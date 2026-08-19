@@ -1,0 +1,150 @@
+{
+  "contentVersion": "2026.1-dev",
+  "sourceVersion": "danb-rhs-outline-effective-2025-03-12",
+  "generatedAt": "2026-08-19T00:00:00Z",
+  "exam": {
+    "id": "danb_rhs",
+    "name": "DANB RHS Exam Prep",
+    "provider": "Dental Assisting National Board",
+    "examVersion": "effective-2025-03-12",
+    "contentVersion": "2026.1-dev",
+    "domains": [
+      {
+        "id": "purpose_technique",
+        "name": "Purpose and Technique",
+        "weight": 0.5,
+        "topics": [
+          {"id": "anatomy_findings", "name": "Anatomy and Image Findings"},
+          {"id": "image_purpose", "name": "Purpose of Dental Images"},
+          {"id": "image_quality", "name": "Diagnostic Image Quality"},
+          {"id": "acquisition_technique", "name": "Image Acquisition Technique"},
+          {"id": "error_correction", "name": "Error Correction"},
+          {"id": "patient_management", "name": "Patient Management"}
+        ]
+      },
+      {
+        "id": "radiation_protection",
+        "name": "Radiation Characteristics and Protection",
+        "weight": 0.25,
+        "topics": [
+          {"id": "radiation_physics", "name": "Radiation Physics"},
+          {"id": "radiation_biology", "name": "Radiation Biology"},
+          {"id": "patient_operator_protection", "name": "Patient and Operator Protection"}
+        ]
+      },
+      {
+        "id": "infection_control",
+        "name": "Infection Prevention and Control",
+        "weight": 0.25,
+        "topics": [
+          {"id": "equipment_precautions", "name": "Equipment and Supply Precautions"},
+          {"id": "patient_operator_precautions", "name": "Patient and Operator Precautions"}
+        ]
+      }
+    ],
+    "mockExam": {
+      "questionCount": 75,
+      "durationMinutes": 60,
+      "practicePassingPercent": 75,
+      "allowsBackNavigation": false,
+      "timed": true
+    },
+    "officialScoring": {
+      "scaleMinimum": 100,
+      "scaleMaximum": 900,
+      "passingScaledScore": 400,
+      "isComputerAdaptive": true
+    },
+    "readiness": {
+      "weights": {
+        "recentAccuracy": 0.3,
+        "domainMastery": 0.25,
+        "mockPerformance": 0.25,
+        "repeatedMastery": 0.1,
+        "coverage": 0.1
+      },
+      "thresholds": [
+        {"minimum": 0, "label": "Starting", "band": "starting"},
+        {"minimum": 40, "label": "Developing", "band": "developing"},
+        {"minimum": 60, "label": "Getting Close", "band": "gettingClose"},
+        {"minimum": 75, "label": "Exam Ready", "band": "examReady"},
+        {"minimum": 85, "label": "Strongly Prepared", "band": "stronglyPrepared"}
+      ],
+      "priorScore": 40,
+      "minimumEvidenceQuestions": 40,
+      "recencyHalfLifeDays": 21,
+      "weakDomainPenalty": 0.15
+    },
+    "subscriptionProductIds": {
+      "weekly": "danb_rhs_premium_weekly",
+      "monthly": "danb_rhs_premium_monthly",
+      "threeMonths": "danb_rhs_premium_3_months"
+    },
+    "freeTier": {
+      "dailyPracticeQuestions": 10,
+      "diagnosticQuestions": 15,
+      "includedMockExams": 0
+    },
+    "disclaimer": "Readiness Score and mock results are estimates based on practice performance and do not guarantee passing the official exam. This app is not affiliated with or endorsed by DANB."
+  },
+  "questions": [
+    {
+      "id": "rhs-dev-001",
+      "examId": "danb_rhs",
+      "domainId": "radiation_protection",
+      "topicId": "radiation_physics",
+      "questionText": "Which change removes lower-energy photons that add exposure without improving the diagnostic image?",
+      "answers": [
+        {"id": "a", "text": "Increasing geometric magnification"},
+        {"id": "b", "text": "Adding beam filtration"},
+        {"id": "c", "text": "Increasing patient movement"},
+        {"id": "d", "text": "Removing collimation"}
+      ],
+      "correctAnswerId": "b",
+      "explanation": "Beam filtration removes lower-energy photons that are more likely to be absorbed without contributing useful information to the diagnostic image.",
+      "references": [
+        {
+          "title": "RHS Exam Outline and References",
+          "source": "Dental Assisting National Board",
+          "section": "II.C Radiation protection",
+          "url": "https://www.danb.org/exams/exam/rhs-exam"
+        }
+      ],
+      "difficulty": 2,
+      "status": "draft",
+      "version": 1,
+      "updatedAt": "2026-08-19T00:00:00Z",
+      "sourceVersion": "development-sample",
+      "tags": ["sample", "radiation-physics"]
+    },
+    {
+      "id": "rhs-dev-002",
+      "examId": "danb_rhs",
+      "domainId": "purpose_technique",
+      "topicId": "error_correction",
+      "questionText": "Which condition should be evaluated first when a dental image shows motion blur?",
+      "answers": [
+        {"id": "a", "text": "Patient, receptor, or equipment movement during exposure"},
+        {"id": "b", "text": "The color of the operatory walls"},
+        {"id": "c", "text": "The appointment time"},
+        {"id": "d", "text": "The brand name of the receptor"}
+      ],
+      "correctAnswerId": "a",
+      "explanation": "Motion blur commonly results when the patient, image receptor, or equipment moves during the exposure, so movement should be evaluated first.",
+      "references": [
+        {
+          "title": "RHS Exam Outline and References",
+          "source": "Dental Assisting National Board",
+          "section": "I.D.7 Error correction",
+          "url": "https://www.danb.org/exams/exam/rhs-exam"
+        }
+      ],
+      "difficulty": 2,
+      "status": "draft",
+      "version": 1,
+      "updatedAt": "2026-08-19T00:00:00Z",
+      "sourceVersion": "development-sample",
+      "tags": ["sample", "image-quality"]
+    }
+  ]
+}

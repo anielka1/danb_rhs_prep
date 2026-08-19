@@ -18,7 +18,5 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
-
-  # Add local avatar/asset images here if you have them, e.g.:
-  # assets:
-  #   - assets/images/
+  assets:
+    - assets/content/danb_rhs/content.json
