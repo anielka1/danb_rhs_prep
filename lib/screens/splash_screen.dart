@@ -1,11 +1,14 @@
 import 'dart:async';
+
 import 'package:flutter/material.dart';
+
 import '../theme/app_theme.dart';
 import '../widgets/radiation_icon.dart';
 import 'login_screen.dart';
 
 class SplashScreen extends StatefulWidget {
   static const String route = '/';
+
   const SplashScreen({super.key});
 
   @override
@@ -13,15 +16,23 @@ class SplashScreen extends StatefulWidget {
 }
 
 class _SplashScreenState extends State<SplashScreen> {
+  Timer? _navigationTimer;
+
   @override
   void initState() {
     super.initState();
-    // Auto-advance to the login screen after a beat, like a typical splash.
-    Timer(const Duration(seconds: 2), () {
+
+    _navigationTimer = Timer(const Duration(seconds: 2), () {
       if (mounted) {
         Navigator.of(context).pushReplacementNamed(LoginScreen.route);
       }
     });
+  }
+
+  @override
+  void dispose() {
+    _navigationTimer?.cancel();
+    super.dispose();
   }
 
   @override
@@ -54,7 +65,10 @@ class _SplashScreenState extends State<SplashScreen> {
                   decoration: BoxDecoration(
                     color: AppColors.lavenderContainer,
                     borderRadius: BorderRadius.circular(28),
-                    border: Border.all(color: AppColors.primary.withOpacity(0.5), width: 1.4),
+                    border: Border.all(
+                      color: AppColors.primary.withOpacity(0.5),
+                      width: 1.4,
+                    ),
                   ),
                   alignment: Alignment.center,
                   child: const RadiationIcon(size: 46),
