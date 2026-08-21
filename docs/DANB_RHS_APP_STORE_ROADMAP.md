@@ -105,18 +105,18 @@ Returning users should go directly from app bootstrap to the main app.
 
 ## 0.1 Apple accounts and identifiers
 
-- [ ] Enroll the legal owner in the Apple Developer Program.
-- [ ] Choose a permanent production bundle ID, for example:
-  `com.yourcompany.danbrhsprep`.
-- [ ] Replace the current example Android/iOS application identifiers.
-- [ ] Register the bundle ID in Certificates, Identifiers & Profiles.
-- [ ] Create the app record in App Store Connect.
-- [ ] Use the exact same bundle ID in Flutter, Xcode, and App Store Connect.
-- [ ] Decide the public app name and subtitle.
-- [ ] Reserve the app name in App Store Connect.
-- [ ] Set the primary category to Education.
-- [ ] Accept the Paid Applications Agreement.
-- [ ] Complete banking and tax forms.
+- [x] Enroll the legal owner in the Apple Developer Program.
+- [x] Choose the permanent production bundle ID:
+  `com.anielkad.danbrhsprep`.
+- [x] Replace the current example Android/iOS application identifiers.
+- [x] Register the bundle ID in Certificates, Identifiers & Profiles.
+- [x] Create the app record in App Store Connect.
+- [x] Use the exact same bundle ID in Flutter, Xcode, and App Store Connect.
+- [x] Decide the public app name and subtitle.
+- [x] Reserve the app name in App Store Connect.
+- [x] Set the primary category to Education.
+- [x] Accept the Paid Applications Agreement.
+- [x] Complete banking and tax forms.
 
 ## 0.2 Legal and content safety
 
