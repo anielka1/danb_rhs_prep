@@ -1,14 +1,11 @@
 import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
-import '../widgets/app_bottom_navigation.dart';
 import '../widgets/app_scaffold.dart';
-import 'home_screen.dart';
-import 'exam_overview_screen.dart';
-import 'progress_screen.dart';
+import '../widgets/primary_button.dart';
 import 'login_screen.dart';
 
 class ProfileSettingsScreen extends StatefulWidget {
-  static const String route = '/profile';
+  static const String route = 'settings';
   const ProfileSettingsScreen({super.key});
 
   @override
@@ -20,28 +17,17 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen> {
   bool _darkMode = false;
   bool _soundEffects = true;
 
-  void _onNavTap(AppTab tab) {
-    switch (tab) {
-      case AppTab.home:
-        Navigator.of(context)
-            .pushNamedAndRemoveUntil(HomeScreen.route, (r) => false);
-        break;
-      case AppTab.practice:
-        Navigator.of(context).pushNamed(ExamOverviewScreen.route);
-        break;
-      case AppTab.stats:
-        Navigator.of(context).pushNamed(ProgressScreen.route);
-        break;
-      case AppTab.profile:
-        break;
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     final colors = context.colors;
     final textStyles = context.textStyles;
     return AppScaffold(
+      leading: CircleIconButton(
+        icon: Icons.chevron_left_rounded,
+        onPressed: () => Navigator.of(context).maybePop(),
+        semanticLabel: 'Back',
+      ),
+      title: 'Settings',
       body: SingleChildScrollView(
         child: Column(
           children: [
@@ -140,8 +126,6 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen> {
           ],
         ),
       ),
-      bottomNavigationBar:
-          AppBottomNavigation(current: AppTab.profile, onTap: _onNavTap),
     );
   }
 }

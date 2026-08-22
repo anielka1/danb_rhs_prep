@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
 import '../widgets/app_scaffold.dart';
 import '../widgets/primary_button.dart';
-import 'home_screen.dart';
+import 'main_shell.dart';
 
 class LoginScreen extends StatefulWidget {
   static const String route = '/login';
@@ -102,7 +102,7 @@ class _LoginScreenState extends State<LoginScreen> {
               label: 'Get Started',
               trailingIcon: Icons.arrow_forward_rounded,
               onPressed: () =>
-                  Navigator.of(context).pushReplacementNamed(HomeScreen.route),
+                  Navigator.of(context).pushReplacementNamed(MainShell.route),
             ),
             const SizedBox(height: AppSpacing.xxl),
             Row(

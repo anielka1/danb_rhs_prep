@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
-import '../widgets/app_bottom_navigation.dart';
 import '../widgets/app_card.dart';
 import '../widgets/app_scaffold.dart';
+import '../widgets/primary_button.dart';
 import 'exam_overview_screen.dart';
-import 'progress_screen.dart';
 import 'profile_settings_screen.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -29,27 +28,22 @@ class _HomeScreenState extends State<HomeScreen> {
   ];
   static const List<int> _dayNumbers = [17, 18, 19, 20, 21, 22, 23];
 
-  void _onNavTap(AppTab tab) {
-    switch (tab) {
-      case AppTab.home:
-        break;
-      case AppTab.practice:
-        Navigator.of(context).pushNamed(ExamOverviewScreen.route);
-        break;
-      case AppTab.stats:
-        Navigator.of(context).pushNamed(ProgressScreen.route);
-        break;
-      case AppTab.profile:
-        Navigator.of(context).pushNamed(ProfileSettingsScreen.route);
-        break;
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     final colors = context.colors;
     final textStyles = context.textStyles;
     return AppScaffold(
+      actions: [
+        Tooltip(
+          message: 'Settings',
+          child: CircleIconButton(
+            icon: Icons.settings_rounded,
+            semanticLabel: 'Settings',
+            onPressed: () =>
+                Navigator.of(context).pushNamed(ProfileSettingsScreen.route),
+          ),
+        ),
+      ],
       body: SingleChildScrollView(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -120,8 +114,6 @@ class _HomeScreenState extends State<HomeScreen> {
         child: const Icon(Icons.add, size: AppIconSize.large),
       ),
       floatingActionButtonLocation: FloatingActionButtonLocation.startFloat,
-      bottomNavigationBar:
-          AppBottomNavigation(current: AppTab.home, onTap: _onNavTap),
     );
   }
 }

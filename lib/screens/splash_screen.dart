@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../theme/app_theme.dart';
 import '../widgets/radiation_icon.dart';
-import 'login_screen.dart';
+import 'main_shell.dart';
 
 class SplashScreen extends StatefulWidget {
   static const String route = '/';
@@ -24,7 +24,7 @@ class _SplashScreenState extends State<SplashScreen> {
 
     _navigationTimer = Timer(const Duration(seconds: 2), () {
       if (mounted) {
-        Navigator.of(context).pushReplacementNamed(LoginScreen.route);
+        Navigator.of(context).pushReplacementNamed(MainShell.route);
       }
     });
   }
