@@ -22,7 +22,8 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen> {
   void _onNavTap(AppTab tab) {
     switch (tab) {
       case AppTab.home:
-        Navigator.of(context).pushNamedAndRemoveUntil(HomeScreen.route, (r) => false);
+        Navigator.of(context)
+            .pushNamedAndRemoveUntil(HomeScreen.route, (r) => false);
         break;
       case AppTab.practice:
         Navigator.of(context).pushNamed(ExamOverviewScreen.route);
@@ -37,49 +38,60 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.colors;
+    final textStyles = context.textStyles;
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: colors.surface,
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.screenPadding),
+          padding:
+              const EdgeInsets.symmetric(horizontal: AppSpacing.screenPadding),
           child: Column(
             children: [
-              const SizedBox(height: 16),
+              const SizedBox(height: AppSpacing.lg),
               Container(
                 width: 92,
                 height: 92,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: AppColors.lavenderContainer,
-                  border: Border.all(color: Colors.white, width: 4),
+                  color: colors.primaryContainer,
+                  border: Border.all(color: colors.surfaceContainer, width: 4),
                   boxShadow: [
-                    BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, 4)),
+                    // Shadow color is intentionally invariant black across
+                    // themes: it represents physical light occlusion, not a
+                    // surface/text/icon role.
+                    BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.05),
+                        blurRadius: 10,
+                        offset: const Offset(0, 4)),
                   ],
                 ),
-                child: const Icon(Icons.person, size: 44, color: AppColors.primary),
+                child: Icon(Icons.person, size: 44, color: colors.primary),
               ),
-              const SizedBox(height: 14),
-              const Text('Sarah Jenkins', style: AppTextStyles.h2),
-              const SizedBox(height: 4),
-              Text('sarah.j@dentalprep.com', style: AppTextStyles.bodySmall),
-              const SizedBox(height: 22),
-              Row(
-                children: const [
+              const SizedBox(height: AppSpacing.md + 2),
+              Text('Sarah Jenkins', style: textStyles.h2),
+              const SizedBox(height: AppSpacing.xs),
+              Text('sarah.j@dentalprep.com', style: textStyles.bodySmall),
+              const SizedBox(height: AppSpacing.xl + 2),
+              const Row(
+                children: [
                   Expanded(child: _ProfileStat(value: '#342', label: 'Rank')),
                   _VerticalDivider(),
-                  Expanded(child: _ProfileStat(value: '48h', label: 'Study Hours')),
+                  Expanded(
+                      child: _ProfileStat(value: '48h', label: 'Study Hours')),
                   _VerticalDivider(),
-                  Expanded(child: _ProfileStat(value: '12', label: 'Exams Taken')),
+                  Expanded(
+                      child: _ProfileStat(value: '12', label: 'Exams Taken')),
                 ],
               ),
-              const SizedBox(height: 26),
-              const Divider(color: AppColors.divider),
-              const SizedBox(height: 20),
+              const SizedBox(height: AppSpacing.xxl + 2),
+              const Divider(),
+              const SizedBox(height: AppSpacing.xl),
               Align(
                 alignment: Alignment.centerLeft,
-                child: Text('APP PREFERENCES', style: AppTextStyles.label),
+                child: Text('APP PREFERENCES', style: textStyles.label),
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: AppSpacing.md),
               _PreferenceRow(
                 title: 'Push Notifications',
                 subtitle: 'Daily alerts & streak reminders',
@@ -99,16 +111,16 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen> {
                 onChanged: (v) => setState(() => _soundEffects = v),
               ),
               const SizedBox(height: 10),
-              const Divider(color: AppColors.divider),
-              const SizedBox(height: 18),
+              const Divider(),
+              const SizedBox(height: AppSpacing.xl - 2),
               Align(
                 alignment: Alignment.centerLeft,
-                child: Text('ACCOUNT', style: AppTextStyles.label),
+                child: Text('ACCOUNT', style: textStyles.label),
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: AppSpacing.sm),
               _AccountRow(title: 'Edit Profile', onTap: () {}),
               _AccountRow(title: 'Change Password', onTap: () {}),
-              const SizedBox(height: 22),
+              const SizedBox(height: AppSpacing.xl + 2),
               SizedBox(
                 width: double.infinity,
                 height: 54,
@@ -116,11 +128,15 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen> {
                   onPressed: () => Navigator.of(context)
                       .pushNamedAndRemoveUntil(LoginScreen.route, (r) => false),
                   style: OutlinedButton.styleFrom(
-                    side: const BorderSide(color: AppColors.error, width: 1.4),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadii.button)),
+                    foregroundColor: colors.error,
+                    side: BorderSide(
+                        color: colors.error, width: AppBorderWidth.regular),
                   ),
-                  child: const Text('Sign Out',
-                      style: TextStyle(color: AppColors.error, fontWeight: FontWeight.w700, fontSize: 15)),
+                  child: Text('Sign Out',
+                      style: TextStyle(
+                          color: colors.error,
+                          fontWeight: FontWeight.w700,
+                          fontSize: 15)),
                 ),
               ),
               const SizedBox(height: 90),
@@ -128,7 +144,8 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen> {
           ),
         ),
       ),
-      bottomNavigationBar: AppBottomNav(current: AppTab.profile, onTap: _onNavTap),
+      bottomNavigationBar:
+          AppBottomNav(current: AppTab.profile, onTap: _onNavTap),
     );
   }
 }
@@ -142,9 +159,13 @@ class _ProfileStat extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        Text(value, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: AppColors.primaryDark)),
-        const SizedBox(height: 4),
-        Text(label, style: AppTextStyles.bodySmall),
+        Text(value,
+            style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w800,
+                color: context.colors.secondary)),
+        const SizedBox(height: AppSpacing.xs),
+        Text(label, style: context.textStyles.bodySmall),
       ],
     );
   }
@@ -155,7 +176,8 @@ class _VerticalDivider extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(width: 1, height: 34, color: AppColors.divider);
+    return Container(
+        width: 1, height: 34, color: context.colors.outlineVariant);
   }
 }
 
@@ -174,6 +196,7 @@ class _PreferenceRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.colors;
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 10),
       child: Row(
@@ -182,19 +205,19 @@ class _PreferenceRow extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(title, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15, color: AppColors.navy)),
+                Text(title,
+                    style: TextStyle(
+                        fontWeight: FontWeight.w700,
+                        fontSize: 15,
+                        color: colors.onSurface)),
                 const SizedBox(height: 2),
-                Text(subtitle, style: AppTextStyles.bodySmall),
+                Text(subtitle, style: context.textStyles.bodySmall),
               ],
             ),
           ),
           Switch(
             value: value,
             onChanged: onChanged,
-            activeColor: Colors.white,
-            activeTrackColor: AppColors.primary,
-            inactiveThumbColor: Colors.white,
-            inactiveTrackColor: AppColors.lavenderContainer,
           ),
         ],
       ),
@@ -209,6 +232,7 @@ class _AccountRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.colors;
     return InkWell(
       onTap: onTap,
       child: Padding(
@@ -216,9 +240,14 @@ class _AccountRow extends StatelessWidget {
         child: Row(
           children: [
             Expanded(
-              child: Text(title, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15, color: AppColors.navy)),
+              child: Text(title,
+                  style: TextStyle(
+                      fontWeight: FontWeight.w700,
+                      fontSize: 15,
+                      color: colors.onSurface)),
             ),
-            const Icon(Icons.chevron_right_rounded, color: AppColors.textMuted),
+            Icon(Icons.chevron_right_rounded,
+                color: context.semanticColors.mutedForeground),
           ],
         ),
       ),

@@ -32,11 +32,14 @@ class _PracticeQuestionScreenState extends State<PracticeQuestionScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.colors;
+    final textStyles = context.textStyles;
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: colors.surface,
       body: SafeArea(
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.screenPadding),
+          padding:
+              const EdgeInsets.symmetric(horizontal: AppSpacing.screenPadding),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
@@ -45,45 +48,49 @@ class _PracticeQuestionScreenState extends State<PracticeQuestionScreen> {
                 children: [
                   CircleIconButton(
                     icon: Icons.close_rounded,
-                    background: Colors.white,
                     onPressed: () => Navigator.of(context).maybePop(),
                   ),
                   const SizedBox(width: 14),
                   Expanded(
                     child: ClipRRect(
                       borderRadius: BorderRadius.circular(10),
-                      child: LinearProgressIndicator(
+                      child: const LinearProgressIndicator(
                         value: currentQuestion / totalQuestions,
                         minHeight: 8,
-                        backgroundColor: AppColors.lavenderContainer,
-                        valueColor: const AlwaysStoppedAnimation(AppColors.primary),
                       ),
                     ),
                   ),
                   const SizedBox(width: 14),
-                  const Icon(Icons.access_time_rounded, size: 18, color: AppColors.navy),
-                  const SizedBox(width: 4),
-                  const Text('24:18',
-                      style: TextStyle(fontWeight: FontWeight.w700, color: AppColors.navy)),
+                  Icon(Icons.access_time_rounded,
+                      size: AppIconSize.medium - 2, color: colors.onSurface),
+                  const SizedBox(width: AppSpacing.xs),
+                  Text('24:18',
+                      style: TextStyle(
+                          fontWeight: FontWeight.w700,
+                          color: colors.onSurface)),
                 ],
               ),
-              const SizedBox(height: 22),
+              const SizedBox(height: AppSpacing.xl + 2),
               Text(
                 'QUESTION $currentQuestion OF $totalQuestions',
-                style: AppTextStyles.label,
+                style: textStyles.label,
               ),
-              const SizedBox(height: 14),
+              const SizedBox(height: AppSpacing.md + 2),
               Container(
                 width: double.infinity,
-                padding: const EdgeInsets.all(20),
+                padding: const EdgeInsets.all(AppSpacing.xl),
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: colors.surfaceContainer,
                   borderRadius: BorderRadius.circular(AppRadii.card),
                 ),
-                child: const Text(
+                child: Text(
                   'What is the maximum permissible dose (MPD) of radiation for '
                   'occupational workers per year?',
-                  style: TextStyle(fontWeight: FontWeight.w700, fontSize: 17, color: AppColors.navy, height: 1.3),
+                  style: TextStyle(
+                      fontWeight: FontWeight.w700,
+                      fontSize: 17,
+                      color: colors.onSurface,
+                      height: 1.3),
                 ),
               ),
               const SizedBox(height: 18),
@@ -92,11 +99,13 @@ class _PracticeQuestionScreenState extends State<PracticeQuestionScreen> {
                   child: Column(
                     children: _options
                         .map((o) => Padding(
-                              padding: const EdgeInsets.only(bottom: 12),
+                              padding:
+                                  const EdgeInsets.only(bottom: AppSpacing.md),
                               child: _OptionTile(
                                 option: o,
                                 selected: _selected == o.letter,
-                                onTap: () => setState(() => _selected = o.letter),
+                                onTap: () =>
+                                    setState(() => _selected = o.letter),
                               ),
                             ))
                         .toList(),
@@ -105,26 +114,33 @@ class _PracticeQuestionScreenState extends State<PracticeQuestionScreen> {
               ),
               PrimaryButton(
                 label: 'Submit Answer',
-                onPressed: () => Navigator.of(context).pushNamed(AnswerExplanationScreen.route),
+                onPressed: () => Navigator.of(context)
+                    .pushNamed(AnswerExplanationScreen.route),
               ),
-              const SizedBox(height: 14),
+              const SizedBox(height: AppSpacing.md + 2),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   TextButton.icon(
                     onPressed: () {},
-                    icon: const Icon(Icons.arrow_back_rounded, size: 16, color: AppColors.primaryDark),
-                    label: const Text('Previous',
-                        style: TextStyle(color: AppColors.primaryDark, fontWeight: FontWeight.w600)),
+                    icon: Icon(Icons.arrow_back_rounded,
+                        size: AppIconSize.small, color: colors.secondary),
+                    label: Text('Previous',
+                        style: TextStyle(
+                            color: colors.secondary,
+                            fontWeight: FontWeight.w600)),
                   ),
                   TextButton(
                     onPressed: () {},
                     child: Row(
-                      children: const [
+                      children: [
                         Text('Next',
-                            style: TextStyle(color: AppColors.primaryDark, fontWeight: FontWeight.w600)),
-                        SizedBox(width: 4),
-                        Icon(Icons.arrow_forward_rounded, size: 16, color: AppColors.primaryDark),
+                            style: TextStyle(
+                                color: colors.secondary,
+                                fontWeight: FontWeight.w600)),
+                        const SizedBox(width: AppSpacing.xs),
+                        Icon(Icons.arrow_forward_rounded,
+                            size: AppIconSize.small, color: colors.secondary),
                       ],
                     ),
                   ),
@@ -144,34 +160,38 @@ class _OptionTile extends StatelessWidget {
   final bool selected;
   final VoidCallback onTap;
 
-  const _OptionTile({required this.option, required this.selected, required this.onTap});
+  const _OptionTile(
+      {required this.option, required this.selected, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.colors;
     return GestureDetector(
       onTap: onTap,
       child: Container(
         width: double.infinity,
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.lg, vertical: AppSpacing.md + 2),
         decoration: BoxDecoration(
-          color: selected ? AppColors.lavenderContainer : Colors.white,
-          borderRadius: BorderRadius.circular(16),
+          color: selected ? colors.primaryContainer : colors.surfaceContainer,
+          borderRadius: BorderRadius.circular(AppRadii.smallIcon),
           border: Border.all(
-            color: selected ? AppColors.primary : Colors.transparent,
-            width: 1.4,
+            color: selected ? colors.primary : Colors.transparent,
+            width: AppBorderWidth.regular,
           ),
         ),
         child: Row(
           children: [
             CircleAvatar(
               radius: 13,
-              backgroundColor: selected ? AppColors.primary : AppColors.lavenderContainer,
+              backgroundColor:
+                  selected ? colors.primary : colors.primaryContainer,
               child: Text(
                 option.letter,
                 style: TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w700,
-                  color: selected ? Colors.white : AppColors.textSecondary,
+                  color: selected ? colors.onPrimary : colors.onSurfaceVariant,
                 ),
               ),
             ),
@@ -179,7 +199,10 @@ class _OptionTile extends StatelessWidget {
             Expanded(
               child: Text(
                 option.text,
-                style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14, color: AppColors.navy),
+                style: TextStyle(
+                    fontWeight: FontWeight.w600,
+                    fontSize: 14,
+                    color: colors.onSurface),
               ),
             ),
           ],

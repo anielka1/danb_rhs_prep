@@ -23,7 +23,11 @@ class DanbRhsPrepApp extends StatelessWidget {
     return MaterialApp(
       title: 'DANB RHS Prep',
       debugShowCheckedModeBanner: false,
-      theme: AppTheme.theme,
+      theme: AppTheme.lightTheme,
+      darkTheme: AppTheme.darkTheme,
+      // No deliberate user preference exists yet (Settings persistence is
+      // out of scope for this task), so the app follows the OS setting.
+      themeMode: ThemeMode.system,
       initialRoute: SplashScreen.route,
       routes: {
         SplashScreen.route: (_) => const SplashScreen(),

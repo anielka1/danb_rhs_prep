@@ -23,30 +23,34 @@ class PracticeSummaryScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.colors;
+    final textStyles = context.textStyles;
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: colors.surface,
       body: SafeArea(
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.screenPadding),
+          padding:
+              const EdgeInsets.symmetric(horizontal: AppSpacing.screenPadding),
           child: Column(
             children: [
               const SizedBox(height: 28),
               Container(
                 width: 56,
                 height: 56,
-                decoration: const BoxDecoration(
-                  color: AppColors.lavenderContainer,
+                decoration: BoxDecoration(
+                  color: colors.primaryContainer,
                   shape: BoxShape.circle,
                 ),
-                child: const Icon(Icons.check_rounded, color: AppColors.primary, size: 28),
+                child: Icon(Icons.check_rounded,
+                    color: colors.primary, size: AppIconSize.large),
               ),
               const SizedBox(height: 18),
-              const Text('Session Complete!', style: AppTextStyles.h1),
-              const SizedBox(height: 8),
+              Text('Session Complete!', style: textStyles.h1),
+              const SizedBox(height: AppSpacing.sm),
               Text(
                 'You did an outstanding job reviewing today.',
                 textAlign: TextAlign.center,
-                style: AppTextStyles.body,
+                style: textStyles.body,
               ),
               const SizedBox(height: 30),
               Row(
@@ -55,9 +59,9 @@ class PracticeSummaryScreen extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text('78%', style: AppTextStyles.statNumber),
-                        const SizedBox(height: 4),
-                        Text('78/100 Correct', style: AppTextStyles.bodySmall),
+                        Text('78%', style: textStyles.statNumber),
+                        const SizedBox(height: AppSpacing.xs),
+                        Text('78/100 Correct', style: textStyles.bodySmall),
                       ],
                     ),
                   ),
@@ -65,24 +69,24 @@ class PracticeSummaryScreen extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text('42m', style: AppTextStyles.statNumber),
-                        const SizedBox(height: 4),
-                        Text('Time Spent', style: AppTextStyles.bodySmall),
+                        Text('42m', style: textStyles.statNumber),
+                        const SizedBox(height: AppSpacing.xs),
+                        Text('Time Spent', style: textStyles.bodySmall),
                       ],
                     ),
                   ),
                 ],
               ),
-              const SizedBox(height: 28),
+              const SizedBox(height: AppSpacing.xxl + 4),
               Align(
                 alignment: Alignment.centerLeft,
-                child: Text('TOPIC BREAKDOWN', style: AppTextStyles.label),
+                child: Text('TOPIC BREAKDOWN', style: textStyles.label),
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: AppSpacing.sm),
               Expanded(
                 child: ListView.separated(
                   itemCount: _breakdown.length,
-                  separatorBuilder: (_, __) => const Divider(color: AppColors.divider, height: 1),
+                  separatorBuilder: (_, __) => const Divider(height: 1),
                   itemBuilder: (context, i) {
                     final t = _breakdown[i];
                     return Padding(
@@ -91,9 +95,15 @@ class PracticeSummaryScreen extends StatelessWidget {
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           Text(t.name,
-                              style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15, color: AppColors.navy)),
+                              style: TextStyle(
+                                  fontWeight: FontWeight.w700,
+                                  fontSize: 15,
+                                  color: colors.onSurface)),
                           Text('${t.percent}%',
-                              style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14, color: AppColors.primaryDark)),
+                              style: TextStyle(
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 14,
+                                  color: colors.secondary)),
                         ],
                       ),
                     );
@@ -101,13 +111,13 @@ class PracticeSummaryScreen extends StatelessWidget {
                 ),
               ),
               SecondaryButton(label: 'Review Mistakes', onPressed: () {}),
-              const SizedBox(height: 12),
+              const SizedBox(height: AppSpacing.md),
               PrimaryButton(
                 label: 'Back to Home',
-                onPressed: () => Navigator.of(context)
-                    .pushNamedAndRemoveUntil(HomeScreen.route, (route) => false),
+                onPressed: () => Navigator.of(context).pushNamedAndRemoveUntil(
+                    HomeScreen.route, (route) => false),
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: AppSpacing.lg),
             ],
           ),
         ),

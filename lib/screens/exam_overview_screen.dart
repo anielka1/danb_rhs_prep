@@ -24,8 +24,10 @@ class ExamOverviewScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.colors;
+    final textStyles = context.textStyles;
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: colors.surface,
       body: SafeArea(
         child: Column(
           children: [
@@ -36,37 +38,36 @@ class ExamOverviewScreen extends StatelessWidget {
                 children: [
                   CircleIconButton(
                     icon: Icons.chevron_left_rounded,
-                    background: Colors.white,
                     onPressed: () => Navigator.of(context).maybePop(),
                   ),
-                  const SizedBox(width: 12),
-                  const Text('Exam Info', style: AppTextStyles.h3),
+                  const SizedBox(width: AppSpacing.md),
+                  Text('Exam Info', style: textStyles.h3),
                 ],
               ),
             ),
             Expanded(
               child: SingleChildScrollView(
-                padding: const EdgeInsets.fromLTRB(
-                    AppSpacing.screenPadding, 20, AppSpacing.screenPadding, 20),
+                padding: const EdgeInsets.fromLTRB(AppSpacing.screenPadding,
+                    AppSpacing.xl, AppSpacing.screenPadding, AppSpacing.xl),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Container(
                       width: double.infinity,
-                      padding: const EdgeInsets.all(20),
+                      padding: const EdgeInsets.all(AppSpacing.xl),
                       decoration: BoxDecoration(
-                        color: AppColors.lavenderContainer,
+                        color: colors.primaryContainer,
                         borderRadius: BorderRadius.circular(AppRadii.card),
                       ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Text('Practice Exam Prep', style: AppTextStyles.h2),
+                          Text('Practice Exam Prep', style: textStyles.h2),
                           const SizedBox(height: 6),
                           Text(
                             '1.5 Hours · 100 Questions · Intermediate',
-                            style: AppTextStyles.body.copyWith(
-                              color: AppColors.primaryDark,
+                            style: textStyles.body.copyWith(
+                              color: colors.secondary,
                               fontWeight: FontWeight.w600,
                             ),
                           ),
@@ -74,17 +75,17 @@ class ExamOverviewScreen extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(height: 26),
-                    const Text('About Certification', style: AppTextStyles.h3),
+                    Text('About Certification', style: textStyles.h3),
                     const SizedBox(height: 10),
                     Text(
                       'This simulator prepares you comprehensively for the official '
                       'Dental Assisting National Board Radiation Health & Safety exam. '
                       'Complete each module with 80% correct score.',
-                      style: AppTextStyles.body,
+                      style: textStyles.body,
                     ),
                     const SizedBox(height: 26),
-                    const Text('Topics Covered', style: AppTextStyles.h3),
-                    const SizedBox(height: 14),
+                    Text('Topics Covered', style: textStyles.h3),
+                    const SizedBox(height: AppSpacing.md + 2),
                     ..._topics.map((t) => Padding(
                           padding: const EdgeInsets.only(bottom: 18),
                           child: _TopicRow(topic: t),
@@ -94,11 +95,12 @@ class ExamOverviewScreen extends StatelessWidget {
               ),
             ),
             Padding(
-              padding: const EdgeInsets.fromLTRB(
-                  AppSpacing.screenPadding, 0, AppSpacing.screenPadding, 20),
+              padding: const EdgeInsets.fromLTRB(AppSpacing.screenPadding, 0,
+                  AppSpacing.screenPadding, AppSpacing.xl),
               child: PrimaryButton(
                 label: 'Start Practice Exam',
-                onPressed: () => Navigator.of(context).pushNamed(PracticeQuestionScreen.route),
+                onPressed: () => Navigator.of(context)
+                    .pushNamed(PracticeQuestionScreen.route),
               ),
             ),
           ],
@@ -114,20 +116,24 @@ class _TopicRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.colors;
     return Row(
       children: [
         Container(
           width: 36,
           height: 36,
           decoration: BoxDecoration(
-            color: topic.unlocked ? AppColors.lavenderContainer : Colors.transparent,
+            color:
+                topic.unlocked ? colors.primaryContainer : Colors.transparent,
             shape: BoxShape.circle,
           ),
           alignment: Alignment.center,
           child: Icon(
             topic.unlocked ? Icons.check_rounded : Icons.lock_outline_rounded,
-            size: 18,
-            color: topic.unlocked ? AppColors.primary : AppColors.lockedGrey,
+            size: AppIconSize.small + 2,
+            color: topic.unlocked
+                ? colors.primary
+                : context.semanticColors.mutedForeground,
           ),
         ),
         const SizedBox(width: 14),
@@ -137,10 +143,14 @@ class _TopicRow extends StatelessWidget {
             children: [
               Text(
                 topic.title,
-                style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14, color: AppColors.navy),
+                style: TextStyle(
+                    fontWeight: FontWeight.w700,
+                    fontSize: 14,
+                    color: colors.onSurface),
               ),
               const SizedBox(height: 2),
-              Text('${topic.questions} Questions', style: AppTextStyles.bodySmall),
+              Text('${topic.questions} Questions',
+                  style: context.textStyles.bodySmall),
             ],
           ),
         ),
