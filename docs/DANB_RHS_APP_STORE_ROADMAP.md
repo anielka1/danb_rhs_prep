@@ -173,14 +173,14 @@ Returning users should go directly from app bootstrap to the main app.
 
 ## 1.2 Complete the application boundaries
 
-- [ ] Create repository interfaces for:
+- [x] Create repository interfaces for:
   - content
   - progress
   - user settings
   - subscriptions
   - optional sync
-- [ ] Keep engines free of Flutter widget and plugin imports.
-- [ ] Add immutable models for:
+- [x] Keep engines free of Flutter widget and plugin imports.
+- [x] Add immutable models for:
   - `UserProfile`
   - `AnswerAttempt`
   - `QuestionState`
@@ -190,8 +190,11 @@ Returning users should go directly from app bootstrap to the main app.
   - `QuestionReport`
   - `Entitlement`
 - [ ] Introduce a simple state-management layer when shared state begins.
+  (No shared cross-screen state exists yet — every screen only has local
+  `setState` UI state — so no controller layer was added; see PR notes.)
 - [ ] Prefer Riverpod only if it clearly reduces controller/lifecycle code.
-- [ ] Keep Navigator initially; add `go_router` only if deep-link and auth
+  (Not applicable until the item above applies.)
+- [x] Keep Navigator initially; add `go_router` only if deep-link and auth
   routing becomes meaningfully difficult.
 
 ### Phase 1 exit criteria

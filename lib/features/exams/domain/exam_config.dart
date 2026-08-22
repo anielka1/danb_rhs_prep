@@ -1,10 +1,4 @@
-enum ReadinessBand {
-  starting,
-  developing,
-  gettingClose,
-  examReady,
-  stronglyPrepared,
-}
+import '../../../domain/models/readiness_band.dart';
 
 class ReadinessThreshold {
   const ReadinessThreshold({
