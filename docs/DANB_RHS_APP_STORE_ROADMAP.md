@@ -253,13 +253,13 @@ Returning users should go directly from app bootstrap to the main app.
 
 ## 2.3 Navigation shell
 
-- [ ] Replace `Home / Practice / Stats / Profile` with:
+- [x] Replace `Home / Practice / Stats / Profile` with:
   `Home / Practice / Mock Exam / Progress`.
-- [ ] Remove Login from first-launch routing.
-- [ ] Move Settings to a toolbar icon.
-- [ ] Preserve selected tab state.
-- [ ] Use state restoration where practical.
-- [ ] Add route-level analytics hooks without adding an analytics SDK yet.
+- [x] Remove Login from first-launch routing.
+- [x] Move Settings to a toolbar icon.
+- [x] Preserve selected tab state.
+- [x] Use state restoration where practical.
+- [x] Add route-level analytics hooks without adding an analytics SDK yet.
 
 ## 2.4 Accessibility
 

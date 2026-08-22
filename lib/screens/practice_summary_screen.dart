@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
 import '../widgets/app_scaffold.dart';
 import '../widgets/primary_button.dart';
-import 'home_screen.dart';
+import 'main_shell.dart';
 
 class _TopicScore {
   final String name;
@@ -111,7 +111,7 @@ class PracticeSummaryScreen extends StatelessWidget {
           PrimaryButton(
             label: 'Back to Home',
             onPressed: () => Navigator.of(context)
-                .pushNamedAndRemoveUntil(HomeScreen.route, (route) => false),
+                .pushNamedAndRemoveUntil(MainShell.route, (route) => false),
           ),
           const SizedBox(height: AppSpacing.lg),
         ],

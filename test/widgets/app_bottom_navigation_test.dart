@@ -18,8 +18,8 @@ void main() {
           wrap(const AppBottomNavigation(current: AppTab.home), theme: theme));
       expect(find.text('Home'), findsOneWidget);
       expect(find.text('Practice'), findsOneWidget);
-      expect(find.text('Stats'), findsOneWidget);
-      expect(find.text('Profile'), findsOneWidget);
+      expect(find.text('Mock Exam'), findsOneWidget);
+      expect(find.text('Progress'), findsOneWidget);
     }
   });
 
@@ -44,10 +44,10 @@ void main() {
       wrap(AppBottomNavigation(current: AppTab.home, onTap: taps.add)),
     );
 
-    await tester.tap(find.text('Profile'));
+    await tester.tap(find.text('Progress'));
     await tester.pump();
 
-    expect(taps, [AppTab.profile]);
+    expect(taps, [AppTab.progress]);
   });
 
   testWidgets('each tab meets the 44x44 minimum interactive size',

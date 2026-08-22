@@ -1,12 +1,8 @@
 import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
-import '../widgets/app_bottom_navigation.dart';
 import '../widgets/app_scaffold.dart';
 import '../widgets/domain_progress_row.dart';
 import '../widgets/progress_bar.dart';
-import 'home_screen.dart';
-import 'exam_overview_screen.dart';
-import 'profile_settings_screen.dart';
 
 class ProgressScreen extends StatelessWidget {
   static const String route = '/progress';
@@ -24,23 +20,6 @@ class ProgressScreen extends StatelessWidget {
     0.40
   ];
   static const int _peakIndex = 5; // Saturday, the tallest / darkest bar
-
-  void _onNavTap(BuildContext context, AppTab tab) {
-    switch (tab) {
-      case AppTab.home:
-        Navigator.of(context)
-            .pushNamedAndRemoveUntil(HomeScreen.route, (r) => false);
-        break;
-      case AppTab.practice:
-        Navigator.of(context).pushNamed(ExamOverviewScreen.route);
-        break;
-      case AppTab.stats:
-        break;
-      case AppTab.profile:
-        Navigator.of(context).pushNamed(ProfileSettingsScreen.route);
-        break;
-    }
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -62,7 +41,7 @@ class ProgressScreen extends StatelessWidget {
             Semantics(
               label: 'Weekly activity chart',
               child: SizedBox(
-                height: 90,
+                height: 100,
                 child: ExcludeSemantics(
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.end,
@@ -146,10 +125,6 @@ class ProgressScreen extends StatelessWidget {
             const SizedBox(height: 90),
           ],
         ),
-      ),
-      bottomNavigationBar: AppBottomNavigation(
-        current: AppTab.stats,
-        onTap: (t) => _onNavTap(context, t),
       ),
     );
   }

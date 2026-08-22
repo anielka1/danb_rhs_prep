@@ -1,9 +1,14 @@
 import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
 
-enum AppTab { home, practice, stats, profile }
+/// The four primary tabs, in their fixed display order. This is the only
+/// application-facing representation of "which tab is selected" — screens
+/// and the main shell pass this typed enum around, never a raw index or
+/// label, so a tab and its position can never drift out of sync.
+enum AppTab { home, practice, mockExam, progress }
 
-/// Bottom tab bar shown on Home, Progress (Stats) and Profile screens.
+/// Bottom tab bar shown by the main app shell for all four primary tabs.
+/// Settings is intentionally not a tab — it's reached via a toolbar icon.
 class AppBottomNavigation extends StatelessWidget {
   final AppTab current;
   final ValueChanged<AppTab>? onTap;
@@ -36,16 +41,16 @@ class AppBottomNavigation extends StatelessWidget {
               onTap: () => onTap?.call(AppTab.practice),
             ),
             _NavItem(
-              icon: Icons.bar_chart_rounded,
-              label: 'Stats',
-              selected: current == AppTab.stats,
-              onTap: () => onTap?.call(AppTab.stats),
+              icon: Icons.assignment_rounded,
+              label: 'Mock Exam',
+              selected: current == AppTab.mockExam,
+              onTap: () => onTap?.call(AppTab.mockExam),
             ),
             _NavItem(
-              icon: Icons.person_rounded,
-              label: 'Profile',
-              selected: current == AppTab.profile,
-              onTap: () => onTap?.call(AppTab.profile),
+              icon: Icons.bar_chart_rounded,
+              label: 'Progress',
+              selected: current == AppTab.progress,
+              onTap: () => onTap?.call(AppTab.progress),
             ),
           ],
         ),
