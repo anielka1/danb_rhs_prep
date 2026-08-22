@@ -11,13 +11,22 @@ class ProgressScreen extends StatelessWidget {
 
   static const List<String> _dayLabels = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
   // Relative bar heights (0-1) matching the weekly activity chart.
-  static const List<double> _activity = [0.18, 0.55, 0.10, 0.60, 0.15, 1.0, 0.40];
+  static const List<double> _activity = [
+    0.18,
+    0.55,
+    0.10,
+    0.60,
+    0.15,
+    1.0,
+    0.40
+  ];
   static const int _peakIndex = 5; // Saturday, the tallest / darkest bar
 
   void _onNavTap(BuildContext context, AppTab tab) {
     switch (tab) {
       case AppTab.home:
-        Navigator.of(context).pushNamedAndRemoveUntil(HomeScreen.route, (r) => false);
+        Navigator.of(context)
+            .pushNamedAndRemoveUntil(HomeScreen.route, (r) => false);
         break;
       case AppTab.practice:
         Navigator.of(context).pushNamed(ExamOverviewScreen.route);
@@ -32,21 +41,26 @@ class ProgressScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.colors;
+    final semanticColors = context.semanticColors;
+    final textStyles = context.textStyles;
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: colors.surface,
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.screenPadding),
+          padding:
+              const EdgeInsets.symmetric(horizontal: AppSpacing.screenPadding),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const SizedBox(height: 12),
-              const Text('Your Progress', style: AppTextStyles.h1),
+              Text('Your Progress', style: textStyles.h1),
               const SizedBox(height: 6),
-              Text('Track your study stats & milestones', style: AppTextStyles.body),
-              const SizedBox(height: 26),
-              Text('WEEKLY ACTIVITY (MINS)', style: AppTextStyles.label),
-              const SizedBox(height: 16),
+              Text('Track your study stats & milestones',
+                  style: textStyles.body),
+              const SizedBox(height: AppSpacing.xxl + 2),
+              Text('WEEKLY ACTIVITY (MINS)', style: textStyles.label),
+              const SizedBox(height: AppSpacing.lg),
               SizedBox(
                 height: 90,
                 child: Row(
@@ -61,62 +75,71 @@ class ProgressScreen extends StatelessWidget {
                           width: 18,
                           height: 70 * _activity[i],
                           decoration: BoxDecoration(
-                            color: peak ? AppColors.navy : AppColors.primary.withOpacity(0.5),
+                            color: peak
+                                ? colors.onSurface
+                                : colors.primary.withValues(alpha: 0.5),
                             borderRadius: BorderRadius.circular(9),
                           ),
                         ),
-                        const SizedBox(height: 8),
-                        Text(_dayLabels[i], style: AppTextStyles.bodySmall),
+                        const SizedBox(height: AppSpacing.sm),
+                        Text(_dayLabels[i], style: textStyles.bodySmall),
                       ],
                     );
                   }),
                 ),
               ),
-              const SizedBox(height: 24),
-              const Divider(color: AppColors.divider),
-              const SizedBox(height: 20),
+              const SizedBox(height: AppSpacing.xxl),
+              const Divider(),
+              const SizedBox(height: AppSpacing.xl),
               Row(
                 children: [
                   Expanded(
-                    child: _StatBlock(value: '1,247', label: 'Qs Answered', color: AppColors.navy),
+                    child: _StatBlock(
+                        value: '1,247',
+                        label: 'Qs Answered',
+                        color: colors.onSurface),
                   ),
                   Expanded(
-                    child: _StatBlock(value: '78%', label: 'Avg Accuracy', color: AppColors.success),
+                    child: _StatBlock(
+                        value: '78%',
+                        label: 'Avg Accuracy',
+                        color: semanticColors.success),
                   ),
                   Expanded(
                     child: _StatBlock(
                       value: '12',
                       label: 'Day Streak',
-                      color: AppColors.streakOrange,
+                      color: semanticColors.accent,
                       leadingIcon: Icons.local_fire_department_rounded,
                     ),
                   ),
                 ],
               ),
-              const SizedBox(height: 24),
-              const Divider(color: AppColors.divider),
-              const SizedBox(height: 20),
+              const SizedBox(height: AppSpacing.xxl),
+              const Divider(),
+              const SizedBox(height: AppSpacing.xl),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Text('Weekly Goal',
-                      style: TextStyle(fontWeight: FontWeight.w700, fontSize: 15, color: AppColors.navy)),
-                  Text('75 / 100 Qs', style: AppTextStyles.bodySmall),
+                  Text('Weekly Goal',
+                      style: TextStyle(
+                          fontWeight: FontWeight.w700,
+                          fontSize: 15,
+                          color: colors.onSurface)),
+                  Text('75 / 100 Qs', style: textStyles.bodySmall),
                 ],
               ),
               const SizedBox(height: 10),
               ClipRRect(
                 borderRadius: BorderRadius.circular(10),
-                child: LinearProgressIndicator(
+                child: const LinearProgressIndicator(
                   value: 0.75,
                   minHeight: 10,
-                  backgroundColor: AppColors.lavenderContainer,
-                  valueColor: const AlwaysStoppedAnimation(AppColors.primary),
                 ),
               ),
-              const SizedBox(height: 26),
-              Text('SUBJECT MASTERY', style: AppTextStyles.label),
-              const SizedBox(height: 12),
+              const SizedBox(height: AppSpacing.xxl + 2),
+              Text('SUBJECT MASTERY', style: textStyles.label),
+              const SizedBox(height: AppSpacing.md),
               const _MasteryRow(name: 'Radiation Physics', percent: 85),
               const SizedBox(height: 14),
               const _MasteryRow(name: 'Radiation Biology', percent: 72),
@@ -139,7 +162,11 @@ class _StatBlock extends StatelessWidget {
   final Color color;
   final IconData? leadingIcon;
 
-  const _StatBlock({required this.value, required this.label, required this.color, this.leadingIcon});
+  const _StatBlock(
+      {required this.value,
+      required this.label,
+      required this.color,
+      this.leadingIcon});
 
   @override
   Widget build(BuildContext context) {
@@ -149,14 +176,16 @@ class _StatBlock extends StatelessWidget {
         Row(
           children: [
             if (leadingIcon != null) ...[
-              Icon(leadingIcon, size: 20, color: color),
+              Icon(leadingIcon, size: AppIconSize.medium, color: color),
               const SizedBox(width: 2),
             ],
-            Text(value, style: AppTextStyles.statNumber.copyWith(color: color, fontSize: 24)),
+            Text(value,
+                style: context.textStyles.statNumber
+                    .copyWith(color: color, fontSize: 24)),
           ],
         ),
-        const SizedBox(height: 4),
-        Text(label, style: AppTextStyles.bodySmall),
+        const SizedBox(height: AppSpacing.xs),
+        Text(label, style: context.textStyles.bodySmall),
       ],
     );
   }
@@ -170,21 +199,28 @@ class _MasteryRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.colors;
     return Row(
       children: [
         Container(
           width: 4,
           height: 32,
           decoration: BoxDecoration(
-            color: AppColors.primary,
+            color: colors.primary,
             borderRadius: BorderRadius.circular(4),
           ),
         ),
-        const SizedBox(width: 12),
+        const SizedBox(width: AppSpacing.md),
         Expanded(
-          child: Text(name, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15, color: AppColors.navy)),
+          child: Text(name,
+              style: TextStyle(
+                  fontWeight: FontWeight.w700,
+                  fontSize: 15,
+                  color: colors.onSurface)),
         ),
-        Text('$percent%', style: AppTextStyles.body.copyWith(fontWeight: FontWeight.w600, color: AppColors.primaryDark)),
+        Text('$percent%',
+            style: context.textStyles.body.copyWith(
+                fontWeight: FontWeight.w600, color: colors.secondary)),
       ],
     );
   }

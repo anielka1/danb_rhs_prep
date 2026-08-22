@@ -199,9 +199,12 @@ Returning users should go directly from app bootstrap to the main app.
 
 ### Phase 1 exit criteria
 
-- [ ] Business logic can be unit tested without a device.
-- [ ] UI cannot directly query JSON, SQLite, StoreKit, or Supabase.
+- [x] Business logic can be unit tested without a device.
+- [x] UI cannot directly query JSON, SQLite, StoreKit, or Supabase.
 - [ ] Adding another exam requires config, content, and assets—not new engines.
+  (The content/config/domain layer is already exam-agnostic, but screens
+  still show hardcoded prototype text rather than reading from
+  `ExamConfig`/`ContentPackage`, so this isn't true end-to-end yet.)
 
 ---
 
@@ -209,7 +212,7 @@ Returning users should go directly from app bootstrap to the main app.
 
 ## 2.1 Theme cleanup
 
-- [ ] Preserve the prototype palette as semantic colors:
+- [x] Preserve the prototype palette as semantic colors:
   - background
   - surface/card
   - primary action
@@ -219,15 +222,15 @@ Returning users should go directly from app bootstrap to the main app.
   - error
   - warning
   - divider
-- [ ] Add complete light and dark themes.
-- [ ] Remove hardcoded use of `Colors.white` where semantic surface colors are
+- [x] Add complete light and dark themes.
+- [x] Remove hardcoded use of `Colors.white` where semantic surface colors are
   needed.
-- [ ] Replace deprecated `withOpacity` calls with supported color APIs.
-- [ ] Remove the unbundled hardcoded `SF Pro Display` family or deliberately
+- [x] Replace deprecated `withOpacity` calls with supported color APIs.
+- [x] Remove the unbundled hardcoded `SF Pro Display` family or deliberately
   bundle a licensed font.
-- [ ] Create spacing tokens: 4, 8, 12, 16, 20, 24, 32, 40.
-- [ ] Create consistent radius, elevation, icon, and tap-target tokens.
-- [ ] Ensure all interactive controls have at least a 44×44 logical-point
+- [x] Create spacing tokens: 4, 8, 12, 16, 20, 24, 32, 40.
+- [x] Create consistent radius, elevation, icon, and tap-target tokens.
+- [x] Ensure all interactive controls have at least a 44×44 logical-point
   target on iOS.
 
 ## 2.2 Reusable components

@@ -37,25 +37,26 @@ class _SplashScreenState extends State<SplashScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.colors;
+    final textStyles = context.textStyles;
     return Scaffold(
       body: Container(
         width: double.infinity,
         height: double.infinity,
-        decoration: const BoxDecoration(
+        decoration: BoxDecoration(
+          // Background fading toward the primary-container tint, matching
+          // the prototype's cream-to-periwinkle splash gradient using
+          // theme-aware roles instead of a bespoke fixed color.
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
-            colors: [
-              AppColors.background,
-              AppColors.background,
-              AppColors.backgroundGradientEnd,
-            ],
-            stops: [0.0, 0.62, 1.0],
+            colors: [colors.surface, colors.surface, colors.primaryContainer],
+            stops: const [0.0, 0.62, 1.0],
           ),
         ),
         child: SafeArea(
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 32),
+            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xxxl),
             child: Column(
               children: [
                 const SizedBox(height: 160),
@@ -63,28 +64,28 @@ class _SplashScreenState extends State<SplashScreen> {
                   width: 96,
                   height: 96,
                   decoration: BoxDecoration(
-                    color: AppColors.lavenderContainer,
+                    color: colors.primaryContainer,
                     borderRadius: BorderRadius.circular(28),
                     border: Border.all(
-                      color: AppColors.primary.withOpacity(0.5),
-                      width: 1.4,
+                      color: colors.primary.withValues(alpha: 0.5),
+                      width: AppBorderWidth.regular,
                     ),
                   ),
                   alignment: Alignment.center,
                   child: const RadiationIcon(size: 46),
                 ),
                 const SizedBox(height: 28),
-                const Text(
+                Text(
                   'DANB RHS Prep',
                   textAlign: TextAlign.center,
-                  style: AppTextStyles.h1,
+                  style: textStyles.h1,
                 ),
                 const SizedBox(height: 10),
                 Text(
                   'Ace Your Radiation Health and Safety Exam',
                   textAlign: TextAlign.center,
-                  style: AppTextStyles.body.copyWith(
-                    color: AppColors.primaryDark,
+                  style: textStyles.body.copyWith(
+                    color: colors.secondary,
                     fontWeight: FontWeight.w600,
                   ),
                 ),

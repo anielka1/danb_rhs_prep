@@ -16,7 +16,15 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   int _selectedDayIndex = 1; // Tue is selected in the source screenshot
 
-  static const List<String> _dayNames = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+  static const List<String> _dayNames = [
+    'Mon',
+    'Tue',
+    'Wed',
+    'Thu',
+    'Fri',
+    'Sat',
+    'Sun'
+  ];
   static const List<int> _dayNumbers = [17, 18, 19, 20, 21, 22, 23];
 
   void _onNavTap(AppTab tab) {
@@ -37,39 +45,42 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.colors;
+    final textStyles = context.textStyles;
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: colors.surface,
       body: SafeArea(
         child: Column(
           children: [
             Expanded(
               child: SingleChildScrollView(
-                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.screenPadding),
+                padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.screenPadding),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const SizedBox(height: 8),
+                    const SizedBox(height: AppSpacing.sm),
                     Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Expanded(
+                        Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text('Aug 18, 2026', style: AppTextStyles.bodySmall),
-                              SizedBox(height: 2),
-                              Text('Today', style: AppTextStyles.h1),
+                              Text('Aug 18, 2026', style: textStyles.bodySmall),
+                              const SizedBox(height: 2),
+                              Text('Today', style: textStyles.h1),
                             ],
                           ),
                         ),
-                        const CircleAvatar(
+                        CircleAvatar(
                           radius: 22,
-                          backgroundColor: AppColors.lavenderContainer,
-                          child: Icon(Icons.person, color: AppColors.primary),
+                          backgroundColor: colors.primaryContainer,
+                          child: Icon(Icons.person, color: colors.primary),
                         ),
                       ],
                     ),
-                    const SizedBox(height: 20),
+                    const SizedBox(height: AppSpacing.xl),
                     _WeekStrip(
                       selectedIndex: _selectedDayIndex,
                       dayNames: _dayNames,
@@ -77,26 +88,30 @@ class _HomeScreenState extends State<HomeScreen> {
                       onSelect: (i) => setState(() => _selectedDayIndex = i),
                     ),
                     const SizedBox(height: 22),
-                    _TaskCard(
+                    const _TaskCard(
                       title: 'Radiation Physics Review',
                       time: '9:00 AM',
-                      description: 'Fundamental properties and x-ray tube components review.',
+                      description:
+                          'Fundamental properties and x-ray tube components review.',
                     ),
                     const SizedBox(height: 14),
-                    _TaskCard(
+                    const _TaskCard(
                       title: 'Infection Control Practice',
                       time: '10:00 AM',
-                      description: 'Calibrate barrier requirements & protective equipment.',
+                      description:
+                          'Calibrate barrier requirements & protective equipment.',
                     ),
                     const SizedBox(height: 14),
                     _MockExamCard(
-                      onTap: () => Navigator.of(context).pushNamed(ExamOverviewScreen.route),
+                      onTap: () => Navigator.of(context)
+                          .pushNamed(ExamOverviewScreen.route),
                     ),
                     const SizedBox(height: 14),
-                    _TaskCard(
+                    const _TaskCard(
                       title: 'Equipment Safety Quiz',
                       time: '1:00 PM',
-                      description: 'Test proper x-ray machine settings and tube angles.',
+                      description:
+                          'Test proper x-ray machine settings and tube angles.',
                     ),
                     const SizedBox(height: 90),
                   ],
@@ -108,9 +123,10 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () {},
-        backgroundColor: AppColors.primary,
+        backgroundColor: colors.primary,
+        foregroundColor: colors.onPrimary,
         shape: const CircleBorder(),
-        child: const Icon(Icons.add, color: Colors.white, size: 28),
+        child: const Icon(Icons.add, size: AppIconSize.large),
       ),
       floatingActionButtonLocation: FloatingActionButtonLocation.startFloat,
       bottomNavigationBar: AppBottomNav(current: AppTab.home, onTap: _onNavTap),
@@ -133,6 +149,7 @@ class _WeekStrip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.colors;
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: List.generate(dayNames.length, (i) {
@@ -141,10 +158,11 @@ class _WeekStrip extends StatelessWidget {
           onTap: () => onSelect(i),
           child: AnimatedContainer(
             duration: const Duration(milliseconds: 150),
-            padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
+            padding: const EdgeInsets.symmetric(
+                vertical: 10, horizontal: AppSpacing.sm),
             decoration: BoxDecoration(
-              color: selected ? AppColors.primary : Colors.transparent,
-              borderRadius: BorderRadius.circular(16),
+              color: selected ? colors.primary : Colors.transparent,
+              borderRadius: BorderRadius.circular(AppRadii.smallIcon),
             ),
             child: Column(
               children: [
@@ -153,16 +171,18 @@ class _WeekStrip extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w600,
-                    color: selected ? Colors.white70 : AppColors.textSecondary,
+                    color: selected
+                        ? colors.onPrimary.withValues(alpha: 0.7)
+                        : colors.onSurfaceVariant,
                   ),
                 ),
-                const SizedBox(height: 6),
+                const SizedBox(height: AppSpacing.xs + 2),
                 Text(
                   '${dayNumbers[i]}',
                   style: TextStyle(
                     fontSize: 15,
                     fontWeight: FontWeight.w800,
-                    color: selected ? Colors.white : AppColors.navy,
+                    color: selected ? colors.onPrimary : colors.onSurface,
                   ),
                 ),
               ],
@@ -179,10 +199,13 @@ class _TaskCard extends StatelessWidget {
   final String time;
   final String description;
 
-  const _TaskCard({required this.title, required this.time, required this.description});
+  const _TaskCard(
+      {required this.title, required this.time, required this.description});
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.colors;
+    final textStyles = context.textStyles;
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -193,16 +216,18 @@ class _TaskCard extends StatelessWidget {
             height: 20,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              border: Border.all(color: AppColors.primary.withOpacity(0.5), width: 1.6),
+              border: Border.all(
+                  color: colors.primary.withValues(alpha: 0.5),
+                  width: AppBorderWidth.thick),
             ),
           ),
         ),
-        const SizedBox(width: 12),
+        const SizedBox(width: AppSpacing.md),
         Expanded(
           child: Container(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(AppSpacing.lg),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: colors.surfaceContainer,
               borderRadius: BorderRadius.circular(AppRadii.card),
             ),
             child: Column(
@@ -212,13 +237,16 @@ class _TaskCard extends StatelessWidget {
                   children: [
                     Expanded(
                       child: Text(title,
-                          style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15, color: AppColors.navy)),
+                          style: TextStyle(
+                              fontWeight: FontWeight.w700,
+                              fontSize: 15,
+                              color: colors.onSurface)),
                     ),
-                    Text(time, style: AppTextStyles.bodySmall),
+                    Text(time, style: textStyles.bodySmall),
                   ],
                 ),
-                const SizedBox(height: 6),
-                Text(description, style: AppTextStyles.bodySmall),
+                const SizedBox(height: AppSpacing.xs + 2),
+                Text(description, style: textStyles.bodySmall),
               ],
             ),
           ),
@@ -234,6 +262,8 @@ class _MockExamCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.colors;
+    final textStyles = context.textStyles;
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -242,21 +272,20 @@ class _MockExamCard extends StatelessWidget {
           child: Container(
             width: 20,
             height: 20,
-            decoration: const BoxDecoration(
+            decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: AppColors.primary,
+              color: colors.primary,
             ),
-            child: const Icon(Icons.circle, color: Colors.white, size: 0),
           ),
         ),
-        const SizedBox(width: 12),
+        const SizedBox(width: AppSpacing.md),
         Expanded(
           child: GestureDetector(
             onTap: onTap,
             child: Container(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.all(AppSpacing.lg),
               decoration: BoxDecoration(
-                color: AppColors.primary,
+                color: colors.primary,
                 borderRadius: BorderRadius.circular(AppRadii.card),
               ),
               child: Column(
@@ -264,20 +293,25 @@ class _MockExamCard extends StatelessWidget {
                 children: [
                   Row(
                     children: [
-                      const Expanded(
+                      Expanded(
                         child: Text('Mock Exam Session',
-                            style: TextStyle(fontWeight: FontWeight.w700, fontSize: 15, color: Colors.white)),
+                            style: TextStyle(
+                                fontWeight: FontWeight.w700,
+                                fontSize: 15,
+                                color: colors.onPrimary)),
                       ),
                       Text('11:00 AM',
-                          style: AppTextStyles.bodySmall.copyWith(color: Colors.white.withOpacity(0.85))),
+                          style: textStyles.bodySmall.copyWith(
+                              color: colors.onPrimary.withValues(alpha: 0.85))),
                     ],
                   ),
-                  const SizedBox(height: 6),
+                  const SizedBox(height: AppSpacing.xs + 2),
                   Text(
                     'Live review: biological effects & dose limitations.',
-                    style: AppTextStyles.bodySmall.copyWith(color: Colors.white.withOpacity(0.9)),
+                    style: textStyles.bodySmall.copyWith(
+                        color: colors.onPrimary.withValues(alpha: 0.9)),
                   ),
-                  const SizedBox(height: 14),
+                  const SizedBox(height: AppSpacing.md + 2),
                   Row(
                     children: [
                       SizedBox(
@@ -289,11 +323,13 @@ class _MockExamCard extends StatelessWidget {
                               left: i * 20.0,
                               child: CircleAvatar(
                                 radius: 14,
-                                backgroundColor: Colors.white,
+                                backgroundColor: colors.onPrimary,
                                 child: CircleAvatar(
                                   radius: 12,
-                                  backgroundColor: AppColors.lavenderContainer,
-                                  child: Icon(Icons.person, size: 14, color: AppColors.primary),
+                                  backgroundColor: colors.primaryContainer,
+                                  child: Icon(Icons.person,
+                                      size: AppIconSize.small - 2,
+                                      color: colors.primary),
                                 ),
                               ),
                             );
@@ -305,10 +341,11 @@ class _MockExamCard extends StatelessWidget {
                         width: 36,
                         height: 36,
                         decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.25),
+                          color: colors.onPrimary.withValues(alpha: 0.25),
                           shape: BoxShape.circle,
                         ),
-                        child: const Icon(Icons.play_arrow_rounded, color: Colors.white, size: 20),
+                        child: Icon(Icons.play_arrow_rounded,
+                            color: colors.onPrimary, size: AppIconSize.medium),
                       ),
                     ],
                   ),

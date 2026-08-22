@@ -5,9 +5,9 @@ import '../theme/app_theme.dart';
 /// Outline radiation trefoil symbol drawn to match the splash screen icon.
 class RadiationIcon extends StatelessWidget {
   final double size;
-  final Color color;
+  final Color? color;
 
-  const RadiationIcon({super.key, this.size = 44, this.color = AppColors.primary});
+  const RadiationIcon({super.key, this.size = 44, this.color});
 
   @override
   Widget build(BuildContext context) {
@@ -15,7 +15,7 @@ class RadiationIcon extends StatelessWidget {
       width: size,
       height: size,
       child: CustomPaint(
-        painter: _RadiationPainter(color: color),
+        painter: _RadiationPainter(color: color ?? context.colors.primary),
       ),
     );
   }
@@ -41,11 +41,18 @@ class _RadiationPainter extends CustomPainter {
 
     for (int i = 0; i < 3; i++) {
       final double angle = -math.pi / 2 + i * (2 * math.pi / 3);
-      final Offset tip = center + Offset(math.cos(angle), math.sin(angle)) * outerR;
-      final Offset a = center + Offset(math.cos(angle - 0.42), math.sin(angle - 0.42)) * innerR;
-      final Offset b = center + Offset(math.cos(angle + 0.42), math.sin(angle + 0.42)) * innerR;
-      final Offset tipLeft = tip + Offset(math.cos(angle + math.pi / 2), math.sin(angle + math.pi / 2)) * (petalSpan * 0.28);
-      final Offset tipRight = tip + Offset(math.cos(angle - math.pi / 2), math.sin(angle - math.pi / 2)) * (petalSpan * 0.28);
+      final Offset tip =
+          center + Offset(math.cos(angle), math.sin(angle)) * outerR;
+      final Offset a = center +
+          Offset(math.cos(angle - 0.42), math.sin(angle - 0.42)) * innerR;
+      final Offset b = center +
+          Offset(math.cos(angle + 0.42), math.sin(angle + 0.42)) * innerR;
+      final Offset tipLeft = tip +
+          Offset(math.cos(angle + math.pi / 2), math.sin(angle + math.pi / 2)) *
+              (petalSpan * 0.28);
+      final Offset tipRight = tip +
+          Offset(math.cos(angle - math.pi / 2), math.sin(angle - math.pi / 2)) *
+              (petalSpan * 0.28);
 
       final Path path = Path()
         ..moveTo(a.dx, a.dy)
@@ -60,5 +67,6 @@ class _RadiationPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant _RadiationPainter oldDelegate) => oldDelegate.color != color;
+  bool shouldRepaint(covariant _RadiationPainter oldDelegate) =>
+      oldDelegate.color != color;
 }

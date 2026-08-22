@@ -22,11 +22,15 @@ class MockExamResultsScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.colors;
+    final semanticColors = context.semanticColors;
+    final textStyles = context.textStyles;
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: colors.surface,
       body: SafeArea(
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.screenPadding),
+          padding:
+              const EdgeInsets.symmetric(horizontal: AppSpacing.screenPadding),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
@@ -35,22 +39,24 @@ class MockExamResultsScreen extends StatelessWidget {
                 children: [
                   CircleIconButton(
                     icon: Icons.chevron_left_rounded,
-                    background: Colors.white,
                     onPressed: () => Navigator.of(context).maybePop(),
                   ),
-                  const SizedBox(width: 12),
-                  const Text('Exam Results', style: AppTextStyles.h3),
+                  const SizedBox(width: AppSpacing.md),
+                  Text('Exam Results', style: textStyles.h3),
                 ],
               ),
-              const SizedBox(height: 20),
+              const SizedBox(height: AppSpacing.xl),
               Center(
-                child: Text('DANB RHS MOCK EXAM', style: AppTextStyles.label),
+                child: Text('DANB RHS MOCK EXAM', style: textStyles.label),
               ),
               const SizedBox(height: 6),
-              const Center(
+              Center(
                 child: Text(
                   '82%',
-                  style: TextStyle(fontSize: 56, fontWeight: FontWeight.w800, color: AppColors.navy),
+                  style: TextStyle(
+                      fontSize: 56,
+                      fontWeight: FontWeight.w800,
+                      color: colors.onSurface),
                 ),
               ),
               const SizedBox(height: 10),
@@ -59,36 +65,40 @@ class MockExamResultsScreen extends StatelessWidget {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 14, vertical: 6),
                       decoration: BoxDecoration(
-                        color: AppColors.successBg,
+                        color: semanticColors.successContainer,
                         borderRadius: BorderRadius.circular(AppRadii.pill),
                       ),
-                      child: const Text('PASSED',
-                          style: TextStyle(color: AppColors.success, fontWeight: FontWeight.w800, fontSize: 12)),
+                      child: Text('PASSED',
+                          style: TextStyle(
+                              color: semanticColors.onSuccessContainer,
+                              fontWeight: FontWeight.w800,
+                              fontSize: 12)),
                     ),
                     const SizedBox(width: 10),
-                    Text('82 / 100', style: AppTextStyles.body),
+                    Text('82 / 100', style: textStyles.body),
                   ],
                 ),
               ),
-              const SizedBox(height: 22),
-              const Divider(color: AppColors.divider),
-              const SizedBox(height: 14),
+              const SizedBox(height: AppSpacing.xl + 2),
+              const Divider(),
+              const SizedBox(height: AppSpacing.md + 2),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text('Time taken: 1h 15m', style: AppTextStyles.bodySmall),
-                  Text('Passing score: 80%', style: AppTextStyles.bodySmall),
+                  Text('Time taken: 1h 15m', style: textStyles.bodySmall),
+                  Text('Passing score: 80%', style: textStyles.bodySmall),
                 ],
               ),
-              const SizedBox(height: 20),
-              Text('SECTION PERFORMANCE', style: AppTextStyles.label),
+              const SizedBox(height: AppSpacing.xl),
+              Text('SECTION PERFORMANCE', style: textStyles.label),
               const SizedBox(height: 4),
               Expanded(
                 child: ListView.separated(
                   itemCount: _sections.length,
-                  separatorBuilder: (_, __) => const Divider(color: AppColors.divider, height: 1),
+                  separatorBuilder: (_, __) => const Divider(height: 1),
                   itemBuilder: (context, i) {
                     final s = _sections[i];
                     final bool strong = s.percent >= 80;
@@ -98,13 +108,18 @@ class MockExamResultsScreen extends StatelessWidget {
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           Text(s.name,
-                              style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15, color: AppColors.navy)),
+                              style: TextStyle(
+                                  fontWeight: FontWeight.w700,
+                                  fontSize: 15,
+                                  color: colors.onSurface)),
                           Text(
                             '${s.percent}%',
                             style: TextStyle(
                               fontWeight: FontWeight.w700,
                               fontSize: 14,
-                              color: strong ? AppColors.success : AppColors.primaryDark,
+                              color: strong
+                                  ? semanticColors.success
+                                  : colors.secondary,
                             ),
                           ),
                         ],
@@ -114,9 +129,11 @@ class MockExamResultsScreen extends StatelessWidget {
                 ),
               ),
               SecondaryButton(label: 'Review Answers', onPressed: () {}),
-              const SizedBox(height: 12),
-              PrimaryButton(label: 'Retake Exam', onPressed: () => Navigator.of(context).maybePop()),
-              const SizedBox(height: 16),
+              const SizedBox(height: AppSpacing.md),
+              PrimaryButton(
+                  label: 'Retake Exam',
+                  onPressed: () => Navigator.of(context).maybePop()),
+              const SizedBox(height: AppSpacing.lg),
             ],
           ),
         ),

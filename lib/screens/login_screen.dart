@@ -28,54 +28,60 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.colors;
+    final textStyles = context.textStyles;
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: colors.surface,
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.screenPadding),
+          padding:
+              const EdgeInsets.symmetric(horizontal: AppSpacing.screenPadding),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const SizedBox(height: 24),
+              const SizedBox(height: AppSpacing.xxl),
               Center(
                 child: CircleIconButton(
                   icon: Icons.close_rounded,
-                  background: AppColors.background,
-                  iconColor: AppColors.primary,
+                  background: colors.surface,
+                  iconColor: colors.primary,
                   onPressed: () => Navigator.of(context).maybePop(),
                 ),
               ),
-              const SizedBox(height: 20),
-              const Text(
+              const SizedBox(height: AppSpacing.xl),
+              Text(
                 'Welcome to PrepMaster',
                 textAlign: TextAlign.center,
-                style: AppTextStyles.h2,
+                style: textStyles.h2,
               ),
               const SizedBox(height: 28),
               _SegmentedToggle(
                 isLogin: _isLogin,
                 onChanged: (v) => setState(() => _isLogin = v),
               ),
-              const SizedBox(height: 24),
+              const SizedBox(height: AppSpacing.xxl),
               const _FieldLabel('Email Address'),
-              const SizedBox(height: 8),
+              const SizedBox(height: AppSpacing.sm),
               _RoundedTextField(
                 controller: _emailController,
                 hintText: 'dental.assistant@danb.org',
               ),
               const SizedBox(height: 18),
               const _FieldLabel('Password'),
-              const SizedBox(height: 8),
+              const SizedBox(height: AppSpacing.sm),
               _RoundedTextField(
                 controller: _passwordController,
                 obscureText: _obscurePassword,
                 suffixIcon: IconButton(
                   icon: Icon(
-                    _obscurePassword ? Icons.visibility_outlined : Icons.visibility_off_outlined,
-                    color: AppColors.textSecondary,
-                    size: 20,
+                    _obscurePassword
+                        ? Icons.visibility_outlined
+                        : Icons.visibility_off_outlined,
+                    color: colors.onSurfaceVariant,
+                    size: AppIconSize.medium,
                   ),
-                  onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
+                  onPressed: () =>
+                      setState(() => _obscurePassword = !_obscurePassword),
                 ),
               ),
               const SizedBox(height: 10),
@@ -84,10 +90,10 @@ class _LoginScreenState extends State<LoginScreen> {
                 child: TextButton(
                   onPressed: () {},
                   style: TextButton.styleFrom(padding: EdgeInsets.zero),
-                  child: const Text(
+                  child: Text(
                     'Forgot Password?',
                     style: TextStyle(
-                      color: AppColors.primaryDark,
+                      color: colors.secondary,
                       fontWeight: FontWeight.w600,
                       fontSize: 13,
                     ),
@@ -101,15 +107,16 @@ class _LoginScreenState extends State<LoginScreen> {
                 onPressed: () => Navigator.of(context)
                     .pushReplacementNamed(HomeScreen.route),
               ),
-              const SizedBox(height: 28),
+              const SizedBox(height: AppSpacing.xxl),
               Row(
                 children: [
-                  const Expanded(child: Divider(color: AppColors.divider)),
+                  const Expanded(child: Divider()),
                   Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 12),
-                    child: Text('or connect with', style: AppTextStyles.bodySmall),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+                    child: Text('or connect with', style: textStyles.bodySmall),
                   ),
-                  const Expanded(child: Divider(color: AppColors.divider)),
+                  const Expanded(child: Divider()),
                 ],
               ),
               const SizedBox(height: 18),
@@ -132,7 +139,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                 ],
               ),
-              const SizedBox(height: 24),
+              const SizedBox(height: AppSpacing.xxl),
             ],
           ),
         ),
@@ -149,8 +156,8 @@ class _FieldLabel extends StatelessWidget {
   Widget build(BuildContext context) {
     return Text(
       text,
-      style: const TextStyle(
-        color: AppColors.navy,
+      style: TextStyle(
+        color: context.colors.onSurface,
         fontWeight: FontWeight.w700,
         fontSize: 13,
       ),
@@ -173,29 +180,17 @@ class _RoundedTextField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Fill color, border and hint style come from the app-wide
+    // InputDecorationTheme (see AppTheme) so every text field stays
+    // consistent; only content that varies per field is passed here.
     return TextField(
       controller: controller,
       obscureText: obscureText,
-      style: const TextStyle(color: AppColors.navy, fontWeight: FontWeight.w600),
+      style: TextStyle(
+          color: context.colors.onSurface, fontWeight: FontWeight.w600),
       decoration: InputDecoration(
         hintText: hintText,
-        hintStyle: const TextStyle(color: AppColors.textMuted, fontWeight: FontWeight.w500),
-        filled: true,
-        fillColor: Colors.white,
         suffixIcon: suffixIcon,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(AppRadii.pill),
-          borderSide: const BorderSide(color: AppColors.inputBorder),
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(AppRadii.pill),
-          borderSide: const BorderSide(color: AppColors.inputBorder),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(AppRadii.pill),
-          borderSide: const BorderSide(color: AppColors.primary, width: 1.6),
-        ),
       ),
     );
   }
@@ -211,37 +206,52 @@ class _SegmentedToggle extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       height: 52,
-      padding: const EdgeInsets.all(4),
+      padding: const EdgeInsets.all(AppSpacing.xs),
       decoration: BoxDecoration(
-        color: AppColors.lavenderContainer,
+        color: context.colors.primaryContainer,
         borderRadius: BorderRadius.circular(AppRadii.pill),
       ),
       child: Row(
         children: [
-          Expanded(child: _segment('Log In', isLogin, () => onChanged(true))),
-          Expanded(child: _segment('Sign Up', !isLogin, () => onChanged(false))),
+          Expanded(
+              child:
+                  _segment(context, 'Log In', isLogin, () => onChanged(true))),
+          Expanded(
+              child: _segment(
+                  context, 'Sign Up', !isLogin, () => onChanged(false))),
         ],
       ),
     );
   }
 
-  Widget _segment(String label, bool selected, VoidCallback onTap) {
+  Widget _segment(
+      BuildContext context, String label, bool selected, VoidCallback onTap) {
+    final colors = context.colors;
     return GestureDetector(
       onTap: onTap,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
         decoration: BoxDecoration(
-          color: selected ? Colors.white : Colors.transparent,
+          color: selected ? colors.surfaceContainer : Colors.transparent,
           borderRadius: BorderRadius.circular(AppRadii.pill),
           boxShadow: selected
-              ? [BoxShadow(color: Colors.black.withOpacity(0.06), blurRadius: 8, offset: const Offset(0, 2))]
+              ? [
+                  // Shadow color is intentionally invariant black across
+                  // themes: it represents physical light occlusion, not a
+                  // surface/text/icon role.
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.06),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ]
               : null,
         ),
         alignment: Alignment.center,
         child: Text(
           label,
           style: TextStyle(
-            color: selected ? AppColors.navy : AppColors.textSecondary,
+            color: selected ? colors.onSurface : colors.onSurfaceVariant,
             fontWeight: FontWeight.w700,
             fontSize: 15,
           ),
@@ -256,25 +266,29 @@ class _SocialButton extends StatelessWidget {
   final String label;
   final VoidCallback onPressed;
 
-  const _SocialButton({required this.icon, required this.label, required this.onPressed});
+  const _SocialButton(
+      {required this.icon, required this.label, required this.onPressed});
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.colors;
     return SizedBox(
       height: 52,
       child: OutlinedButton(
         onPressed: onPressed,
         style: OutlinedButton.styleFrom(
-          backgroundColor: Colors.white,
-          side: const BorderSide(color: AppColors.inputBorder),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadii.pill)),
+          backgroundColor: colors.surfaceContainer,
+          foregroundColor: colors.onSurface,
+          side: BorderSide(color: colors.outline),
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(icon, size: 20, color: AppColors.navy),
-            const SizedBox(width: 8),
-            Text(label, style: const TextStyle(color: AppColors.navy, fontWeight: FontWeight.w600)),
+            Icon(icon, size: AppIconSize.medium, color: colors.onSurface),
+            const SizedBox(width: AppSpacing.sm),
+            Text(label,
+                style: TextStyle(
+                    color: colors.onSurface, fontWeight: FontWeight.w600)),
           ],
         ),
       ),

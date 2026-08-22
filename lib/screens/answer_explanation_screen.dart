@@ -23,11 +23,15 @@ class AnswerExplanationScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.colors;
+    final semanticColors = context.semanticColors;
+    final textStyles = context.textStyles;
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: colors.surface,
       body: SafeArea(
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.screenPadding),
+          padding:
+              const EdgeInsets.symmetric(horizontal: AppSpacing.screenPadding),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
@@ -36,17 +40,17 @@ class AnswerExplanationScreen extends StatelessWidget {
                 children: [
                   CircleIconButton(
                     icon: Icons.chevron_left_rounded,
-                    background: Colors.white,
                     onPressed: () => Navigator.of(context).maybePop(),
                   ),
-                  const SizedBox(width: 12),
-                  const Expanded(
-                    child: Text('Review Question', textAlign: TextAlign.center, style: AppTextStyles.h3),
+                  const SizedBox(width: AppSpacing.md),
+                  Expanded(
+                    child: Text('Review Question',
+                        textAlign: TextAlign.center, style: textStyles.h3),
                   ),
                   CircleIconButton(
                     icon: Icons.bookmark_border_rounded,
-                    background: AppColors.lavenderContainer,
-                    iconColor: AppColors.primary,
+                    background: colors.primaryContainer,
+                    iconColor: colors.primary,
                     onPressed: () {},
                   ),
                 ],
@@ -59,9 +63,9 @@ class AnswerExplanationScreen extends StatelessWidget {
                     children: [
                       Container(
                         width: double.infinity,
-                        padding: const EdgeInsets.all(20),
+                        padding: const EdgeInsets.all(AppSpacing.xl),
                         decoration: BoxDecoration(
-                          color: Colors.white,
+                          color: colors.surfaceContainer,
                           borderRadius: BorderRadius.circular(AppRadii.card),
                         ),
                         child: Column(
@@ -69,20 +73,26 @@ class AnswerExplanationScreen extends StatelessWidget {
                           children: [
                             Text(
                               'RADIATION PROTECTION STANDARDS',
-                              style: AppTextStyles.label.copyWith(color: AppColors.primary),
+                              style: textStyles.label
+                                  .copyWith(color: colors.primary),
                             ),
                             const SizedBox(height: 10),
-                            const Text(
+                            Text(
                               'What is the maximum permissible dose (MPD) of radiation for '
                               'occupational workers per year?',
-                              style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16, color: AppColors.navy, height: 1.3),
+                              style: TextStyle(
+                                  fontWeight: FontWeight.w700,
+                                  fontSize: 16,
+                                  color: colors.onSurface,
+                                  height: 1.3),
                             ),
                           ],
                         ),
                       ),
-                      const SizedBox(height: 16),
+                      const SizedBox(height: AppSpacing.lg),
                       ..._options.map((o) => Padding(
-                            padding: const EdgeInsets.only(bottom: 12),
+                            padding:
+                                const EdgeInsets.only(bottom: AppSpacing.md),
                             child: _ReviewOptionTile(option: o),
                           )),
                       const SizedBox(height: 6),
@@ -90,18 +100,23 @@ class AnswerExplanationScreen extends StatelessWidget {
                         width: double.infinity,
                         padding: const EdgeInsets.all(18),
                         decoration: BoxDecoration(
-                          color: AppColors.successBg,
+                          color: semanticColors.successContainer,
                           borderRadius: BorderRadius.circular(AppRadii.card),
                         ),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Row(
-                              children: const [
-                                Icon(Icons.menu_book_rounded, size: 18, color: AppColors.success),
-                                SizedBox(width: 8),
+                              children: [
+                                Icon(Icons.menu_book_rounded,
+                                    size: AppIconSize.medium - 2,
+                                    color: semanticColors.onSuccessContainer),
+                                const SizedBox(width: AppSpacing.sm),
                                 Text('Correct Explanation',
-                                    style: TextStyle(fontWeight: FontWeight.w700, color: AppColors.success)),
+                                    style: TextStyle(
+                                        fontWeight: FontWeight.w700,
+                                        color:
+                                            semanticColors.onSuccessContainer)),
                               ],
                             ),
                             const SizedBox(height: 10),
@@ -110,7 +125,9 @@ class AnswerExplanationScreen extends StatelessWidget {
                               'Measurements (NCRP), the annual maximum permissible dose (MPD) for '
                               'occupationally exposed dental personnel is 5 rem (or 50 mSv / 0.05 Sv) '
                               'per year to ensure professional safety.',
-                              style: AppTextStyles.body.copyWith(color: AppColors.navy.withOpacity(0.75)),
+                              style: textStyles.body.copyWith(
+                                  color:
+                                      colors.onSurface.withValues(alpha: 0.75)),
                             ),
                           ],
                         ),
@@ -119,13 +136,13 @@ class AnswerExplanationScreen extends StatelessWidget {
                   ),
                 ),
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: AppSpacing.md),
               PrimaryButton(
                 label: 'Next Question',
                 trailingIcon: Icons.arrow_forward_rounded,
                 onPressed: () => Navigator.of(context).maybePop(),
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: AppSpacing.md),
             ],
           ),
         ),
@@ -140,6 +157,9 @@ class _ReviewOptionTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.colors;
+    final semanticColors = context.semanticColors;
+
     late final Color bg;
     late final Color border;
     late final Color badgeBg;
@@ -147,34 +167,42 @@ class _ReviewOptionTile extends StatelessWidget {
 
     switch (option.state) {
       case _OptionState.correct:
-        bg = AppColors.lavenderContainer;
-        border = AppColors.success;
-        badgeBg = AppColors.success;
-        badgeChild = const Icon(Icons.check_rounded, size: 15, color: Colors.white);
+        bg = colors.primaryContainer;
+        border = semanticColors.success;
+        badgeBg = semanticColors.success;
+        badgeChild = Icon(Icons.check_rounded,
+            size: 15, color: semanticColors.onSuccess);
         break;
       case _OptionState.incorrectSelected:
-        bg = AppColors.errorBg;
-        border = AppColors.error;
-        badgeBg = AppColors.error;
+        bg = colors.errorContainer;
+        border = colors.error;
+        badgeBg = colors.error;
         badgeChild = Text(option.letter,
-            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 12));
+            style: TextStyle(
+                color: colors.onError,
+                fontWeight: FontWeight.w700,
+                fontSize: 12));
         break;
       case _OptionState.neutral:
-        bg = Colors.white;
+        bg = colors.surfaceContainer;
         border = Colors.transparent;
-        badgeBg = AppColors.lavenderContainer;
+        badgeBg = colors.primaryContainer;
         badgeChild = Text(option.letter,
-            style: const TextStyle(color: AppColors.textSecondary, fontWeight: FontWeight.w700, fontSize: 12));
+            style: TextStyle(
+                color: colors.onSurfaceVariant,
+                fontWeight: FontWeight.w700,
+                fontSize: 12));
         break;
     }
 
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.lg, vertical: AppSpacing.md + 2),
       decoration: BoxDecoration(
         color: bg,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: border, width: 1.4),
+        borderRadius: BorderRadius.circular(AppRadii.smallIcon),
+        border: Border.all(color: border, width: AppBorderWidth.regular),
       ),
       child: Row(
         children: [
@@ -182,7 +210,10 @@ class _ReviewOptionTile extends StatelessWidget {
           const SizedBox(width: 14),
           Expanded(
             child: Text(option.text,
-                style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14, color: AppColors.navy)),
+                style: TextStyle(
+                    fontWeight: FontWeight.w600,
+                    fontSize: 14,
+                    color: colors.onSurface)),
           ),
         ],
       ),
