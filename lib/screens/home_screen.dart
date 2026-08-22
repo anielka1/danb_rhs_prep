@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
-import '../widgets/app_bottom_nav.dart';
+import '../widgets/app_bottom_navigation.dart';
+import '../widgets/app_card.dart';
+import '../widgets/app_scaffold.dart';
 import 'exam_overview_screen.dart';
 import 'progress_screen.dart';
 import 'profile_settings_screen.dart';
@@ -47,77 +49,66 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     final colors = context.colors;
     final textStyles = context.textStyles;
-    return Scaffold(
-      backgroundColor: colors.surface,
-      body: SafeArea(
+    return AppScaffold(
+      body: SingleChildScrollView(
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.symmetric(
-                    horizontal: AppSpacing.screenPadding),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const SizedBox(height: AppSpacing.sm),
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text('Aug 18, 2026', style: textStyles.bodySmall),
-                              const SizedBox(height: 2),
-                              Text('Today', style: textStyles.h1),
-                            ],
-                          ),
-                        ),
-                        CircleAvatar(
-                          radius: 22,
-                          backgroundColor: colors.primaryContainer,
-                          child: Icon(Icons.person, color: colors.primary),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: AppSpacing.xl),
-                    _WeekStrip(
-                      selectedIndex: _selectedDayIndex,
-                      dayNames: _dayNames,
-                      dayNumbers: _dayNumbers,
-                      onSelect: (i) => setState(() => _selectedDayIndex = i),
-                    ),
-                    const SizedBox(height: 22),
-                    const _TaskCard(
-                      title: 'Radiation Physics Review',
-                      time: '9:00 AM',
-                      description:
-                          'Fundamental properties and x-ray tube components review.',
-                    ),
-                    const SizedBox(height: 14),
-                    const _TaskCard(
-                      title: 'Infection Control Practice',
-                      time: '10:00 AM',
-                      description:
-                          'Calibrate barrier requirements & protective equipment.',
-                    ),
-                    const SizedBox(height: 14),
-                    _MockExamCard(
-                      onTap: () => Navigator.of(context)
-                          .pushNamed(ExamOverviewScreen.route),
-                    ),
-                    const SizedBox(height: 14),
-                    const _TaskCard(
-                      title: 'Equipment Safety Quiz',
-                      time: '1:00 PM',
-                      description:
-                          'Test proper x-ray machine settings and tube angles.',
-                    ),
-                    const SizedBox(height: 90),
-                  ],
+            const SizedBox(height: AppSpacing.sm),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Aug 18, 2026', style: textStyles.bodySmall),
+                      const SizedBox(height: 2),
+                      Text('Today', style: textStyles.h1),
+                    ],
+                  ),
                 ),
-              ),
+                CircleAvatar(
+                  radius: 22,
+                  backgroundColor: colors.primaryContainer,
+                  child: Icon(Icons.person, color: colors.primary),
+                ),
+              ],
             ),
+            const SizedBox(height: AppSpacing.xl),
+            _WeekStrip(
+              selectedIndex: _selectedDayIndex,
+              dayNames: _dayNames,
+              dayNumbers: _dayNumbers,
+              onSelect: (i) => setState(() => _selectedDayIndex = i),
+            ),
+            const SizedBox(height: 22),
+            const _TaskCard(
+              title: 'Radiation Physics Review',
+              time: '9:00 AM',
+              description:
+                  'Fundamental properties and x-ray tube components review.',
+            ),
+            const SizedBox(height: 14),
+            const _TaskCard(
+              title: 'Infection Control Practice',
+              time: '10:00 AM',
+              description:
+                  'Calibrate barrier requirements & protective equipment.',
+            ),
+            const SizedBox(height: 14),
+            _MockExamCard(
+              onTap: () =>
+                  Navigator.of(context).pushNamed(ExamOverviewScreen.route),
+            ),
+            const SizedBox(height: 14),
+            const _TaskCard(
+              title: 'Equipment Safety Quiz',
+              time: '1:00 PM',
+              description:
+                  'Test proper x-ray machine settings and tube angles.',
+            ),
+            const SizedBox(height: 90),
           ],
         ),
       ),
@@ -129,7 +120,8 @@ class _HomeScreenState extends State<HomeScreen> {
         child: const Icon(Icons.add, size: AppIconSize.large),
       ),
       floatingActionButtonLocation: FloatingActionButtonLocation.startFloat,
-      bottomNavigationBar: AppBottomNav(current: AppTab.home, onTap: _onNavTap),
+      bottomNavigationBar:
+          AppBottomNavigation(current: AppTab.home, onTap: _onNavTap),
     );
   }
 }
@@ -154,38 +146,45 @@ class _WeekStrip extends StatelessWidget {
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: List.generate(dayNames.length, (i) {
         final bool selected = i == selectedIndex;
-        return GestureDetector(
-          onTap: () => onSelect(i),
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 150),
-            padding: const EdgeInsets.symmetric(
-                vertical: 10, horizontal: AppSpacing.sm),
-            decoration: BoxDecoration(
-              color: selected ? colors.primary : Colors.transparent,
-              borderRadius: BorderRadius.circular(AppRadii.smallIcon),
-            ),
-            child: Column(
-              children: [
-                Text(
-                  dayNames[i],
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                    color: selected
-                        ? colors.onPrimary.withValues(alpha: 0.7)
-                        : colors.onSurfaceVariant,
-                  ),
+        return Semantics(
+          button: true,
+          selected: selected,
+          label: '${dayNames[i]} ${dayNumbers[i]}',
+          child: GestureDetector(
+            onTap: () => onSelect(i),
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 150),
+              padding: const EdgeInsets.symmetric(
+                  vertical: 10, horizontal: AppSpacing.sm),
+              decoration: BoxDecoration(
+                color: selected ? colors.primary : Colors.transparent,
+                borderRadius: BorderRadius.circular(AppRadii.smallIcon),
+              ),
+              child: ExcludeSemantics(
+                child: Column(
+                  children: [
+                    Text(
+                      dayNames[i],
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: selected
+                            ? colors.onPrimary.withValues(alpha: 0.7)
+                            : colors.onSurfaceVariant,
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.xs + 2),
+                    Text(
+                      '${dayNumbers[i]}',
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w800,
+                        color: selected ? colors.onPrimary : colors.onSurface,
+                      ),
+                    ),
+                  ],
                 ),
-                const SizedBox(height: AppSpacing.xs + 2),
-                Text(
-                  '${dayNumbers[i]}',
-                  style: TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w800,
-                    color: selected ? colors.onPrimary : colors.onSurface,
-                  ),
-                ),
-              ],
+              ),
             ),
           ),
         );
@@ -224,12 +223,7 @@ class _TaskCard extends StatelessWidget {
         ),
         const SizedBox(width: AppSpacing.md),
         Expanded(
-          child: Container(
-            padding: const EdgeInsets.all(AppSpacing.lg),
-            decoration: BoxDecoration(
-              color: colors.surfaceContainer,
-              borderRadius: BorderRadius.circular(AppRadii.card),
-            ),
+          child: AppCard(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -272,85 +266,78 @@ class _MockExamCard extends StatelessWidget {
           child: Container(
             width: 20,
             height: 20,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: colors.primary,
-            ),
+            decoration:
+                BoxDecoration(shape: BoxShape.circle, color: colors.primary),
           ),
         ),
         const SizedBox(width: AppSpacing.md),
         Expanded(
-          child: GestureDetector(
+          child: AppCard(
+            backgroundColor: colors.primary,
             onTap: onTap,
-            child: Container(
-              padding: const EdgeInsets.all(AppSpacing.lg),
-              decoration: BoxDecoration(
-                color: colors.primary,
-                borderRadius: BorderRadius.circular(AppRadii.card),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Text('Mock Exam Session',
-                            style: TextStyle(
-                                fontWeight: FontWeight.w700,
-                                fontSize: 15,
-                                color: colors.onPrimary)),
-                      ),
-                      Text('11:00 AM',
-                          style: textStyles.bodySmall.copyWith(
-                              color: colors.onPrimary.withValues(alpha: 0.85))),
-                    ],
-                  ),
-                  const SizedBox(height: AppSpacing.xs + 2),
-                  Text(
-                    'Live review: biological effects & dose limitations.',
-                    style: textStyles.bodySmall.copyWith(
-                        color: colors.onPrimary.withValues(alpha: 0.9)),
-                  ),
-                  const SizedBox(height: AppSpacing.md + 2),
-                  Row(
-                    children: [
-                      SizedBox(
-                        width: 84,
-                        height: 28,
-                        child: Stack(
-                          children: List.generate(4, (i) {
-                            return Positioned(
-                              left: i * 20.0,
+            semanticLabel: 'Mock Exam Session, 11:00 AM',
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text('Mock Exam Session',
+                          style: TextStyle(
+                              fontWeight: FontWeight.w700,
+                              fontSize: 15,
+                              color: colors.onPrimary)),
+                    ),
+                    Text('11:00 AM',
+                        style: textStyles.bodySmall.copyWith(
+                            color: colors.onPrimary.withValues(alpha: 0.85))),
+                  ],
+                ),
+                const SizedBox(height: AppSpacing.xs + 2),
+                Text(
+                  'Live review: biological effects & dose limitations.',
+                  style: textStyles.bodySmall
+                      .copyWith(color: colors.onPrimary.withValues(alpha: 0.9)),
+                ),
+                const SizedBox(height: AppSpacing.md + 2),
+                Row(
+                  children: [
+                    SizedBox(
+                      width: 84,
+                      height: 28,
+                      child: Stack(
+                        children: List.generate(4, (i) {
+                          return Positioned(
+                            left: i * 20.0,
+                            child: CircleAvatar(
+                              radius: 14,
+                              backgroundColor: colors.onPrimary,
                               child: CircleAvatar(
-                                radius: 14,
-                                backgroundColor: colors.onPrimary,
-                                child: CircleAvatar(
-                                  radius: 12,
-                                  backgroundColor: colors.primaryContainer,
-                                  child: Icon(Icons.person,
-                                      size: AppIconSize.small - 2,
-                                      color: colors.primary),
-                                ),
+                                radius: 12,
+                                backgroundColor: colors.primaryContainer,
+                                child: Icon(Icons.person,
+                                    size: AppIconSize.small - 2,
+                                    color: colors.primary),
                               ),
-                            );
-                          }),
-                        ),
+                            ),
+                          );
+                        }),
                       ),
-                      const Spacer(),
-                      Container(
-                        width: 36,
-                        height: 36,
-                        decoration: BoxDecoration(
-                          color: colors.onPrimary.withValues(alpha: 0.25),
-                          shape: BoxShape.circle,
-                        ),
-                        child: Icon(Icons.play_arrow_rounded,
-                            color: colors.onPrimary, size: AppIconSize.medium),
+                    ),
+                    const Spacer(),
+                    Container(
+                      width: 36,
+                      height: 36,
+                      decoration: BoxDecoration(
+                        color: colors.onPrimary.withValues(alpha: 0.25),
+                        shape: BoxShape.circle,
                       ),
-                    ],
-                  ),
-                ],
-              ),
+                      child: Icon(Icons.play_arrow_rounded,
+                          color: colors.onPrimary, size: AppIconSize.medium),
+                    ),
+                  ],
+                ),
+              ],
             ),
           ),
         ),
