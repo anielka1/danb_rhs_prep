@@ -4,11 +4,11 @@ import '../theme/app_theme.dart';
 enum AppTab { home, practice, stats, profile }
 
 /// Bottom tab bar shown on Home, Progress (Stats) and Profile screens.
-class AppBottomNav extends StatelessWidget {
+class AppBottomNavigation extends StatelessWidget {
   final AppTab current;
   final ValueChanged<AppTab>? onTap;
 
-  const AppBottomNav({super.key, required this.current, this.onTap});
+  const AppBottomNavigation({super.key, required this.current, this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -18,9 +18,7 @@ class AppBottomNav extends StatelessWidget {
         padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
         decoration: BoxDecoration(
           color: context.colors.surface,
-          border: Border(
-            top: BorderSide(color: context.colors.outlineVariant),
-          ),
+          border: Border(top: BorderSide(color: context.colors.outlineVariant)),
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceAround,
@@ -74,34 +72,39 @@ class _NavItem extends StatelessWidget {
     final Color color = selected
         ? context.colors.onSurface
         : context.semanticColors.mutedForeground;
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(AppRadii.smallIcon),
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(
-          minWidth: AppTapTarget.minInteractive,
-          minHeight: AppTapTarget.minInteractive,
-        ),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(
-            horizontal: AppSpacing.md,
-            vertical: AppSpacing.xs,
+    return Semantics(
+      button: true,
+      selected: selected,
+      label: label,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(AppRadii.smallIcon),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(
+            minWidth: AppTapTarget.minInteractive,
+            minHeight: AppTapTarget.minInteractive,
           ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(icon, color: color, size: AppIconSize.standard),
-              const SizedBox(height: AppSpacing.xs),
-              Text(
-                label,
-                style: TextStyle(
-                  fontSize: 11,
-                  fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
-                  color: color,
-                ),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.md, vertical: AppSpacing.xs),
+            child: ExcludeSemantics(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(icon, color: color, size: AppIconSize.standard),
+                  const SizedBox(height: AppSpacing.xs),
+                  Text(
+                    label,
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+                      color: color,
+                    ),
+                  ),
+                ],
               ),
-            ],
+            ),
           ),
         ),
       ),

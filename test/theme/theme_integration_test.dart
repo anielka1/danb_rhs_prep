@@ -3,7 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:danb_rhs_prep/main.dart';
 import 'package:danb_rhs_prep/theme/app_theme.dart';
-import 'package:danb_rhs_prep/widgets/app_bottom_nav.dart';
+import 'package:danb_rhs_prep/widgets/app_bottom_navigation.dart';
 import 'package:danb_rhs_prep/widgets/primary_button.dart';
 
 void main() {
@@ -80,14 +80,14 @@ void main() {
     });
 
     testWidgets(
-        'AppBottomNav selected item uses onSurface, unselected uses mutedForeground',
+        'AppBottomNavigation selected item uses onSurface, unselected uses mutedForeground',
         (tester) async {
       for (final theme in [AppTheme.lightTheme, AppTheme.darkTheme]) {
         await tester.pumpWidget(
           MaterialApp(
             theme: theme,
             home: const Scaffold(
-                bottomNavigationBar: AppBottomNav(current: AppTab.home)),
+                bottomNavigationBar: AppBottomNavigation(current: AppTab.home)),
           ),
         );
         await tester.pumpAndSettle();
@@ -123,18 +123,18 @@ void main() {
     });
 
     testWidgets(
-        'AppBottomNav items each meet the 44x44 minimum interactive size',
+        'AppBottomNavigation items each meet the 44x44 minimum interactive size',
         (tester) async {
       await tester.pumpWidget(
         MaterialApp(
           theme: AppTheme.lightTheme,
           home: const Scaffold(
-              bottomNavigationBar: AppBottomNav(current: AppTab.home)),
+              bottomNavigationBar: AppBottomNavigation(current: AppTab.home)),
         ),
       );
 
       final inkWells = find.descendant(
-          of: find.byType(AppBottomNav), matching: find.byType(InkWell));
+          of: find.byType(AppBottomNavigation), matching: find.byType(InkWell));
       expect(inkWells, findsNWidgets(4));
       for (final element in inkWells.evaluate()) {
         final Size size = tester.getSize(find.byWidget(element.widget));

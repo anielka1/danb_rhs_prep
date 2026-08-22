@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
+import '../widgets/app_scaffold.dart';
 import '../widgets/primary_button.dart';
 import 'home_screen.dart';
 
@@ -30,118 +31,113 @@ class _LoginScreenState extends State<LoginScreen> {
   Widget build(BuildContext context) {
     final colors = context.colors;
     final textStyles = context.textStyles;
-    return Scaffold(
-      backgroundColor: colors.surface,
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding:
-              const EdgeInsets.symmetric(horizontal: AppSpacing.screenPadding),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              const SizedBox(height: AppSpacing.xxl),
-              Center(
-                child: CircleIconButton(
-                  icon: Icons.close_rounded,
-                  background: colors.surface,
-                  iconColor: colors.primary,
-                  onPressed: () => Navigator.of(context).maybePop(),
+    return AppScaffold(
+      body: SingleChildScrollView(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const SizedBox(height: AppSpacing.xxl),
+            Center(
+              child: CircleIconButton(
+                icon: Icons.close_rounded,
+                background: colors.surface,
+                iconColor: colors.primary,
+                onPressed: () => Navigator.of(context).maybePop(),
+              ),
+            ),
+            const SizedBox(height: AppSpacing.xl),
+            Text(
+              'Welcome to PrepMaster',
+              textAlign: TextAlign.center,
+              style: textStyles.h2,
+            ),
+            const SizedBox(height: 28),
+            _SegmentedToggle(
+              isLogin: _isLogin,
+              onChanged: (v) => setState(() => _isLogin = v),
+            ),
+            const SizedBox(height: AppSpacing.xxl),
+            const _FieldLabel('Email Address'),
+            const SizedBox(height: AppSpacing.sm),
+            _RoundedTextField(
+              controller: _emailController,
+              hintText: 'dental.assistant@danb.org',
+            ),
+            const SizedBox(height: 18),
+            const _FieldLabel('Password'),
+            const SizedBox(height: AppSpacing.sm),
+            _RoundedTextField(
+              controller: _passwordController,
+              obscureText: _obscurePassword,
+              suffixIcon: IconButton(
+                icon: Icon(
+                  _obscurePassword
+                      ? Icons.visibility_outlined
+                      : Icons.visibility_off_outlined,
+                  color: colors.onSurfaceVariant,
+                  size: AppIconSize.medium,
                 ),
+                onPressed: () =>
+                    setState(() => _obscurePassword = !_obscurePassword),
               ),
-              const SizedBox(height: AppSpacing.xl),
-              Text(
-                'Welcome to PrepMaster',
-                textAlign: TextAlign.center,
-                style: textStyles.h2,
-              ),
-              const SizedBox(height: 28),
-              _SegmentedToggle(
-                isLogin: _isLogin,
-                onChanged: (v) => setState(() => _isLogin = v),
-              ),
-              const SizedBox(height: AppSpacing.xxl),
-              const _FieldLabel('Email Address'),
-              const SizedBox(height: AppSpacing.sm),
-              _RoundedTextField(
-                controller: _emailController,
-                hintText: 'dental.assistant@danb.org',
-              ),
-              const SizedBox(height: 18),
-              const _FieldLabel('Password'),
-              const SizedBox(height: AppSpacing.sm),
-              _RoundedTextField(
-                controller: _passwordController,
-                obscureText: _obscurePassword,
-                suffixIcon: IconButton(
-                  icon: Icon(
-                    _obscurePassword
-                        ? Icons.visibility_outlined
-                        : Icons.visibility_off_outlined,
-                    color: colors.onSurfaceVariant,
-                    size: AppIconSize.medium,
-                  ),
-                  onPressed: () =>
-                      setState(() => _obscurePassword = !_obscurePassword),
-                ),
-              ),
-              const SizedBox(height: 10),
-              Align(
-                alignment: Alignment.centerRight,
-                child: TextButton(
-                  onPressed: () {},
-                  style: TextButton.styleFrom(padding: EdgeInsets.zero),
-                  child: Text(
-                    'Forgot Password?',
-                    style: TextStyle(
-                      color: colors.secondary,
-                      fontWeight: FontWeight.w600,
-                      fontSize: 13,
-                    ),
+            ),
+            const SizedBox(height: 10),
+            Align(
+              alignment: Alignment.centerRight,
+              child: TextButton(
+                onPressed: () {},
+                style: TextButton.styleFrom(padding: EdgeInsets.zero),
+                child: Text(
+                  'Forgot Password?',
+                  style: TextStyle(
+                    color: colors.secondary,
+                    fontWeight: FontWeight.w600,
+                    fontSize: 13,
                   ),
                 ),
               ),
-              const SizedBox(height: 18),
-              PrimaryButton(
-                label: 'Get Started',
-                trailingIcon: Icons.arrow_forward_rounded,
-                onPressed: () => Navigator.of(context)
-                    .pushReplacementNamed(HomeScreen.route),
-              ),
-              const SizedBox(height: AppSpacing.xxl),
-              Row(
-                children: [
-                  const Expanded(child: Divider()),
-                  Padding(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: AppSpacing.md),
-                    child: Text('or connect with', style: textStyles.bodySmall),
+            ),
+            const SizedBox(height: 18),
+            PrimaryButton(
+              label: 'Get Started',
+              trailingIcon: Icons.arrow_forward_rounded,
+              onPressed: () =>
+                  Navigator.of(context).pushReplacementNamed(HomeScreen.route),
+            ),
+            const SizedBox(height: AppSpacing.xxl),
+            Row(
+              children: [
+                const Expanded(child: Divider()),
+                Padding(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+                  child: Text('or connect with', style: textStyles.bodySmall),
+                ),
+                const Expanded(child: Divider()),
+              ],
+            ),
+            const SizedBox(height: 18),
+            Row(
+              children: [
+                Expanded(
+                  child: _SocialButton(
+                    icon: Icons.g_mobiledata_rounded,
+                    label: 'Google',
+                    onPressed: () {},
                   ),
-                  const Expanded(child: Divider()),
-                ],
-              ),
-              const SizedBox(height: 18),
-              Row(
-                children: [
-                  Expanded(
-                    child: _SocialButton(
-                      icon: Icons.g_mobiledata_rounded,
-                      label: 'Google',
-                      onPressed: () {},
-                    ),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: _SocialButton(
+                    icon: Icons.apple_rounded,
+                    label: 'Apple',
+                    onPressed: () {},
                   ),
-                  const SizedBox(width: 14),
-                  Expanded(
-                    child: _SocialButton(
-                      icon: Icons.apple_rounded,
-                      label: 'Apple',
-                      onPressed: () {},
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: AppSpacing.xxl),
-            ],
-          ),
+                ),
+              ],
+            ),
+            const SizedBox(height: AppSpacing.xxl),
+          ],
         ),
       ),
     );

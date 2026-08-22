@@ -235,21 +235,21 @@ Returning users should go directly from app bootstrap to the main app.
 
 ## 2.2 Reusable components
 
-- [ ] `AppScaffold`
-- [ ] `PrimaryButton`
-- [ ] `SecondaryButton`
-- [ ] `AppCard`
-- [ ] `AppBottomNavigation`
-- [ ] `ReadinessRing`
-- [ ] `ReadinessCard`
-- [ ] `AnswerOptionTile`
-- [ ] `DomainProgressRow`
-- [ ] `ProgressBar`
-- [ ] `EmptyState`
-- [ ] `ErrorState`
-- [ ] `LoadingState`
-- [ ] `SubscriptionProductCard`
-- [ ] Adaptive alert/dialog wrapper using Cupertino behavior where beneficial.
+- [x] `AppScaffold`
+- [x] `PrimaryButton`
+- [x] `SecondaryButton`
+- [x] `AppCard`
+- [x] `AppBottomNavigation`
+- [x] `ReadinessRing`
+- [x] `ReadinessCard`
+- [x] `AnswerOptionTile`
+- [x] `DomainProgressRow`
+- [x] `ProgressBar`
+- [x] `EmptyState`
+- [x] `ErrorState`
+- [x] `LoadingState`
+- [x] `SubscriptionProductCard`
+- [x] Adaptive alert/dialog wrapper using Cupertino behavior where beneficial.
 
 ## 2.3 Navigation shell
 

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
-import '../widgets/app_bottom_nav.dart';
+import '../widgets/app_bottom_navigation.dart';
+import '../widgets/app_scaffold.dart';
 import 'home_screen.dart';
 import 'exam_overview_screen.dart';
 import 'progress_screen.dart';
@@ -40,112 +41,107 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen> {
   Widget build(BuildContext context) {
     final colors = context.colors;
     final textStyles = context.textStyles;
-    return Scaffold(
-      backgroundColor: colors.surface,
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding:
-              const EdgeInsets.symmetric(horizontal: AppSpacing.screenPadding),
-          child: Column(
-            children: [
-              const SizedBox(height: AppSpacing.lg),
-              Container(
-                width: 92,
-                height: 92,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: colors.primaryContainer,
-                  border: Border.all(color: colors.surfaceContainer, width: 4),
-                  boxShadow: [
-                    // Shadow color is intentionally invariant black across
-                    // themes: it represents physical light occlusion, not a
-                    // surface/text/icon role.
-                    BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.05),
-                        blurRadius: 10,
-                        offset: const Offset(0, 4)),
-                  ],
-                ),
-                child: Icon(Icons.person, size: 44, color: colors.primary),
-              ),
-              const SizedBox(height: AppSpacing.md + 2),
-              Text('Sarah Jenkins', style: textStyles.h2),
-              const SizedBox(height: AppSpacing.xs),
-              Text('sarah.j@dentalprep.com', style: textStyles.bodySmall),
-              const SizedBox(height: AppSpacing.xl + 2),
-              const Row(
-                children: [
-                  Expanded(child: _ProfileStat(value: '#342', label: 'Rank')),
-                  _VerticalDivider(),
-                  Expanded(
-                      child: _ProfileStat(value: '48h', label: 'Study Hours')),
-                  _VerticalDivider(),
-                  Expanded(
-                      child: _ProfileStat(value: '12', label: 'Exams Taken')),
+    return AppScaffold(
+      body: SingleChildScrollView(
+        child: Column(
+          children: [
+            const SizedBox(height: AppSpacing.lg),
+            Container(
+              width: 92,
+              height: 92,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: colors.primaryContainer,
+                border: Border.all(color: colors.surfaceContainer, width: 4),
+                boxShadow: [
+                  // Shadow color is intentionally invariant black across
+                  // themes: it represents physical light occlusion, not a
+                  // surface/text/icon role.
+                  BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.05),
+                      blurRadius: 10,
+                      offset: const Offset(0, 4)),
                 ],
               ),
-              const SizedBox(height: AppSpacing.xxl + 2),
-              const Divider(),
-              const SizedBox(height: AppSpacing.xl),
-              Align(
-                alignment: Alignment.centerLeft,
-                child: Text('APP PREFERENCES', style: textStyles.label),
-              ),
-              const SizedBox(height: AppSpacing.md),
-              _PreferenceRow(
-                title: 'Push Notifications',
-                subtitle: 'Daily alerts & streak reminders',
-                value: _pushNotifications,
-                onChanged: (v) => setState(() => _pushNotifications = v),
-              ),
-              _PreferenceRow(
-                title: 'Dark Mode',
-                subtitle: 'Switch to dark appearance',
-                value: _darkMode,
-                onChanged: (v) => setState(() => _darkMode = v),
-              ),
-              _PreferenceRow(
-                title: 'Sound Effects',
-                subtitle: 'Play sound on question feedback',
-                value: _soundEffects,
-                onChanged: (v) => setState(() => _soundEffects = v),
-              ),
-              const SizedBox(height: 10),
-              const Divider(),
-              const SizedBox(height: AppSpacing.xl - 2),
-              Align(
-                alignment: Alignment.centerLeft,
-                child: Text('ACCOUNT', style: textStyles.label),
-              ),
-              const SizedBox(height: AppSpacing.sm),
-              _AccountRow(title: 'Edit Profile', onTap: () {}),
-              _AccountRow(title: 'Change Password', onTap: () {}),
-              const SizedBox(height: AppSpacing.xl + 2),
-              SizedBox(
-                width: double.infinity,
-                height: 54,
-                child: OutlinedButton(
-                  onPressed: () => Navigator.of(context)
-                      .pushNamedAndRemoveUntil(LoginScreen.route, (r) => false),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: colors.error,
-                    side: BorderSide(
-                        color: colors.error, width: AppBorderWidth.regular),
-                  ),
-                  child: Text('Sign Out',
-                      style: TextStyle(
-                          color: colors.error,
-                          fontWeight: FontWeight.w700,
-                          fontSize: 15)),
+              child: Icon(Icons.person, size: 44, color: colors.primary),
+            ),
+            const SizedBox(height: AppSpacing.md + 2),
+            Text('Sarah Jenkins', style: textStyles.h2),
+            const SizedBox(height: AppSpacing.xs),
+            Text('sarah.j@dentalprep.com', style: textStyles.bodySmall),
+            const SizedBox(height: AppSpacing.xl + 2),
+            const Row(
+              children: [
+                Expanded(child: _ProfileStat(value: '#342', label: 'Rank')),
+                _VerticalDivider(),
+                Expanded(
+                    child: _ProfileStat(value: '48h', label: 'Study Hours')),
+                _VerticalDivider(),
+                Expanded(
+                    child: _ProfileStat(value: '12', label: 'Exams Taken')),
+              ],
+            ),
+            const SizedBox(height: AppSpacing.xxl + 2),
+            const Divider(),
+            const SizedBox(height: AppSpacing.xl),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: Text('APP PREFERENCES', style: textStyles.label),
+            ),
+            const SizedBox(height: AppSpacing.md),
+            _PreferenceRow(
+              title: 'Push Notifications',
+              subtitle: 'Daily alerts & streak reminders',
+              value: _pushNotifications,
+              onChanged: (v) => setState(() => _pushNotifications = v),
+            ),
+            _PreferenceRow(
+              title: 'Dark Mode',
+              subtitle: 'Switch to dark appearance',
+              value: _darkMode,
+              onChanged: (v) => setState(() => _darkMode = v),
+            ),
+            _PreferenceRow(
+              title: 'Sound Effects',
+              subtitle: 'Play sound on question feedback',
+              value: _soundEffects,
+              onChanged: (v) => setState(() => _soundEffects = v),
+            ),
+            const SizedBox(height: 10),
+            const Divider(),
+            const SizedBox(height: AppSpacing.xl - 2),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: Text('ACCOUNT', style: textStyles.label),
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            _AccountRow(title: 'Edit Profile', onTap: () {}),
+            _AccountRow(title: 'Change Password', onTap: () {}),
+            const SizedBox(height: AppSpacing.xl + 2),
+            SizedBox(
+              width: double.infinity,
+              height: 54,
+              child: OutlinedButton(
+                onPressed: () => Navigator.of(context)
+                    .pushNamedAndRemoveUntil(LoginScreen.route, (r) => false),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: colors.error,
+                  side: BorderSide(
+                      color: colors.error, width: AppBorderWidth.regular),
                 ),
+                child: Text('Sign Out',
+                    style: TextStyle(
+                        color: colors.error,
+                        fontWeight: FontWeight.w700,
+                        fontSize: 15)),
               ),
-              const SizedBox(height: 90),
-            ],
-          ),
+            ),
+            const SizedBox(height: 90),
+          ],
         ),
       ),
       bottomNavigationBar:
-          AppBottomNav(current: AppTab.profile, onTap: _onNavTap),
+          AppBottomNavigation(current: AppTab.profile, onTap: _onNavTap),
     );
   }
 }
