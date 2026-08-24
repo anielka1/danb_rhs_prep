@@ -1,39 +1,143 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
 
+import '../bootstrap/app_bootstrap_service.dart';
+import '../bootstrap/bootstrap_session_scope.dart';
+import '../domain/repositories/bootstrap_local_store.dart';
+import '../services/analytics_service.dart';
 import '../theme/app_theme.dart';
+import '../widgets/error_state.dart';
 import '../widgets/radiation_icon.dart';
 import 'main_shell.dart';
+import 'onboarding_entry_screen.dart';
 
+/// The app's entry screen: drives real startup ([AppBootstrapService])
+/// instead of a fixed delay, showing the same splash artwork while that
+/// runs. Its lifetime is determined entirely by bootstrap completion —
+/// there is no timer here of any kind.
 class SplashScreen extends StatefulWidget {
   static const String route = '/';
 
-  const SplashScreen({super.key});
+  const SplashScreen({
+    super.key,
+    required this.bootstrapService,
+    required this.localStore,
+    this.analytics = const NoOpAnalyticsService(),
+    this.onReady,
+  });
+
+  final AppBootstrapService bootstrapService;
+  final BootstrapLocalStore localStore;
+  final AnalyticsService analytics;
+
+  /// Called once, synchronously, with a [BootstrapReady] result before
+  /// this screen navigates away — the app shell's hook for applying
+  /// bootstrap-loaded state (e.g. the persisted theme preference) that
+  /// lives above this screen and isn't part of the navigated-to route
+  /// itself.
+  final ValueChanged<BootstrapReady>? onReady;
 
   @override
   State<SplashScreen> createState() => _SplashScreenState();
 }
 
 class _SplashScreenState extends State<SplashScreen> {
-  Timer? _navigationTimer;
+  /// Non-null only for a failure — a successful result navigates away
+  /// immediately rather than ever being stored here. `null` is also the
+  /// initial ("still loading") state.
+  BootstrapResult? _failure;
+
+  /// Guards against a second concurrent bootstrap run — from a retry tap
+  /// while one is already in flight, not from normal `initState`, which
+  /// runs exactly once per State lifetime regardless.
+  bool _running = false;
 
   @override
   void initState() {
     super.initState();
+    _running = true;
+    widget.bootstrapService.initialize().then(_handleResult);
+  }
 
-    _navigationTimer = Timer(const Duration(seconds: 2), () {
-      if (mounted) {
-        Navigator.of(context).pushReplacementNamed(MainShell.route);
-      }
-    });
+  void _handleResult(BootstrapResult result) {
+    // The tree (or just this State) may have been disposed while
+    // bootstrap was in flight — touching `context`/`setState` after that
+    // would throw, so this must be the first thing checked.
+    if (!mounted) return;
+    _running = false;
+
+    switch (result) {
+      case BootstrapReady():
+        _navigateAfterReady(result);
+      case BootstrapContentFailure():
+      case BootstrapUnexpectedFailure():
+        setState(() => _failure = result);
+    }
+  }
+
+  void _navigateAfterReady(BootstrapReady ready) {
+    widget.onReady?.call(ready);
+
+    final Widget screen = ready.onboardingComplete
+        ? MainShell(analytics: widget.analytics)
+        : OnboardingEntryScreen(
+            localStore: widget.localStore,
+            analytics: widget.analytics,
+          );
+    final String routeName = ready.onboardingComplete
+        ? MainShell.route
+        : OnboardingEntryScreen.route;
+
+    // pushReplacement, not push: the splash route must not remain
+    // reachable by navigating back to it once startup has resolved.
+    // An explicit MaterialPageRoute (rather than pushReplacementNamed)
+    // is what lets this carry the just-computed BootstrapReady snapshot
+    // to the next screen; RouteSettings(name:) on it is what keeps
+    // AnalyticsNavigatorObserver's named-route reporting working exactly
+    // as it did before this screen owned real logic.
+    Navigator.of(context).pushReplacement(
+      MaterialPageRoute(
+        settings: RouteSettings(name: routeName),
+        builder: (_) => BootstrapSessionScope(snapshot: ready, child: screen),
+      ),
+    );
+  }
+
+  void _retry() {
+    // Duplicate taps while a retry is already loading must not start a
+    // second concurrent bootstrap run.
+    if (_running) return;
+    _running = true;
+    setState(() => _failure = null);
+    widget.bootstrapService.retry().then(_handleResult);
   }
 
   @override
-  void dispose() {
-    _navigationTimer?.cancel();
-    super.dispose();
+  Widget build(BuildContext context) {
+    final BootstrapResult? failure = _failure;
+    if (failure != null) {
+      return Scaffold(
+        body: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.all(AppSpacing.xl),
+            child: ErrorState(
+              title: 'Study content could not be loaded',
+              message: 'Please try again. If this keeps happening, '
+                  'reinstalling the app may help.',
+              onRetry: _retry,
+            ),
+          ),
+        ),
+      );
+    }
+    return const _SplashVisual();
   }
+}
+
+/// The splash artwork itself — unchanged from before this screen owned
+/// real bootstrap logic, and shown for exactly as long as that logic
+/// takes, whether that's shorter or longer than the old fixed delay.
+class _SplashVisual extends StatelessWidget {
+  const _SplashVisual();
 
   @override
   Widget build(BuildContext context) {
@@ -92,6 +196,20 @@ class _SplashScreenState extends State<SplashScreen> {
                     style: textStyles.body.copyWith(
                       color: colors.secondary,
                       fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(height: 28),
+                  // A loading announcement for assistive tech — the
+                  // splash artwork above it is otherwise silent/decorative.
+                  Semantics(
+                    liveRegion: true,
+                    label: 'Loading',
+                    child: const ExcludeSemantics(
+                      child: SizedBox(
+                        width: 28,
+                        height: 28,
+                        child: CircularProgressIndicator(strokeWidth: 2.5),
+                      ),
                     ),
                   ),
                 ],
