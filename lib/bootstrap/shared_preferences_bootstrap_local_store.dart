@@ -3,6 +3,8 @@ import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../domain/models/entitlement.dart';
+import '../domain/models/exam_date_precision.dart';
+import '../domain/models/exam_date_selection.dart';
 import '../domain/models/readiness_snapshot.dart';
 import '../domain/models/readiness_band.dart';
 import '../domain/models/user_profile.dart';
@@ -32,6 +34,7 @@ class SharedPreferencesBootstrapLocalStore implements BootstrapLocalStore {
   static const String _themePreferenceKey = 'bootstrap.theme_preference';
   static const String _entitlementKey = 'bootstrap.entitlement_snapshot';
   static const String _readinessKeyPrefix = 'bootstrap.readiness_snapshot.';
+  static const String _examDateSelectionKey = 'bootstrap.exam_date_selection';
 
   @override
   Future<String?> readSelectedExamId() async {
@@ -183,5 +186,79 @@ class SharedPreferencesBootstrapLocalStore implements BootstrapLocalStore {
       '$_readinessKeyPrefix${snapshot.examId}',
       jsonEncode(json),
     );
+  }
+
+  /// The only `version` value this store currently knows how to read —
+  /// an entry written with any other value (including a missing one) is
+  /// treated as unsupported/corrupt, not guessed at or migrated.
+  static const int _examDateSelectionVersion = 1;
+
+  @override
+  Future<ExamDateSelection?> readExamDateSelection() async {
+    final String? raw = await _preferences.getString(_examDateSelectionKey);
+    if (raw == null) return null;
+    try {
+      final json = jsonDecode(raw);
+      if (json is! Map<String, Object?>) return null;
+
+      if (json['version'] != _examDateSelectionVersion) return null;
+
+      final String? precisionName = json['precision'] as String?;
+      if (precisionName == null) return null;
+      final ExamDatePrecision precision = ExamDatePrecision.values
+          .firstWhere((value) => value.name == precisionName);
+
+      final Object? yearRaw = json['year'];
+      final Object? monthRaw = json['month'];
+      final Object? dayRaw = json['day'];
+
+      DateTime? date;
+      if (yearRaw != null || monthRaw != null || dayRaw != null) {
+        // Any date component present means all three must be present and
+        // must be genuine integers, not doubles/strings/etc — a
+        // partially- or wrongly-typed date is corrupt, not usable.
+        if (yearRaw is! int || monthRaw is! int || dayRaw is! int) {
+          return null;
+        }
+        final DateTime constructed = DateTime(yearRaw, monthRaw, dayRaw);
+        // Dart's DateTime constructor silently *normalizes* impossible
+        // calendar components — DateTime(2026, 2, 31) becomes a March
+        // date — instead of throwing. Round-tripping the constructed
+        // value's own fields back against what was stored is how that
+        // silent normalization is caught: any mismatch means the stored
+        // date never described a real calendar day, and is rejected
+        // rather than rolled forward to whatever Dart normalized it to.
+        if (constructed.year != yearRaw ||
+            constructed.month != monthRaw ||
+            constructed.day != dayRaw) {
+          return null;
+        }
+        date = constructed;
+      }
+
+      // The [ExamDateSelection] constructor itself enforces "date is
+      // non-null exactly when precision is exact/approximate" — an
+      // unscheduled value with a date, or an exact/approximate value
+      // missing one, throws here and is caught below, discarded exactly
+      // like any other corrupt entry rather than fabricated as valid.
+      return ExamDateSelection(precision: precision, date: date);
+    } on Object {
+      // A corrupt, unrecognized, or structurally-invalid cache entry is
+      // discarded, not treated as valid user data.
+      return null;
+    }
+  }
+
+  @override
+  Future<void> writeExamDateSelection(ExamDateSelection selection) {
+    final DateTime? date = selection.date;
+    final json = <String, Object?>{
+      'version': _examDateSelectionVersion,
+      'precision': selection.precision.name,
+      'year': date?.year,
+      'month': date?.month,
+      'day': date?.day,
+    };
+    return _preferences.setString(_examDateSelectionKey, jsonEncode(json));
   }
 }

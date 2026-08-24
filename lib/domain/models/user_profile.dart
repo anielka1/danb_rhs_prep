@@ -1,5 +1,4 @@
-/// How firmly the user has scheduled their exam.
-enum ExamDatePrecision { exact, approximate, notScheduled }
+import 'exam_date_precision.dart';
 
 /// Self-reported study experience captured during onboarding.
 enum ExperienceLevel { justStarting, studyingAlready, retakingExam }

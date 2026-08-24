@@ -1,6 +1,8 @@
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:danb_rhs_prep/domain/models/entitlement.dart';
+import 'package:danb_rhs_prep/domain/models/exam_date_precision.dart';
+import 'package:danb_rhs_prep/domain/models/exam_date_selection.dart';
 import 'package:danb_rhs_prep/domain/models/readiness_band.dart';
 import 'package:danb_rhs_prep/domain/models/readiness_snapshot.dart';
 import 'package:danb_rhs_prep/domain/models/user_profile.dart';
@@ -15,6 +17,7 @@ void main() {
     expect(await store.readThemePreference(), isNull);
     expect(await store.readEntitlementSnapshot(), isNull);
     expect(await store.readLatestReadinessSnapshot('danb_rhs'), isNull);
+    expect(await store.readExamDateSelection(), isNull);
   });
 
   test('constructor arguments pre-seed each key synchronously', () async {
@@ -34,12 +37,15 @@ void main() {
     );
     final entitlement =
         Entitlement.free(lastVerifiedAt: DateTime.utc(2026, 1, 1));
+    final examDateSelection = ExamDateSelection(
+        precision: ExamDatePrecision.exact, date: DateTime(2026, 3, 1));
     final store = InMemoryBootstrapLocalStore(
       selectedExamId: 'danb_rhs',
       onboardingComplete: true,
       themePreference: ThemePreference.dark,
       entitlement: entitlement,
       readinessSnapshot: snapshot,
+      examDateSelection: examDateSelection,
     );
 
     expect(await store.readSelectedExamId(), 'danb_rhs');
@@ -47,6 +53,7 @@ void main() {
     expect(await store.readThemePreference(), ThemePreference.dark);
     expect(await store.readEntitlementSnapshot(), entitlement);
     expect(await store.readLatestReadinessSnapshot('danb_rhs'), snapshot);
+    expect(await store.readExamDateSelection(), examDateSelection);
   });
 
   test('each key round-trips independently through write then read', () async {
@@ -77,12 +84,16 @@ void main() {
       uniqueQuestionsAnswered: 80,
     );
     await store.writeLatestReadinessSnapshot(snapshot);
+    final examDateSelection = ExamDateSelection(
+        precision: ExamDatePrecision.approximate, date: DateTime(2026, 4, 1));
+    await store.writeExamDateSelection(examDateSelection);
 
     expect(await store.readSelectedExamId(), 'danb_rhs');
     expect(await store.readOnboardingComplete(), isTrue);
     expect(await store.readThemePreference(), ThemePreference.light);
     expect(await store.readEntitlementSnapshot(), entitlement);
     expect(await store.readLatestReadinessSnapshot('danb_rhs'), snapshot);
+    expect(await store.readExamDateSelection(), examDateSelection);
   });
 
   test('readiness snapshots are keyed per exam ID', () async {

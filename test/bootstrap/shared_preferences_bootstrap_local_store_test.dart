@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:shared_preferences_platform_interface/in_memory_shared_preferences_async.dart';
@@ -5,6 +7,8 @@ import 'package:shared_preferences_platform_interface/shared_preferences_async_p
 
 import 'package:danb_rhs_prep/bootstrap/shared_preferences_bootstrap_local_store.dart';
 import 'package:danb_rhs_prep/domain/models/entitlement.dart';
+import 'package:danb_rhs_prep/domain/models/exam_date_precision.dart';
+import 'package:danb_rhs_prep/domain/models/exam_date_selection.dart';
 import 'package:danb_rhs_prep/domain/models/readiness_band.dart';
 import 'package:danb_rhs_prep/domain/models/readiness_snapshot.dart';
 import 'package:danb_rhs_prep/domain/models/user_profile.dart';
@@ -27,6 +31,7 @@ void main() {
     expect(await store.readThemePreference(), isNull);
     expect(await store.readEntitlementSnapshot(), isNull);
     expect(await store.readLatestReadinessSnapshot('danb_rhs'), isNull);
+    expect(await store.readExamDateSelection(), isNull);
   });
 
   test(
@@ -124,6 +129,285 @@ void main() {
       expect(await store.readEntitlementSnapshot(), isNull);
       expect(await store.readSelectedExamId(), 'danb_rhs');
       expect(await store.readOnboardingComplete(), isTrue);
+    });
+  });
+
+  group('exam date selection', () {
+    test('an exact selection round-trips through a fresh store instance',
+        () async {
+      final writer = SharedPreferencesBootstrapLocalStore();
+      final selection = ExamDateSelection(
+          precision: ExamDatePrecision.exact, date: DateTime(2026, 3, 12));
+      await writer.writeExamDateSelection(selection);
+
+      final reader = SharedPreferencesBootstrapLocalStore();
+      expect(await reader.readExamDateSelection(), selection);
+    });
+
+    test(
+        'an approximate selection round-trips through a fresh store '
+        'instance', () async {
+      final writer = SharedPreferencesBootstrapLocalStore();
+      final selection = ExamDateSelection(
+          precision: ExamDatePrecision.approximate, date: DateTime(2026, 6, 1));
+      await writer.writeExamDateSelection(selection);
+
+      final reader = SharedPreferencesBootstrapLocalStore();
+      expect(await reader.readExamDateSelection(), selection);
+    });
+
+    test(
+        'an unscheduled selection round-trips through a fresh store '
+        'instance', () async {
+      final writer = SharedPreferencesBootstrapLocalStore();
+      final selection =
+          ExamDateSelection(precision: ExamDatePrecision.notScheduled);
+      await writer.writeExamDateSelection(selection);
+
+      final reader = SharedPreferencesBootstrapLocalStore();
+      expect(await reader.readExamDateSelection(), selection);
+    });
+
+    test(
+        'precision and date are stored together as one atomic JSON value, '
+        'not unrelated keys that could drift apart', () async {
+      final store = SharedPreferencesBootstrapLocalStore();
+      await store.writeExamDateSelection(ExamDateSelection(
+          precision: ExamDatePrecision.exact, date: DateTime(2026, 3, 12)));
+
+      final SharedPreferencesAsync raw = SharedPreferencesAsync();
+      final String? stored =
+          await raw.getString('bootstrap.exam_date_selection');
+      expect(stored, isNotNull);
+      final Map<String, Object?> json =
+          jsonDecode(stored!) as Map<String, Object?>;
+      expect(json['precision'], 'exact');
+      expect(json['year'], 2026);
+      expect(json['month'], 3);
+      expect(json['day'], 12);
+    });
+
+    group(
+        'a corrupt or structurally-invalid cache entry is discarded, not '
+        'fabricated as valid data', () {
+      test('unparsable JSON returns null, not a throw', () async {
+        final SharedPreferencesAsync raw = SharedPreferencesAsync();
+        await raw.setString('bootstrap.exam_date_selection', 'not json{{{');
+        final store = SharedPreferencesBootstrapLocalStore();
+
+        expect(await store.readExamDateSelection(), isNull);
+      });
+
+      test('an unknown precision value returns null', () async {
+        final SharedPreferencesAsync raw = SharedPreferencesAsync();
+        await raw.setString(
+          'bootstrap.exam_date_selection',
+          jsonEncode({
+            'version': 1,
+            'precision': 'someday',
+            'year': 2026,
+            'month': 3,
+            'day': 12
+          }),
+        );
+        final store = SharedPreferencesBootstrapLocalStore();
+
+        expect(await store.readExamDateSelection(), isNull);
+      });
+
+      test(
+          'an exact/approximate entry missing the required date returns '
+          'null', () async {
+        final SharedPreferencesAsync raw = SharedPreferencesAsync();
+        await raw.setString(
+          'bootstrap.exam_date_selection',
+          jsonEncode({'version': 1, 'precision': 'exact'}),
+        );
+        final store = SharedPreferencesBootstrapLocalStore();
+
+        expect(await store.readExamDateSelection(), isNull);
+      });
+
+      test('an unscheduled entry that also carries a date is rejected',
+          () async {
+        final SharedPreferencesAsync raw = SharedPreferencesAsync();
+        await raw.setString(
+          'bootstrap.exam_date_selection',
+          jsonEncode({
+            'version': 1,
+            'precision': 'notScheduled',
+            'year': 2026,
+            'month': 3,
+            'day': 12,
+          }),
+        );
+        final store = SharedPreferencesBootstrapLocalStore();
+
+        expect(await store.readExamDateSelection(), isNull);
+      });
+
+      test('a corrupt exam-date entry does not affect any other key', () async {
+        final SharedPreferencesAsync raw = SharedPreferencesAsync();
+        await raw.setString('bootstrap.exam_date_selection', 'garbage');
+        final store = SharedPreferencesBootstrapLocalStore();
+        await store.writeSelectedExamId('danb_rhs');
+        await store.writeOnboardingComplete(true);
+
+        expect(await store.readExamDateSelection(), isNull);
+        expect(await store.readSelectedExamId(), 'danb_rhs');
+        expect(await store.readOnboardingComplete(), isTrue);
+      });
+    });
+
+    group(
+        'an impossible calendar date is rejected, not silently normalized '
+        'forward (Dart\'s DateTime constructor would otherwise roll '
+        'DateTime(2026, 2, 31) forward into March)', () {
+      Future<void> expectRejected(Map<String, Object?> json) async {
+        final SharedPreferencesAsync raw = SharedPreferencesAsync();
+        await raw.setString('bootstrap.exam_date_selection', jsonEncode(json));
+        final store = SharedPreferencesBootstrapLocalStore();
+
+        expect(await store.readExamDateSelection(), isNull);
+      }
+
+      test('month 0 is rejected', () async {
+        await expectRejected({
+          'version': 1,
+          'precision': 'exact',
+          'year': 2026,
+          'month': 0,
+          'day': 15,
+        });
+      });
+
+      test('month 13 is rejected', () async {
+        await expectRejected({
+          'version': 1,
+          'precision': 'exact',
+          'year': 2026,
+          'month': 13,
+          'day': 15,
+        });
+      });
+
+      test('day 0 is rejected', () async {
+        await expectRejected({
+          'version': 1,
+          'precision': 'exact',
+          'year': 2026,
+          'month': 3,
+          'day': 0,
+        });
+      });
+
+      test('day 32 is rejected', () async {
+        await expectRejected({
+          'version': 1,
+          'precision': 'exact',
+          'year': 2026,
+          'month': 1,
+          'day': 32,
+        });
+      });
+
+      test('April 31 (April only has 30 days) is rejected', () async {
+        await expectRejected({
+          'version': 1,
+          'precision': 'exact',
+          'year': 2026,
+          'month': 4,
+          'day': 31,
+        });
+      });
+
+      test('February 30 is rejected', () async {
+        await expectRejected({
+          'version': 1,
+          'precision': 'exact',
+          'year': 2026,
+          'month': 2,
+          'day': 30,
+        });
+      });
+
+      test('February 29 in a non-leap year (2026) is rejected', () async {
+        await expectRejected({
+          'version': 1,
+          'precision': 'exact',
+          'year': 2026,
+          'month': 2,
+          'day': 29,
+        });
+      });
+
+      test('February 29 in a leap year (2028) succeeds', () async {
+        final SharedPreferencesAsync raw = SharedPreferencesAsync();
+        await raw.setString(
+          'bootstrap.exam_date_selection',
+          jsonEncode({
+            'version': 1,
+            'precision': 'exact',
+            'year': 2028,
+            'month': 2,
+            'day': 29,
+          }),
+        );
+        final store = SharedPreferencesBootstrapLocalStore();
+
+        final ExamDateSelection? result = await store.readExamDateSelection();
+        expect(result, isNotNull);
+        expect(result!.date, DateTime(2028, 2, 29));
+      });
+
+      test('a non-integer (double) year is rejected', () async {
+        await expectRejected({
+          'version': 1,
+          'precision': 'exact',
+          'year': 2026.5,
+          'month': 3,
+          'day': 15,
+        });
+      });
+
+      test('a non-integer (string) month is rejected', () async {
+        await expectRejected({
+          'version': 1,
+          'precision': 'exact',
+          'year': 2026,
+          'month': 'march',
+          'day': 15,
+        });
+      });
+
+      test('a non-integer (string) day is rejected', () async {
+        await expectRejected({
+          'version': 1,
+          'precision': 'exact',
+          'year': 2026,
+          'month': 3,
+          'day': '15',
+        });
+      });
+
+      test('an unsupported JSON version is rejected', () async {
+        await expectRejected({
+          'version': 2,
+          'precision': 'exact',
+          'year': 2026,
+          'month': 3,
+          'day': 15,
+        });
+      });
+
+      test('a missing JSON version is rejected', () async {
+        await expectRejected({
+          'precision': 'exact',
+          'year': 2026,
+          'month': 3,
+          'day': 15,
+        });
+      });
     });
   });
 }

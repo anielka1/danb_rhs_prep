@@ -1,4 +1,5 @@
 import '../models/entitlement.dart';
+import '../models/exam_date_selection.dart';
 import '../models/readiness_snapshot.dart';
 import '../models/user_profile.dart';
 
@@ -43,4 +44,12 @@ abstract interface class BootstrapLocalStore {
   /// readiness algorithm) — always absent today.
   Future<ReadinessSnapshot?> readLatestReadinessSnapshot(String examId);
   Future<void> writeLatestReadinessSnapshot(ReadinessSnapshot snapshot);
+
+  /// The onboarding exam-date screen's saved selection, if any — stored
+  /// and read as one atomic value (precision and date together), never
+  /// as separate keys that could drift apart from each other or be read
+  /// half-written. Like every other key here: a missing or corrupt value
+  /// returns null rather than throwing, and never affects any other key.
+  Future<ExamDateSelection?> readExamDateSelection();
+  Future<void> writeExamDateSelection(ExamDateSelection selection);
 }

@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:danb_rhs_prep/domain/models/exam_date_precision.dart';
 import 'package:danb_rhs_prep/domain/models/user_profile.dart';
 
 void main() {
