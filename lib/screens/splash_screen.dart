@@ -8,7 +8,7 @@ import '../theme/app_theme.dart';
 import '../widgets/error_state.dart';
 import '../widgets/radiation_icon.dart';
 import 'main_shell.dart';
-import 'onboarding_entry_screen.dart';
+import 'welcome_screen.dart';
 
 /// The app's entry screen: drives real startup ([AppBootstrapService])
 /// instead of a fixed delay, showing the same splash artwork while that
@@ -79,13 +79,12 @@ class _SplashScreenState extends State<SplashScreen> {
 
     final Widget screen = ready.onboardingComplete
         ? MainShell(analytics: widget.analytics)
-        : OnboardingEntryScreen(
+        : WelcomeScreen(
             localStore: widget.localStore,
             analytics: widget.analytics,
           );
-    final String routeName = ready.onboardingComplete
-        ? MainShell.route
-        : OnboardingEntryScreen.route;
+    final String routeName =
+        ready.onboardingComplete ? MainShell.route : WelcomeScreen.route;
 
     // pushReplacement, not push: the splash route must not remain
     // reachable by navigating back to it once startup has resolved.

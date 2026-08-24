@@ -514,11 +514,41 @@ Returning users should go directly from app bootstrap to the main app.
 
 ## 3.2 Welcome screen
 
-- [ ] Display `DANB RHS Exam Prep` from `ExamConfig`.
-- [ ] Add headline: `Know when you're ready to pass.`
-- [ ] Add short, calm supporting copy.
-- [ ] Add one primary CTA: `Start Preparing`.
-- [ ] Start `onboarding_started` analytics event through the internal interface.
+- [x] Display `DANB RHS Exam Prep` from `ExamConfig`. (New
+  `lib/screens/welcome_screen.dart` reads `BootstrapSessionScope.of(context)`
+  and renders `contentPackage.exam.name` — never a hardcoded screen
+  string. `content.json`'s `exam.name` already held the correct value, so
+  no content-data change was needed. Evidence:
+  `test/screens/welcome_screen_test.dart`'s "exam identity" group,
+  including a test that injects a *different* fake exam name and asserts
+  that (not the real DANB string) is what renders — proving there is no
+  hardcoded fallback.)
+- [x] Add headline: `Know when you're ready to pass.` (Exact string,
+  asserted verbatim in `welcome_screen_test.dart`.)
+- [x] Add short, calm supporting copy. (Exact string — `Build confidence
+  with focused practice, clear explanations, and progress you can
+  understand.` — asserted verbatim.)
+- [x] Add one primary CTA: `Start Preparing`. (Exactly one `PrimaryButton`
+  in the default state; no Login/Sign Up/Skip/secondary CTA anywhere in
+  that state. Activation is guarded against duplicate taps and reuses
+  Section 3.1's recoverable save-failure behavior — including its
+  "Continue for this session" secondary action — only once a save has
+  actually failed, not as a second CTA on the welcome content itself.)
+- [x] Start `onboarding_started` analytics event through the internal
+  interface. (`AnalyticsService` gained a plain-Dart `trackEvent(String
+  name, {Map<String, Object?> properties})` method — no SDK added, no
+  Flutter/vendor import. Fires exactly once per CTA activation (not on
+  render, not again on Retry), carries only the non-sensitive `exam_id`
+  sourced from `ExamConfig`, and a throwing analytics implementation
+  never blocks onboarding. Evidence: `welcome_screen_test.dart`'s "CTA
+  behavior and analytics" group.)
+
+Replaces Section 3.1's minimal `OnboardingEntryScreen` (deleted, along
+with its test file) with the production `WelcomeScreen` above — routed
+at `/welcome`, wired from `SplashScreen`/`main.dart`. The
+onboarding-completion bridge (persist `onboardingComplete`, enter
+`MainShell`) is unchanged from Section 3.1 and stays explicitly
+documented in code as temporary, pending Section 3.3's real next step.
 
 ## 3.3 Exam-date screen
 

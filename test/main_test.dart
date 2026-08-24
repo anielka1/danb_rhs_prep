@@ -13,7 +13,7 @@ import 'package:danb_rhs_prep/features/content/domain/content_package.dart';
 import 'package:danb_rhs_prep/main.dart';
 import 'package:danb_rhs_prep/screens/login_screen.dart';
 import 'package:danb_rhs_prep/screens/main_shell.dart';
-import 'package:danb_rhs_prep/screens/onboarding_entry_screen.dart';
+import 'package:danb_rhs_prep/screens/welcome_screen.dart';
 import 'package:danb_rhs_prep/screens/splash_screen.dart';
 import 'package:danb_rhs_prep/services/analytics_service.dart';
 import 'package:danb_rhs_prep/services/fakes/fake_analytics_service.dart';
@@ -126,14 +126,14 @@ void main() {
   });
 
   group('successful bootstrap routing', () {
-    testWidgets('onboarding incomplete routes to the onboarding screen',
+    testWidgets('onboarding incomplete routes to the welcome screen',
         (tester) async {
       final boot = _freshBootstrap();
       await tester.pumpWidget(_appWith(boot));
       boot.contentLoader.complete();
       await tester.pumpAndSettle();
 
-      expect(find.byType(OnboardingEntryScreen), findsOneWidget);
+      expect(find.byType(WelcomeScreen), findsOneWidget);
       expect(find.byType(MainShell), findsNothing);
       expect(find.byType(LoginScreen), findsNothing);
     });
@@ -149,7 +149,7 @@ void main() {
       expect(find.byType(MainShell), findsOneWidget);
       expect(find.text('Today'), findsOneWidget);
       expect(find.byType(LoginScreen), findsNothing);
-      expect(find.byType(OnboardingEntryScreen), findsNothing);
+      expect(find.byType(WelcomeScreen), findsNothing);
     });
 
     testWidgets(
@@ -163,6 +163,19 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(analytics.screenViews.where((id) => id == 'home').length, 1);
+    });
+
+    testWidgets(
+        'onboarding incomplete: the welcome route is reported for '
+        'route analytics, preserving AnalyticsNavigatorObserver behavior',
+        (tester) async {
+      final boot = _freshBootstrap();
+      final analytics = FakeAnalyticsService();
+      await tester.pumpWidget(_appWith(boot, analytics: analytics));
+      boot.contentLoader.complete();
+      await tester.pumpAndSettle();
+
+      expect(analytics.screenViews.contains(WelcomeScreen.route), isTrue);
     });
 
     testWidgets('replacement navigation prevents returning to the splash',
@@ -191,7 +204,7 @@ void main() {
       expect(find.text('Study content could not be loaded'), findsOneWidget);
       expect(find.text('Try Again'), findsOneWidget);
       expect(find.byType(MainShell), findsNothing);
-      expect(find.byType(OnboardingEntryScreen), findsNothing);
+      expect(find.byType(WelcomeScreen), findsNothing);
 
       // The failure's raw detail must never reach the UI.
       expect(find.textContaining('FormatException'), findsNothing);
@@ -218,7 +231,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('Study content could not be loaded'), findsNothing);
-      expect(find.byType(OnboardingEntryScreen), findsOneWidget);
+      expect(find.byType(WelcomeScreen), findsOneWidget);
     });
 
     testWidgets('repeated taps while retrying do not start concurrent runs',
@@ -328,6 +341,11 @@ void main() {
 class _ThrowingAnalyticsService implements AnalyticsService {
   @override
   void trackScreenView(String screenId) {
+    throw StateError('analytics backend unavailable');
+  }
+
+  @override
+  void trackEvent(String name, {Map<String, Object?> properties = const {}}) {
     throw StateError('analytics backend unavailable');
   }
 }
