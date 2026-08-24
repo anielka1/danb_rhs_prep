@@ -506,4 +506,11 @@ extension AppThemeContext on BuildContext {
       Theme.of(this).extension<AppSemanticColors>()!;
 
   AppTextStyles get textStyles => AppTextStyles.of(this);
+
+  /// Respects the system Reduce Motion preference: returns [Duration.zero]
+  /// when [MediaQuery.disableAnimations] is set, so an `AnimatedContainer`
+  /// (or similar implicit animation) jumps straight to its end state
+  /// instead of animating, and [duration] unchanged otherwise.
+  Duration reducedMotionDuration(Duration duration) =>
+      MediaQuery.of(this).disableAnimations ? Duration.zero : duration;
 }

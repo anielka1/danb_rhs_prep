@@ -60,7 +60,11 @@ class AnswerOptionTile extends StatelessWidget {
         background = colors.surfaceContainer;
         border = Colors.transparent;
         badgeBackground = colors.primaryContainer;
-        badgeForeground = colors.onSurfaceVariant;
+        // onSurfaceVariant only reaches ~4.44:1 against primaryContainer
+        // (just under the 4.5:1 text floor); onPrimaryContainer is the
+        // color role Material actually defines for text on top of
+        // primaryContainer, and clears 4.5:1 in both themes.
+        badgeForeground = colors.onPrimaryContainer;
         stateDescription = 'not selected';
         break;
       case AnswerOptionState.selected:
@@ -92,6 +96,13 @@ class AnswerOptionTile extends StatelessWidget {
         background = colors.surfaceContainer;
         border = Colors.transparent;
         badgeBackground = colors.primaryContainer;
+        // Deliberately muted below the 4.5:1 text floor (light ~4.30:1,
+        // dark ~3.07:1) to visually read as inactive, matching this
+        // state's meaning ("not available"); still clears 3:1, and the
+        // letter itself remains available via the option's Semantics
+        // label regardless of visual contrast. Same accepted-exception
+        // reasoning as a disabled button (WCAG 1.4.3 exempts inactive UI
+        // components from the contrast requirement).
         badgeForeground = semanticColors.mutedForeground;
         stateDescription = 'not available';
         break;

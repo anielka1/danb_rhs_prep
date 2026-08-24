@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../services/theme_mode_controller.dart';
 import '../theme/app_theme.dart';
 import '../widgets/app_scaffold.dart';
 import '../widgets/primary_button.dart';
@@ -6,16 +7,24 @@ import 'login_screen.dart';
 
 class ProfileSettingsScreen extends StatefulWidget {
   static const String route = 'settings';
-  const ProfileSettingsScreen({super.key});
+
+  const ProfileSettingsScreen({super.key, required this.themeModeController});
+
+  /// App-level controller (owned by `DanbRhsPrepApp`, not this screen) —
+  /// reading/writing it here, rather than holding a local bool, is what
+  /// makes the whole app update immediately and the choice survive
+  /// navigating away from and back to this screen.
+  final ThemeModeController themeModeController;
 
   @override
   State<ProfileSettingsScreen> createState() => _ProfileSettingsScreenState();
 }
 
 class _ProfileSettingsScreenState extends State<ProfileSettingsScreen> {
-  bool _pushNotifications = true;
-  bool _darkMode = false;
-  bool _soundEffects = true;
+  // Push Notifications and Sound Effects have no backing feature yet (no
+  // notification-permission/scheduling system, no audio system) — the
+  // switches are disabled rather than wired to a setState-only bool that
+  // would otherwise look like it's toggling a real feature.
 
   @override
   Widget build(BuildContext context) {
@@ -52,19 +61,23 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen> {
               child: Icon(Icons.person, size: 44, color: colors.primary),
             ),
             const SizedBox(height: AppSpacing.md + 2),
-            Text('Sarah Jenkins', style: textStyles.h2),
+            // No account/auth system exists yet — an honest "no profile
+            // loaded" placeholder, not a fabricated name, stands in until
+            // sign-in is real. See docs/PROTOTYPE_CONTENT_AUDIT.md.
+            Text('Guest', style: textStyles.h2),
             const SizedBox(height: AppSpacing.xs),
-            Text('sarah.j@dentalprep.com', style: textStyles.bodySmall),
+            Text('Not signed in', style: textStyles.bodySmall),
             const SizedBox(height: AppSpacing.xl + 2),
+            // Same reasoning: no progress/attempt data exists yet, so the
+            // stat values are an honest "not available" placeholder
+            // rather than fabricated numbers.
             const Row(
               children: [
-                Expanded(child: _ProfileStat(value: '#342', label: 'Rank')),
+                Expanded(child: _ProfileStat(value: '—', label: 'Rank')),
                 _VerticalDivider(),
-                Expanded(
-                    child: _ProfileStat(value: '48h', label: 'Study Hours')),
+                Expanded(child: _ProfileStat(value: '—', label: 'Study Hours')),
                 _VerticalDivider(),
-                Expanded(
-                    child: _ProfileStat(value: '12', label: 'Exams Taken')),
+                Expanded(child: _ProfileStat(value: '—', label: 'Exams Taken')),
               ],
             ),
             const SizedBox(height: AppSpacing.xxl + 2),
@@ -75,23 +88,61 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen> {
               child: Text('APP PREFERENCES', style: textStyles.label),
             ),
             const SizedBox(height: AppSpacing.md),
-            _PreferenceRow(
+            // Disabled: no notification-permission/scheduling system
+            // exists yet to back this preference.
+            const _PreferenceRow(
               title: 'Push Notifications',
               subtitle: 'Daily alerts & streak reminders',
-              value: _pushNotifications,
-              onChanged: (v) => setState(() => _pushNotifications = v),
+              value: true,
+              onChanged: null,
             ),
-            _PreferenceRow(
-              title: 'Dark Mode',
-              subtitle: 'Switch to dark appearance',
-              value: _darkMode,
-              onChanged: (v) => setState(() => _darkMode = v),
+            const SizedBox(height: 10),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: Text('Appearance',
+                  style: TextStyle(
+                      fontWeight: FontWeight.w700,
+                      fontSize: 15,
+                      color: colors.onSurface)),
             ),
-            _PreferenceRow(
+            const SizedBox(height: 2),
+            Text('System, Light, or Dark', style: textStyles.bodySmall),
+            const SizedBox(height: AppSpacing.sm),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: ValueListenableBuilder<ThemeMode>(
+                valueListenable: widget.themeModeController,
+                builder: (context, mode, _) {
+                  return SegmentedButton<ThemeMode>(
+                    segments: const [
+                      ButtonSegment(
+                          value: ThemeMode.system,
+                          label: Text('System'),
+                          icon: Icon(Icons.brightness_auto_rounded)),
+                      ButtonSegment(
+                          value: ThemeMode.light,
+                          label: Text('Light'),
+                          icon: Icon(Icons.light_mode_rounded)),
+                      ButtonSegment(
+                          value: ThemeMode.dark,
+                          label: Text('Dark'),
+                          icon: Icon(Icons.dark_mode_rounded)),
+                    ],
+                    selected: {mode},
+                    onSelectionChanged: (selection) =>
+                        widget.themeModeController.value = selection.first,
+                  );
+                },
+              ),
+            ),
+            const SizedBox(height: 10),
+            // Disabled: no audio system exists yet to back this
+            // preference.
+            const _PreferenceRow(
               title: 'Sound Effects',
               subtitle: 'Play sound on question feedback',
-              value: _soundEffects,
-              onChanged: (v) => setState(() => _soundEffects = v),
+              value: true,
+              onChanged: null,
             ),
             const SizedBox(height: 10),
             const Divider(),
@@ -101,12 +152,16 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen> {
               child: Text('ACCOUNT', style: textStyles.label),
             ),
             const SizedBox(height: AppSpacing.sm),
-            _AccountRow(title: 'Edit Profile', onTap: () {}),
-            _AccountRow(title: 'Change Password', onTap: () {}),
+            // Disabled: both require an authentication/account backend
+            // that doesn't exist yet.
+            const _AccountRow(title: 'Edit Profile', onTap: null),
+            const _AccountRow(title: 'Change Password', onTap: null),
             const SizedBox(height: AppSpacing.xl + 2),
-            SizedBox(
-              width: double.infinity,
-              height: 54,
+            ConstrainedBox(
+              // A minimum, not an exact height, so the label can wrap and
+              // grow at large Dynamic Type sizes instead of being clipped.
+              constraints: const BoxConstraints(
+                  minWidth: double.infinity, minHeight: 54),
               child: OutlinedButton(
                 onPressed: () => Navigator.of(context)
                     .pushNamedAndRemoveUntil(LoginScreen.route, (r) => false),
@@ -137,16 +192,24 @@ class _ProfileStat extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        Text(value,
-            style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.w800,
-                color: context.colors.secondary)),
-        const SizedBox(height: AppSpacing.xs),
-        Text(label, style: context.textStyles.bodySmall),
-      ],
+    // "—" reads clearly on its own visually, but a screen reader hearing
+    // just "dash, Rank" wouldn't — one merged, honest announcement
+    // instead of two disconnected ones.
+    return Semantics(
+      label: value == '—' ? '$label: not yet available' : '$label: $value',
+      child: ExcludeSemantics(
+        child: Column(
+          children: [
+            Text(value,
+                style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w800,
+                    color: context.colors.secondary)),
+            const SizedBox(height: AppSpacing.xs),
+            Text(label, style: context.textStyles.bodySmall),
+          ],
+        ),
+      ),
     );
   }
 }
@@ -165,7 +228,12 @@ class _PreferenceRow extends StatelessWidget {
   final String title;
   final String subtitle;
   final bool value;
-  final ValueChanged<bool> onChanged;
+
+  /// Null renders (and behaves as) a disabled row: no tap/toggle action
+  /// reaches assistive services, and the text is visually muted to match
+  /// — this is how a not-yet-implemented preference is represented,
+  /// rather than a switch that toggles a bool nothing else reads.
+  final ValueChanged<bool>? onChanged;
 
   const _PreferenceRow({
     required this.title,
@@ -177,6 +245,9 @@ class _PreferenceRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = context.colors;
+    final bool enabled = onChanged != null;
+    final Color textColor =
+        enabled ? colors.onSurface : context.semanticColors.mutedForeground;
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 10),
       child: Row(
@@ -189,9 +260,11 @@ class _PreferenceRow extends StatelessWidget {
                     style: TextStyle(
                         fontWeight: FontWeight.w700,
                         fontSize: 15,
-                        color: colors.onSurface)),
+                        color: textColor)),
                 const SizedBox(height: 2),
-                Text(subtitle, style: context.textStyles.bodySmall),
+                Text(subtitle,
+                    style: context.textStyles.bodySmall
+                        .copyWith(color: enabled ? null : textColor)),
               ],
             ),
           ),
@@ -207,12 +280,18 @@ class _PreferenceRow extends StatelessWidget {
 
 class _AccountRow extends StatelessWidget {
   final String title;
-  final VoidCallback onTap;
+
+  /// Null renders (and behaves as) a disabled row: no tap action reaches
+  /// assistive services, and the text is visually muted to match.
+  final VoidCallback? onTap;
   const _AccountRow({required this.title, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
-    final colors = context.colors;
+    final bool enabled = onTap != null;
+    final Color mutedForeground = context.semanticColors.mutedForeground;
+    final Color textColor =
+        enabled ? context.colors.onSurface : mutedForeground;
     return InkWell(
       onTap: onTap,
       child: Padding(
@@ -224,10 +303,9 @@ class _AccountRow extends StatelessWidget {
                   style: TextStyle(
                       fontWeight: FontWeight.w700,
                       fontSize: 15,
-                      color: colors.onSurface)),
+                      color: textColor)),
             ),
-            Icon(Icons.chevron_right_rounded,
-                color: context.semanticColors.mutedForeground),
+            Icon(Icons.chevron_right_rounded, color: mutedForeground),
           ],
         ),
       ),

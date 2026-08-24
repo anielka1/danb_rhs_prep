@@ -57,39 +57,45 @@ class _SplashScreenState extends State<SplashScreen> {
         child: SafeArea(
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xxxl),
-            child: Column(
-              children: [
-                const SizedBox(height: 160),
-                Container(
-                  width: 96,
-                  height: 96,
-                  decoration: BoxDecoration(
-                    color: colors.primaryContainer,
-                    borderRadius: BorderRadius.circular(28),
-                    border: Border.all(
-                      color: colors.primary.withValues(alpha: 0.5),
-                      width: AppBorderWidth.regular,
+            // Scrollable, not a plain Column: preserves the exact same
+            // appearance at ordinary text sizes (nothing scrolls when
+            // content already fits), but avoids clipping the headline at
+            // large Dynamic Type sizes instead of overflowing.
+            child: SingleChildScrollView(
+              child: Column(
+                children: [
+                  const SizedBox(height: 160),
+                  Container(
+                    width: 96,
+                    height: 96,
+                    decoration: BoxDecoration(
+                      color: colors.primaryContainer,
+                      borderRadius: BorderRadius.circular(28),
+                      border: Border.all(
+                        color: colors.primary.withValues(alpha: 0.5),
+                        width: AppBorderWidth.regular,
+                      ),
+                    ),
+                    alignment: Alignment.center,
+                    child: const RadiationIcon(size: 46),
+                  ),
+                  const SizedBox(height: 28),
+                  Text(
+                    'DANB RHS Prep',
+                    textAlign: TextAlign.center,
+                    style: textStyles.h1,
+                  ),
+                  const SizedBox(height: 10),
+                  Text(
+                    'Ace Your Radiation Health and Safety Exam',
+                    textAlign: TextAlign.center,
+                    style: textStyles.body.copyWith(
+                      color: colors.secondary,
+                      fontWeight: FontWeight.w600,
                     ),
                   ),
-                  alignment: Alignment.center,
-                  child: const RadiationIcon(size: 46),
-                ),
-                const SizedBox(height: 28),
-                Text(
-                  'DANB RHS Prep',
-                  textAlign: TextAlign.center,
-                  style: textStyles.h1,
-                ),
-                const SizedBox(height: 10),
-                Text(
-                  'Ace Your Radiation Health and Safety Exam',
-                  textAlign: TextAlign.center,
-                  style: textStyles.body.copyWith(
-                    color: colors.secondary,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ),

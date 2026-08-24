@@ -70,4 +70,30 @@ void main() {
     await tester.pump();
     expect(taps, 1);
   });
+
+  testWidgets('"View Details" is reachable by assistive technology',
+      (tester) async {
+    // Regression test: AppCard's semanticLabel mechanism excludes its
+    // entire child from the semantics tree, which previously made this
+    // button completely unreachable by VoiceOver whenever a card-level
+    // semanticLabel was set. ReadinessCard no longer sets one.
+    final SemanticsHandle handle = tester.ensureSemantics();
+    await tester.pumpWidget(
+      wrap(ReadinessCard(
+          score: 70, band: ReadinessBand.examReady, onViewDetail: () {})),
+    );
+
+    expect(
+      tester.getSemantics(find.bySemanticsLabel('View readiness detail')),
+      matchesSemantics(
+          isButton: true,
+          hasTapAction: true,
+          hasFocusAction: true,
+          isFocusable: true,
+          hasEnabledState: true,
+          isEnabled: true),
+    );
+
+    handle.dispose();
+  });
 }

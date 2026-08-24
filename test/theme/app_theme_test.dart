@@ -27,6 +27,19 @@ double _contrastRatio(Color a, Color b) {
   return la > lb ? la / lb : lb / la;
 }
 
+/// Alpha-composites [foreground] (at [opacity], 0.0-1.0) over an opaque
+/// [background], returning the resulting opaque color actually rendered
+/// on screen. Used to compute real contrast for colors that are only
+/// ever shown at reduced opacity (e.g. a disabled button's faded fill).
+Color _blend(Color foreground, Color background, double opacity) {
+  return Color.from(
+    alpha: 1,
+    red: foreground.r * opacity + background.r * (1 - opacity),
+    green: foreground.g * opacity + background.g * (1 - opacity),
+    blue: foreground.b * opacity + background.b * (1 - opacity),
+  );
+}
+
 void main() {
   group('brightness', () {
     test('light theme has Brightness.light', () {
@@ -132,6 +145,18 @@ void main() {
           semantic.onSuccessContainer, semantic.successContainer);
       expectReadable('onWarningContainer on warningContainer',
           semantic.onWarningContainer, semantic.warningContainer);
+      // AnswerOptionTile's correct-state badge letter (e.g. "A") — real
+      // 12px bold text, not just the check icon, so it needs the full
+      // 4.5:1 floor, not the 3:1 non-text exception.
+      expectReadable(
+          'onSuccess on success', semantic.onSuccess, semantic.success);
+      // SubscriptionProductCard's billing-period text and introductory-
+      // offer text sit on an AppCard's surfaceContainer fill, not the
+      // screen's plain surface.
+      expectReadable('onSurfaceVariant on surfaceContainer',
+          scheme.onSurfaceVariant, scheme.surfaceContainer);
+      expectReadable('success as text on surfaceContainer', semantic.success,
+          scheme.surfaceContainer);
     });
 
     test('light theme: large-text/non-text exceptions meet the 3:1 floor', () {
@@ -141,9 +166,24 @@ void main() {
       expectReadable('accent as large stat-number text on surface',
           semantic.accent, scheme.surface,
           minRatio: 3);
-      // Checkmark glyph only, never rendered as text.
-      expectReadable(
-          'onSuccess icon on success', semantic.onSuccess, semantic.success,
+    });
+
+    test(
+        'light theme: disabled-state pairs are deliberately muted, but stay '
+        'readable (WCAG 1.4.3 exempts inactive UI components; still '
+        'verified at >=3:1, not left uncalculated)', () {
+      final scheme = AppTheme.lightTheme.colorScheme;
+      final semantic = AppTheme.lightTheme.extension<AppSemanticColors>()!;
+      // AnswerOptionTile's disabled-state badge letter.
+      expectReadable('mutedForeground on primaryContainer (disabled option)',
+          semantic.mutedForeground, scheme.primaryContainer,
+          minRatio: 3);
+      // PrimaryButton's disabled fill: primary at 55% opacity, actually
+      // rendered over the screen's surface color, with the unfaded
+      // onPrimary label on top.
+      final Color disabledFill = _blend(scheme.primary, scheme.surface, 0.55);
+      expectReadable('onPrimary on blended disabled-button fill',
+          scheme.onPrimary, disabledFill,
           minRatio: 3);
     });
 
@@ -172,6 +212,12 @@ void main() {
           semantic.onSuccessContainer, semantic.successContainer);
       expectReadable('onWarningContainer on warningContainer',
           semantic.onWarningContainer, semantic.warningContainer);
+      expectReadable(
+          'onSuccess on success', semantic.onSuccess, semantic.success);
+      expectReadable('onSurfaceVariant on surfaceContainer',
+          scheme.onSurfaceVariant, scheme.surfaceContainer);
+      expectReadable('success as text on surfaceContainer', semantic.success,
+          scheme.surfaceContainer);
     });
 
     test('dark theme: large-text/non-text exceptions meet the 3:1 floor', () {
@@ -180,8 +226,20 @@ void main() {
       expectReadable('accent as large stat-number text on surface',
           semantic.accent, scheme.surface,
           minRatio: 3);
-      expectReadable(
-          'onSuccess icon on success', semantic.onSuccess, semantic.success,
+    });
+
+    test(
+        'dark theme: disabled-state pairs are deliberately muted, but stay '
+        'readable (WCAG 1.4.3 exempts inactive UI components; still '
+        'verified at >=3:1, not left uncalculated)', () {
+      final scheme = AppTheme.darkTheme.colorScheme;
+      final semantic = AppTheme.darkTheme.extension<AppSemanticColors>()!;
+      expectReadable('mutedForeground on primaryContainer (disabled option)',
+          semantic.mutedForeground, scheme.primaryContainer,
+          minRatio: 3);
+      final Color disabledFill = _blend(scheme.primary, scheme.surface, 0.55);
+      expectReadable('onPrimary on blended disabled-button fill',
+          scheme.onPrimary, disabledFill,
           minRatio: 3);
     });
   });

@@ -263,19 +263,155 @@ Returning users should go directly from app bootstrap to the main app.
 
 ## 2.4 Accessibility
 
-- [ ] Test Dynamic Type at the largest accessibility sizes.
-- [ ] Add semantic labels to score rings, charts, answer choices, bookmarks,
-  flags, and navigation items.
-- [ ] Do not communicate correct/incorrect state using color alone.
-- [ ] Verify VoiceOver reading and focus order.
-- [ ] Respect Reduce Motion.
-- [ ] Ensure contrast meets accessibility expectations in both themes.
+- [x] Test Dynamic Type at the largest accessibility sizes. (Extended:
+  every text-bearing/reachable screen now has an automated pass at a
+  4.0x stress scale — chosen because manual on-device testing at the
+  real iOS AX5 category found overflow beyond what a plain 3.0x probe
+  caught — on the small-phone viewport, with no global text-scale
+  clamping.)
+- [x] Add semantic labels to score rings, charts, answer choices, bookmarks,
+  flags, and navigation items. (No flag/report control exists in the UI
+  yet — nothing to label; will be covered when that control is built.)
+- [x] Do not communicate correct/incorrect state using color alone.
+- [ ] Verify VoiceOver reading and focus order. (Reading/focus *order* is
+  covered by automated semantics-tree-traversal tests; actual VoiceOver
+  operation has not been performed — see
+  `docs/ACCESSIBILITY_MANUAL_VERIFICATION.md`. Leaving unchecked until
+  that manual pass is run.)
+- [x] Respect Reduce Motion.
+- [x] Ensure contrast meets accessibility expectations in both themes.
 
 ### Phase 2 exit criteria
 
-- [ ] Four-tab app shell works on small iPhone, large iPhone, and iPad.
-- [ ] Light/dark mode and large text do not break layouts.
-- [ ] No final screen depends on prototype-only content.
+- [x] Four-tab app shell works on small iPhone, large iPhone, and iPad.
+  (Evidence: `test/screens/phase_2_exit_criteria_test.dart`, 18 tests
+  covering all four tabs at 320x568, 430x932, and 834x1194 — tab
+  selection, re-selection safety, visual/semantic selected state, Settings
+  open/close + Back, inactive-tab semantics exclusion, and disabled
+  future-feature controls exposing no tap action. All pass.)
+- [x] Light/dark mode and large text do not break layouts. (Evidence: the
+  same test file's theme + text-scale matrix — 3 viewports x 2 themes
+  (light/dark) x 2 scales (1.0x/4.0x) x all 4 tabs, 12 tests, all pass
+  with no overflow exceptions; selected/disabled states and bottom-nav
+  usability confirmed distinguishable at every combination.
+
+  `AppScaffold`'s adaptive header (single-row when the title fits, a
+  stacked leading/actions-row-then-full-width-title layout when it
+  doesn't, sharing one scroll region with the body in that case — no
+  `FittedBox`, no fixed height budget) is unchanged from the prior pass
+  and still fully covered by `test/screens/essential_label_visibility_test.dart`.
+
+  The bottom nav went through two corrections. A first pass removing
+  `TextOverflow.ellipsis` used `FittedBox(fit: scaleDown)` to guarantee
+  no overflow — rejected on review, since shrinking essential text after
+  layout overrides the user's chosen accessibility text size just as
+  much as truncating it does. A second pass replaced that with a
+  measure-then-switch design (plain four-column `Row` vs. a horizontally
+  scrollable fallback) — but the *measurement* used `flutter test`'s
+  synthetic fallback font, which renders every character as a fixed box
+  exactly as wide as the font size, not real Roboto glyph metrics. Under
+  that synthetic font, "Practice"/"Progress" (single 8-character words,
+  no natural wrap point) measured ~88px against an 80px quarter-column
+  at 320px width — an 8px shortfall with no clean fix (a forced mid-word
+  break like "Practic"/"e" is arguably worse than truncation) — which
+  would have made the scrollable fallback the *normal* phone-width
+  layout, not an accessibility-only one.
+
+  Investigating that discrepancy (vendoring the real Roboto files
+  Flutter itself ships and bundles into every build — Apache 2.0,
+  `test/fonts/`, loaded by `test/flutter_test_config.dart` — and
+  re-measuring through the actual rendered widget tree) confirmed it was
+  purely a test-font artifact: real Roboto renders "Practice" at ~41px
+  and "Progress" at ~44px at 1.0x, comfortably inside an 80px column with
+  room to spare. `lib/widgets/app_bottom_navigation.dart` was corrected
+  accordingly:
+
+  - Per-item horizontal padding dropped from `AppSpacing.md` (12px/side)
+    to `AppSpacing.xs` (4px/side) — the excess wasn't needed even before
+    the font-measurement fix, and every viewport has generous margin now.
+  - The fit decision measures each label's *widest single word* (not the
+    whole label) against the true equal-column width: multi-word labels
+    like "Mock Exam" wrap onto a second line on their own once given
+    that real width — no manual line-splitting — and the bar's height
+    just grows to fit whichever item needs the most lines. Only when
+    even a label's widest word doesn't fit — verified to require ~2.0x+
+    on a 320px phone, never true at 1.0x on any of the four required
+    widths — does the bar fall back to the horizontally scrollable
+    layout, where every item keeps its full natural size.
+  - The bar is now a `StatefulWidget` owning a `ScrollController`, with
+    the selected tab automatically scrolled into view (via
+    `Scrollable.ensureVisible`, a no-op if already visible, so a user's
+    manual scroll position is never reset unnecessarily) after initial
+    construction, state restoration, a programmatic tab change, and any
+    parent rebuild — immediately (no animation) under Reduce Motion.
+    `mounted` is checked before any post-frame callback touches state.
+
+  `test/widgets/app_bottom_navigation_adaptive_test.dart` (new) proves:
+  all four labels visible with zero horizontal scrolling and every tap
+  target ≥44×44 at 320/375/430/iPad at 1.0x; the fallback activates (and
+  is proven necessary) at 4.0x/320×568, with no `FittedBox`, no
+  `didExceedMaxLines`, and painted size matching natural
+  (pre-transform) layout size — the same real-vs-natural-size comparison
+  technique from the previous pass, which does detect a genuine
+  `FittedBox` shrink (verified against a synthetic fixture) — and the
+  requested 4.0x `TextScaler` reaching every label; automatic reveal on
+  initial selection, on a programmatic change to an off-screen tab
+  (without resetting state or leaking post-frame work past disposal),
+  and immediately (not animated) under Reduce Motion.
+  `test/screens/essential_label_visibility_test.dart` continues to cover
+  `AppScaffold` titles and was re-verified against this correction.
+
+  **Correction to the above**: that second pass had also added an
+  explicit `fontFamily: 'Roboto'` to the *production* label style (both
+  the `TextPainter` measurement and the rendered `Text`), reasoning that
+  it was "already this app's real default font on every platform." That
+  claim doesn't hold in general — Flutter's platform typography can
+  resolve differently by platform/configuration, and this app had
+  earlier and deliberately removed a different hardcoded, unbundled font
+  name (see `test/theme/app_theme_test.dart`'s "theme does not declare
+  the removed unbundled font family") specifically so text renders
+  through the theme's real resolution rather than an assumption baked
+  into a widget. `lib/widgets/app_bottom_navigation.dart` was corrected
+  again: the hardcoded `fontFamily: 'Roboto'` is gone from production
+  code entirely. Both the label's `TextPainter` measurement and its
+  rendered `Text` now resolve their style through one shared private
+  function, `_resolveLabelStyle`, which merges only size/weight/color
+  onto `DefaultTextStyle.of(context).style` — the same resolution `Text`
+  performs internally — so measurement and rendering use the literal
+  same style by construction and can't drift apart, and neither
+  hardcodes a font family. The fit-decision measurement uses the wider
+  of the selected/unselected resolved styles for every label regardless
+  of which tab is actually selected, so the fixed-vs-scrollable choice
+  can't flip merely because a different tab becomes selected (proven at
+  a near-threshold scale in
+  `test/widgets/app_bottom_navigation_font_resolution_test.dart`).
+
+  The Roboto files under `test/fonts/` remain, but only as deterministic
+  *test* infrastructure (loaded solely by `test/flutter_test_config.dart`,
+  not declared as a pubspec asset, not referenced anywhere in `lib/`) —
+  they replace `flutter test`'s synthetic fallback font so measurements
+  in tests match real glyph proportions, they do not claim or enforce
+  what font production actually uses. Production measurement uses
+  whatever the real resolved theme/platform label style is, whatever
+  that turns out to be on a given platform.
+
+  Fixing the font-measurement issue also surfaced two pre-existing,
+  unrelated test bugs: `test/screens/main_shell_test.dart` and
+  `test/screens/reduce_motion_test.dart` hardcoded a literal day number
+  ("Wed 19"/day "19") from `HomeScreen`'s real-date week strip (itself
+  fixed to use `DateTime.now()` in an earlier pass) — those tests
+  silently broke the moment the real calendar moved into a new week
+  while this task was in progress. Both now compute the expected
+  day/label at run time instead of hardcoding it, matching the pattern
+  `test/screens/phase_2_exit_criteria_test.dart` already used correctly.)
+- [ ] No final screen depends on prototype-only content. (See
+  `docs/PROTOTYPE_CONTENT_AUDIT.md`. `HomeScreen`, `ProfileSettingsScreen`,
+  and `ProgressScreen` were fixed to use real data or an honest
+  empty/unavailable state. `ExamOverviewScreen`, `PracticeQuestionScreen`,
+  and `AnswerExplanationScreen` are reachable today and still depend on
+  hardcoded prototype question/exam-spec content that requires Phase 6
+  content-package and practice-engine work to resolve honestly. Left
+  unchecked until those are addressed.)
 
 ---
 

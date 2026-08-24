@@ -80,8 +80,12 @@ class SubscriptionProductCard extends StatelessWidget {
                           ),
                           child: Text(
                             'RECOMMENDED',
+                            // onPrimaryContainer, not primary: primary as
+                            // text on primaryContainer only reaches
+                            // ~2.07:1 in light mode, far under the 4.5:1
+                            // floor.
                             style: textStyles.label
-                                .copyWith(color: colors.primary),
+                                .copyWith(color: colors.onPrimaryContainer),
                           ),
                         ),
                       ),
