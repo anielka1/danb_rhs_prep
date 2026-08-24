@@ -552,12 +552,107 @@ documented in code as temporary, pending Section 3.3's real next step.
 
 ## 3.3 Exam-date screen
 
-- [ ] Ask `When is your exam?`
-- [ ] Support exact date.
-- [ ] Support approximate date.
-- [ ] Support `I haven't scheduled it yet`.
-- [ ] Validate that a selected date is not in the past.
-- [ ] Store date and precision locally.
+- [x] Ask `When is your exam?`. (New `lib/screens/exam_date_screen.dart`,
+  `ExamDateScreen`, route `/onboarding/exam-date` — pushed (not
+  replaced) from `WelcomeScreen`'s `Start Preparing`, so Back returns to
+  Welcome. Exact heading and supporting copy asserted verbatim in
+  `test/screens/exam_date_screen_test.dart`.)
+- [x] Support exact date. (Selecting "I know the exact date" reveals a
+  date selector backed by the real Material `showDatePicker`, localized
+  via `MaterialLocalizations.formatMediumDate` — no formatting
+  dependency added.)
+- [x] Support approximate date. (Same date-selector mechanism, under "I
+  have an approximate date" — a distinct `ExamDatePrecision.approximate`
+  value, not a duplicate. `ExamDatePrecision` now lives in its own leaf
+  file, `lib/domain/models/exam_date_precision.dart` — extracted out of
+  `UserProfile` so `ExamDateSelection` can depend on the enum without
+  depending on the `UserProfile` aggregate merely to reuse it; both
+  models import the leaf one-way, and it imports nothing itself.
+  Evidence: `test/domain/models/exam_date_precision_dependency_test.dart`.)
+- [x] Support `I haven't scheduled it yet`. (`ExamDatePrecision.notScheduled`;
+  choosing it clears any in-progress date.)
+- [x] Validate that a selected date is not in the past. (Two layers, per
+  the roadmap's explicit "outside the picker too" requirement: the
+  picker's own `firstDate: today` (from an injected clock, never a
+  direct `DateTime.now()` in validation logic), and the independent,
+  picker-agnostic `isExamDateSelectionValid` function
+  (`lib/domain/models/exam_date_selection.dart`), re-checked immediately
+  before saving and also applied when prefilling a *restored* selection
+  — a previously-saved date that has since passed is not presented as
+  valid; the precision choice stays visible and an accessible live-region
+  message asks for a new date, per `ExamDateSelection`'s and the
+  screen's tests.)
+- [x] Store date and precision locally. (New `ExamDateSelection` domain
+  value — reusing the leaf `ExamDatePrecision`, not a new enum —
+  persisted through new `BootstrapLocalStore.readExamDateSelection`/
+  `writeExamDateSelection` methods, implemented in both
+  `SharedPreferencesBootstrapLocalStore` (as one atomic versioned JSON
+  value under a single key, never separate drift-prone keys) and
+  `InMemoryBootstrapLocalStore`. Decoding now strictly rejects an
+  impossible calendar date: `year`/`month`/`day` must each be genuine
+  integers, and the constructed `DateTime`'s own year/month/day are
+  round-tripped back against what was stored — Dart's `DateTime`
+  constructor silently normalizes an invalid date (e.g. `DateTime(2026,
+  2, 31)` becomes a March date) rather than throwing, so this round-trip
+  check is what actually catches and rejects that, instead of silently
+  persisting the normalized/rolled-forward date. An unsupported JSON
+  `version` is rejected the same way. Loaded during bootstrap into
+  `BootstrapReady.examDateSelection` so the screen can prefill a
+  returning user's choice. No fake `UserProfile` is created to hold
+  this — no production `UserSettingsRepository` adapter exists, exactly
+  as Section 3.1 already documented. Evidence:
+  `test/domain/models/exam_date_selection_test.dart`,
+  `test/bootstrap/shared_preferences_bootstrap_local_store_test.dart`'s
+  "exam date selection" group (including its "impossible calendar date"
+  subgroup), and `test/bootstrap/app_bootstrap_service_test.dart`.)
+
+`WelcomeScreen`'s `Start Preparing` now emits `onboarding_started` and
+routes here instead of marking onboarding complete directly (evidence:
+`test/screens/welcome_screen_test.dart`). This screen's own `Continue`
+still uses the Section 3.1/3.2 temporary completion bridge — persist
+`onboardingComplete`, enter `MainShell` — isolated to
+`_ExamDateScreenState._continue` and documented there as pending Section
+3.4, which replaces only its "on success" branch.
+
+**Navigation stack on completion:** both the successful-persistence path
+and the explicit "Continue for this session" path now use
+`Navigator.pushAndRemoveUntil(..., (route) => false)`, not
+`pushReplacement` — `MainShell` becomes the sole, root route, carrying
+the successful `BootstrapReady` snapshot via `BootstrapSessionScope`
+exactly as before, so a system Back gesture/button afterward has
+nothing left to pop to and cannot reveal Welcome, Exam Date, or Splash.
+Welcome → Exam Date remains a plain `push` (unaffected), so Back from
+Exam Date still returns to Welcome, and a save failure never triggers
+this navigation at all. Every manually constructed `MaterialPageRoute`
+carries the correct `RouteSettings.name` (`ExamDateScreen.route` for
+Welcome → Exam Date, `MainShell.route` for both completion paths into
+Main), so `AnalyticsNavigatorObserver` reports the real named-route
+sequence, not anonymous routes. Evidence:
+`test/screens/onboarding_navigation_stack_test.dart`, including its
+"named-route analytics" group, which drives the real
+`AnalyticsNavigatorObserver`/`FakeAnalyticsService` through the actual
+Welcome → Exam Date → Main flow and asserts the exact ordered sequence
+`['/welcome', '/onboarding/exam-date', '/main']` (each reported exactly
+once, with no duplicate from the stack-clearing route removal), that
+`onboarding_started` remains a single generic event carrying only the
+non-sensitive exam ID, that a no-op Back-from-Main attempt reports
+nothing further, and that the session-only continuation path also
+reports `/main` correctly.
+
+**Accessibility verification:** `test/screens/exam_date_screen_semantics_test.dart`
+adds a real `SemanticsNode`-tree traversal test (not a widget-coordinate
+proxy) confirming the exposed order — heading, supporting copy, the
+three choices, the date selector when applicable, a validation/save
+error when present, then Continue/Retry — plus that choice cards expose
+selected/unselected state, the date selector is entirely absent (not
+merely hidden) when unscheduled is chosen, the save-failure/stale-date
+error is a live region announced exactly once, and Continue exposes its
+disabled/loading state correctly. The earlier widget-coordinate check in
+`exam_date_screen_test.dart` is kept only as a separate layout-regression
+check and is now explicitly labeled as such, not as accessibility
+verification. **Manual VoiceOver operation has not been performed and
+remains outstanding** — these are automated proxies for it, not a
+replacement.
 
 ## 3.4 Experience-level screen
 

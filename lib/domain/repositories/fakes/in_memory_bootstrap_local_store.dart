@@ -1,4 +1,5 @@
 import '../../models/entitlement.dart';
+import '../../models/exam_date_selection.dart';
 import '../../models/readiness_snapshot.dart';
 import '../../models/user_profile.dart';
 import '../bootstrap_local_store.dart';
@@ -15,10 +16,12 @@ class InMemoryBootstrapLocalStore implements BootstrapLocalStore {
     ThemePreference? themePreference,
     Entitlement? entitlement,
     ReadinessSnapshot? readinessSnapshot,
+    ExamDateSelection? examDateSelection,
   })  : _selectedExamId = selectedExamId,
         _onboardingComplete = onboardingComplete,
         _themePreference = themePreference,
-        _entitlement = entitlement {
+        _entitlement = entitlement,
+        _examDateSelection = examDateSelection {
     if (readinessSnapshot != null) {
       _readinessByExam[readinessSnapshot.examId] = readinessSnapshot;
     }
@@ -28,6 +31,7 @@ class InMemoryBootstrapLocalStore implements BootstrapLocalStore {
   bool? _onboardingComplete;
   ThemePreference? _themePreference;
   Entitlement? _entitlement;
+  ExamDateSelection? _examDateSelection;
   final Map<String, ReadinessSnapshot> _readinessByExam = {};
 
   @override
@@ -72,5 +76,14 @@ class InMemoryBootstrapLocalStore implements BootstrapLocalStore {
   @override
   Future<void> writeLatestReadinessSnapshot(ReadinessSnapshot snapshot) async {
     _readinessByExam[snapshot.examId] = snapshot;
+  }
+
+  @override
+  Future<ExamDateSelection?> readExamDateSelection() async =>
+      _examDateSelection;
+
+  @override
+  Future<void> writeExamDateSelection(ExamDateSelection selection) async {
+    _examDateSelection = selection;
   }
 }

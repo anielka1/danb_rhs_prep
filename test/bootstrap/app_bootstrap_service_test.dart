@@ -4,6 +4,8 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:danb_rhs_prep/bootstrap/app_bootstrap_service.dart';
 import 'package:danb_rhs_prep/domain/models/entitlement.dart';
+import 'package:danb_rhs_prep/domain/models/exam_date_precision.dart';
+import 'package:danb_rhs_prep/domain/models/exam_date_selection.dart';
 import 'package:danb_rhs_prep/domain/models/readiness_band.dart';
 import 'package:danb_rhs_prep/domain/models/readiness_snapshot.dart';
 import 'package:danb_rhs_prep/domain/models/user_profile.dart';
@@ -253,6 +255,23 @@ void main() {
       expect(result.readinessSnapshot, isNull);
       expect(result.entitlement.tier, EntitlementTier.free);
       expect(result.onboardingComplete, isFalse);
+      expect(result.examDateSelection, isNull);
+    });
+
+    test('a cached exam-date selection is included in BootstrapReady',
+        () async {
+      final deps = _offlineDeps();
+      final selection = ExamDateSelection(
+          precision: ExamDatePrecision.exact, date: DateTime(2026, 3, 1));
+      await deps.localStore.writeExamDateSelection(selection);
+      final service = AppBootstrapService(
+        contentRepository: deps.contentRepository,
+        localStore: deps.localStore,
+      );
+
+      final result = await service.initialize() as BootstrapReady;
+
+      expect(result.examDateSelection, selection);
     });
 
     test('a present profile (via UserSettingsRepository) is included',
@@ -496,4 +515,10 @@ class _CorruptEntitlementLocalStore implements BootstrapLocalStore {
   @override
   Future<void> writeLatestReadinessSnapshot(ReadinessSnapshot snapshot) =>
       _delegate.writeLatestReadinessSnapshot(snapshot);
+  @override
+  Future<ExamDateSelection?> readExamDateSelection() =>
+      _delegate.readExamDateSelection();
+  @override
+  Future<void> writeExamDateSelection(ExamDateSelection selection) =>
+      _delegate.writeExamDateSelection(selection);
 }

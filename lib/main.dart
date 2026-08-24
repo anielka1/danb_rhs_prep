@@ -14,6 +14,7 @@ import 'screens/splash_screen.dart';
 import 'screens/login_screen.dart';
 import 'screens/main_shell.dart';
 import 'screens/welcome_screen.dart';
+import 'screens/exam_date_screen.dart';
 import 'screens/exam_overview_screen.dart';
 import 'screens/practice_question_screen.dart';
 import 'screens/answer_explanation_screen.dart';
@@ -128,6 +129,10 @@ class _DanbRhsPrepAppState extends State<DanbRhsPrepApp> {
             LoginScreen.route: (_) => const LoginScreen(),
             MainShell.route: (_) => MainShell(analytics: widget.analytics),
             WelcomeScreen.route: (_) => WelcomeScreen(
+                  localStore: _localStore,
+                  analytics: widget.analytics,
+                ),
+            ExamDateScreen.route: (_) => ExamDateScreen(
                   localStore: _localStore,
                   analytics: widget.analytics,
                 ),

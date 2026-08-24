@@ -1,4 +1,5 @@
 import '../domain/models/entitlement.dart';
+import '../domain/models/exam_date_selection.dart';
 import '../domain/models/readiness_snapshot.dart';
 import '../domain/models/user_profile.dart';
 import '../domain/repositories/bootstrap_local_store.dart';
@@ -34,6 +35,7 @@ final class BootstrapReady extends BootstrapResult {
     required this.readinessSnapshot,
     required this.entitlement,
     required this.onboardingComplete,
+    required this.examDateSelection,
   });
 
   final String selectedExamId;
@@ -65,6 +67,12 @@ final class BootstrapReady extends BootstrapResult {
   final Entitlement entitlement;
 
   final bool onboardingComplete;
+
+  /// The onboarding exam-date screen's saved selection, if any — null on
+  /// a fresh install or if the user hasn't reached/completed that screen
+  /// yet. Lets `ExamDateScreen` prefill a returning user's prior choice
+  /// without re-reading local storage itself.
+  final ExamDateSelection? examDateSelection;
 }
 
 /// The selected exam's bundled content could not be loaded or is invalid
@@ -214,6 +222,9 @@ class AppBootstrapService {
       final bool onboardingComplete =
           await _localStore.readOnboardingComplete() ?? false;
 
+      final ExamDateSelection? examDateSelection =
+          await _localStore.readExamDateSelection();
+
       return BootstrapReady(
         selectedExamId: examId,
         contentPackage: package,
@@ -222,6 +233,7 @@ class AppBootstrapService {
         readinessSnapshot: readinessSnapshot,
         entitlement: entitlement,
         onboardingComplete: onboardingComplete,
+        examDateSelection: examDateSelection,
       );
     } on Object catch (error, stackTrace) {
       return BootstrapUnexpectedFailure(error: error, stackTrace: stackTrace);
