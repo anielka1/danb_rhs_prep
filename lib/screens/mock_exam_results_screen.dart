@@ -33,26 +33,36 @@ class MockExamResultsScreen extends StatelessWidget {
         semanticLabel: 'Back',
       ),
       title: 'Exam Results',
-      body: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Center(
-            child: Text('DANB RHS MOCK EXAM', style: textStyles.label),
-          ),
-          const SizedBox(height: 6),
-          Center(
-            child: Text(
-              '82%',
-              style: TextStyle(
-                  fontSize: 56,
-                  fontWeight: FontWeight.w800,
-                  color: colors.onSurface),
+      // The whole screen scrolls (rather than only the section list, with
+      // fixed header/footer content around it) so nothing is clipped when
+      // the header text and section rows grow at large Dynamic Type
+      // sizes on a small device.
+      body: SingleChildScrollView(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Center(
+              child: Text('DANB RHS MOCK EXAM', style: textStyles.label),
             ),
-          ),
-          const SizedBox(height: 10),
-          Center(
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
+            const SizedBox(height: 6),
+            Center(
+              child: Text(
+                '82%',
+                style: TextStyle(
+                    fontSize: 56,
+                    fontWeight: FontWeight.w800,
+                    color: colors.onSurface),
+              ),
+            ),
+            const SizedBox(height: 10),
+            // Wrap, not Row: at large Dynamic Type sizes the badge and
+            // score text may no longer fit on one line, and should drop
+            // to a second line instead of overflowing horizontally.
+            Wrap(
+              alignment: WrapAlignment.center,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              spacing: 10,
+              runSpacing: 4,
               children: [
                 Container(
                   padding:
@@ -67,26 +77,31 @@ class MockExamResultsScreen extends StatelessWidget {
                           fontWeight: FontWeight.w800,
                           fontSize: 12)),
                 ),
-                const SizedBox(width: 10),
                 Text('82 / 100', style: textStyles.body),
               ],
             ),
-          ),
-          const SizedBox(height: AppSpacing.xl + 2),
-          const Divider(),
-          const SizedBox(height: AppSpacing.md + 2),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text('Time taken: 1h 15m', style: textStyles.bodySmall),
-              Text('Passing score: 80%', style: textStyles.bodySmall),
-            ],
-          ),
-          const SizedBox(height: AppSpacing.xl),
-          Text('SECTION PERFORMANCE', style: textStyles.label),
-          const SizedBox(height: 4),
-          Expanded(
-            child: ListView.separated(
+            const SizedBox(height: AppSpacing.xl + 2),
+            const Divider(),
+            const SizedBox(height: AppSpacing.md + 2),
+            // Wrap, not Row: at large Dynamic Type sizes both labels may
+            // no longer fit on one line together.
+            Wrap(
+              alignment: WrapAlignment.spaceBetween,
+              runSpacing: 4,
+              children: [
+                Text('Time taken: 1h 15m', style: textStyles.bodySmall),
+                Text('Passing score: 80%', style: textStyles.bodySmall),
+              ],
+            ),
+            const SizedBox(height: AppSpacing.xl),
+            Text('SECTION PERFORMANCE', style: textStyles.label),
+            const SizedBox(height: 4),
+            // shrinkWrap + NeverScrollableScrollPhysics: this list no longer
+            // owns its own scrolling (the outer SingleChildScrollView does),
+            // it just sizes to its content.
+            ListView.separated(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
               itemCount: _sections.length,
               separatorBuilder: (_, __) => const Divider(height: 1),
               itemBuilder: (context, i) {
@@ -97,11 +112,14 @@ class MockExamResultsScreen extends StatelessWidget {
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text(s.name,
-                          style: TextStyle(
-                              fontWeight: FontWeight.w700,
-                              fontSize: 15,
-                              color: colors.onSurface)),
+                      Expanded(
+                        child: Text(s.name,
+                            style: TextStyle(
+                                fontWeight: FontWeight.w700,
+                                fontSize: 15,
+                                color: colors.onSurface)),
+                      ),
+                      const SizedBox(width: AppSpacing.sm),
                       Text(
                         '${s.percent}%',
                         style: TextStyle(
@@ -117,14 +135,17 @@ class MockExamResultsScreen extends StatelessWidget {
                 );
               },
             ),
-          ),
-          SecondaryButton(label: 'Review Answers', onPressed: () {}),
-          const SizedBox(height: AppSpacing.md),
-          PrimaryButton(
-              label: 'Retake Exam',
-              onPressed: () => Navigator.of(context).maybePop()),
-          const SizedBox(height: AppSpacing.lg),
-        ],
+            const SizedBox(height: AppSpacing.md),
+            // Disabled: reviewing past mock-exam answers requires stored
+            // attempt/answer data that doesn't exist yet.
+            const SecondaryButton(label: 'Review Answers', onPressed: null),
+            const SizedBox(height: AppSpacing.md),
+            PrimaryButton(
+                label: 'Retake Exam',
+                onPressed: () => Navigator.of(context).maybePop()),
+            const SizedBox(height: AppSpacing.lg),
+          ],
+        ),
       ),
     );
   }

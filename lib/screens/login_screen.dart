@@ -15,10 +15,12 @@ class LoginScreen extends StatefulWidget {
 class _LoginScreenState extends State<LoginScreen> {
   bool _isLogin = true;
   bool _obscurePassword = true;
-  final TextEditingController _emailController =
-      TextEditingController(text: 'dental.assistant@danb.org');
-  final TextEditingController _passwordController =
-      TextEditingController(text: 'password123');
+  // No authentication backend exists yet — fields start empty rather than
+  // pre-filled with a fake account, which would misrepresent a signed-in
+  // identity that was never authenticated. See
+  // docs/PROTOTYPE_CONTENT_AUDIT.md.
+  final TextEditingController _emailController = TextEditingController();
+  final TextEditingController _passwordController = TextEditingController();
 
   @override
   void dispose() {
@@ -43,11 +45,12 @@ class _LoginScreenState extends State<LoginScreen> {
                 background: colors.surface,
                 iconColor: colors.primary,
                 onPressed: () => Navigator.of(context).maybePop(),
+                semanticLabel: 'Close',
               ),
             ),
             const SizedBox(height: AppSpacing.xl),
             Text(
-              'Welcome to PrepMaster',
+              'Welcome to DANB RHS Prep',
               textAlign: TextAlign.center,
               style: textStyles.h2,
             ),
@@ -84,13 +87,15 @@ class _LoginScreenState extends State<LoginScreen> {
             const SizedBox(height: 10),
             Align(
               alignment: Alignment.centerRight,
+              // Disabled: password reset requires an authentication
+              // backend that doesn't exist yet.
               child: TextButton(
-                onPressed: () {},
+                onPressed: null,
                 style: TextButton.styleFrom(padding: EdgeInsets.zero),
                 child: Text(
                   'Forgot Password?',
                   style: TextStyle(
-                    color: colors.secondary,
+                    color: context.semanticColors.mutedForeground,
                     fontWeight: FontWeight.w600,
                     fontSize: 13,
                   ),
@@ -108,30 +113,36 @@ class _LoginScreenState extends State<LoginScreen> {
             Row(
               children: [
                 const Expanded(child: Divider()),
-                Padding(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: AppSpacing.md),
-                  child: Text('or connect with', style: textStyles.bodySmall),
+                Flexible(
+                  child: Padding(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+                    child: Text('or connect with',
+                        style: textStyles.bodySmall,
+                        textAlign: TextAlign.center),
+                  ),
                 ),
                 const Expanded(child: Divider()),
               ],
             ),
             const SizedBox(height: 18),
-            Row(
+            // Disabled: Google/Apple sign-in require real authentication
+            // integration that doesn't exist yet.
+            const Row(
               children: [
                 Expanded(
                   child: _SocialButton(
                     icon: Icons.g_mobiledata_rounded,
                     label: 'Google',
-                    onPressed: () {},
+                    onPressed: null,
                   ),
                 ),
-                const SizedBox(width: 14),
+                SizedBox(width: 14),
                 Expanded(
                   child: _SocialButton(
                     icon: Icons.apple_rounded,
                     label: 'Apple',
-                    onPressed: () {},
+                    onPressed: null,
                   ),
                 ),
               ],
@@ -200,22 +211,26 @@ class _SegmentedToggle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      height: 52,
-      padding: const EdgeInsets.all(AppSpacing.xs),
-      decoration: BoxDecoration(
-        color: context.colors.primaryContainer,
-        borderRadius: BorderRadius.circular(AppRadii.pill),
-      ),
-      child: Row(
-        children: [
-          Expanded(
-              child:
-                  _segment(context, 'Log In', isLogin, () => onChanged(true))),
-          Expanded(
-              child: _segment(
-                  context, 'Sign Up', !isLogin, () => onChanged(false))),
-        ],
+    return ConstrainedBox(
+      // A minimum, not an exact height, so a segment's label can grow at
+      // large Dynamic Type sizes instead of being clipped.
+      constraints: const BoxConstraints(minHeight: 52),
+      child: Container(
+        padding: const EdgeInsets.all(AppSpacing.xs),
+        decoration: BoxDecoration(
+          color: context.colors.primaryContainer,
+          borderRadius: BorderRadius.circular(AppRadii.pill),
+        ),
+        child: Row(
+          children: [
+            Expanded(
+                child: _segment(
+                    context, 'Log In', isLogin, () => onChanged(true))),
+            Expanded(
+                child: _segment(
+                    context, 'Sign Up', !isLogin, () => onChanged(false))),
+          ],
+        ),
       ),
     );
   }
@@ -223,33 +238,41 @@ class _SegmentedToggle extends StatelessWidget {
   Widget _segment(
       BuildContext context, String label, bool selected, VoidCallback onTap) {
     final colors = context.colors;
-    return GestureDetector(
-      onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        decoration: BoxDecoration(
-          color: selected ? colors.surfaceContainer : Colors.transparent,
-          borderRadius: BorderRadius.circular(AppRadii.pill),
-          boxShadow: selected
-              ? [
-                  // Shadow color is intentionally invariant black across
-                  // themes: it represents physical light occlusion, not a
-                  // surface/text/icon role.
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.06),
-                    blurRadius: 8,
-                    offset: const Offset(0, 2),
-                  ),
-                ]
-              : null,
-        ),
-        alignment: Alignment.center,
-        child: Text(
-          label,
-          style: TextStyle(
-            color: selected ? colors.onSurface : colors.onSurfaceVariant,
-            fontWeight: FontWeight.w700,
-            fontSize: 15,
+    return Semantics(
+      button: true,
+      selected: selected,
+      label: label,
+      child: GestureDetector(
+        onTap: onTap,
+        child: ExcludeSemantics(
+          child: AnimatedContainer(
+            duration: context
+                .reducedMotionDuration(const Duration(milliseconds: 200)),
+            decoration: BoxDecoration(
+              color: selected ? colors.surfaceContainer : Colors.transparent,
+              borderRadius: BorderRadius.circular(AppRadii.pill),
+              boxShadow: selected
+                  ? [
+                      // Shadow color is intentionally invariant black
+                      // across themes: it represents physical light
+                      // occlusion, not a surface/text/icon role.
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.06),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
+                      ),
+                    ]
+                  : null,
+            ),
+            alignment: Alignment.center,
+            child: Text(
+              label,
+              style: TextStyle(
+                color: selected ? colors.onSurface : colors.onSurfaceVariant,
+                fontWeight: FontWeight.w700,
+                fontSize: 15,
+              ),
+            ),
           ),
         ),
       ),
@@ -260,7 +283,10 @@ class _SegmentedToggle extends StatelessWidget {
 class _SocialButton extends StatelessWidget {
   final IconData icon;
   final String label;
-  final VoidCallback onPressed;
+
+  /// Null renders (and behaves as) a disabled button: no tap action
+  /// reaches assistive services, and the button is visually muted.
+  final VoidCallback? onPressed;
 
   const _SocialButton(
       {required this.icon, required this.label, required this.onPressed});
@@ -268,23 +294,31 @@ class _SocialButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = context.colors;
-    return SizedBox(
-      height: 52,
+    final bool enabled = onPressed != null;
+    final Color foreground =
+        enabled ? colors.onSurface : context.semanticColors.mutedForeground;
+    return ConstrainedBox(
+      // A minimum, not an exact height, so the label can wrap and grow at
+      // large Dynamic Type sizes instead of being clipped.
+      constraints: const BoxConstraints(minHeight: 52),
       child: OutlinedButton(
         onPressed: onPressed,
         style: OutlinedButton.styleFrom(
           backgroundColor: colors.surfaceContainer,
-          foregroundColor: colors.onSurface,
+          foregroundColor: foreground,
+          disabledForegroundColor: foreground,
           side: BorderSide(color: colors.outline),
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(icon, size: AppIconSize.medium, color: colors.onSurface),
+            Icon(icon, size: AppIconSize.medium, color: foreground),
             const SizedBox(width: AppSpacing.sm),
-            Text(label,
-                style: TextStyle(
-                    color: colors.onSurface, fontWeight: FontWeight.w600)),
+            Flexible(
+              child: Text(label,
+                  style: TextStyle(
+                      color: foreground, fontWeight: FontWeight.w600)),
+            ),
           ],
         ),
       ),

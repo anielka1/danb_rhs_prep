@@ -49,10 +49,23 @@ class ReadinessCard extends StatelessWidget {
     final String bandLabel =
         hasEvidence ? _bandLabels[band]! : 'Not enough data yet';
 
+    // Note: no card-level `semanticLabel` here. AppCard's semanticLabel
+    // mechanism excludes the *entire* child from the semantics tree and
+    // replaces it with one label — correct for a card that's a single
+    // logical control, but wrong here: "View Details" is an independent,
+    // separately-actionable control, and excluding it entirely would make
+    // it unreachable by VoiceOver. Instead: the ring keeps its own
+    // existing semantics (score/value), the band label/explanation/
+    // supporting message are combined into one adjacent announcement
+    // below, and the button remains a normal, independently-reachable
+    // sibling — never nested inside an ExcludeSemantics region.
+    final String textSummary = hasEvidence
+        ? '$bandLabel'
+            '${evidenceExplanation != null ? '. $evidenceExplanation' : ''}'
+            '${supportingMessage != null ? '. $supportingMessage' : ''}'
+        : 'Not enough data yet';
+
     return AppCard(
-      semanticLabel: hasEvidence
-          ? 'Readiness: $bandLabel, ${score.round()} percent'
-          : 'Readiness: not enough data yet',
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
@@ -63,15 +76,27 @@ class ReadinessCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text(bandLabel, style: textStyles.h3),
-                if (evidenceExplanation != null) ...[
-                  const SizedBox(height: AppSpacing.xs),
-                  Text(evidenceExplanation!, style: textStyles.bodySmall),
-                ],
-                if (supportingMessage != null) ...[
-                  const SizedBox(height: AppSpacing.sm),
-                  Text(supportingMessage!, style: textStyles.body),
-                ],
+                Semantics(
+                  label: textSummary,
+                  child: ExcludeSemantics(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(bandLabel, style: textStyles.h3),
+                        if (evidenceExplanation != null) ...[
+                          const SizedBox(height: AppSpacing.xs),
+                          Text(evidenceExplanation!,
+                              style: textStyles.bodySmall),
+                        ],
+                        if (supportingMessage != null) ...[
+                          const SizedBox(height: AppSpacing.sm),
+                          Text(supportingMessage!, style: textStyles.body),
+                        ],
+                      ],
+                    ),
+                  ),
+                ),
                 if (onViewDetail != null) ...[
                   const SizedBox(height: AppSpacing.xs),
                   Align(

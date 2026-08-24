@@ -27,9 +27,12 @@ class PrimaryButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final bool disabled = onPressed == null || isLoading;
     final Color resolvedTextColor = textColor ?? context.colors.onPrimary;
-    return SizedBox(
-      width: double.infinity,
-      height: 56,
+    // A minimum, not an exact height: at 1.0x text scaling the button is
+    // exactly 56pt tall as designed, but a large-Dynamic-Type label that
+    // needs to wrap can grow the button taller instead of being clipped.
+    return ConstrainedBox(
+      constraints:
+          const BoxConstraints(minWidth: double.infinity, minHeight: 56),
       child: Semantics(
         button: true,
         enabled: !disabled,
@@ -76,9 +79,12 @@ class PrimaryButton extends StatelessWidget {
                     Flexible(
                       child: Text(
                         label,
+                        // No overflow/ellipsis: a button label is an
+                        // essential instruction (e.g. "Submit Answer") and
+                        // must wrap rather than be truncated at large
+                        // Dynamic Type sizes.
                         style: context.textStyles.button
                             .copyWith(color: resolvedTextColor),
-                        overflow: TextOverflow.ellipsis,
                       ),
                     ),
                     if (trailingIcon != null) ...[
@@ -119,9 +125,9 @@ class SecondaryButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final bool disabled = onPressed == null || isLoading;
     final Color resolvedColor = textColor ?? context.colors.primary;
-    return SizedBox(
-      width: double.infinity,
-      height: 56,
+    return ConstrainedBox(
+      constraints:
+          const BoxConstraints(minWidth: double.infinity, minHeight: 56),
       child: Semantics(
         button: true,
         enabled: !disabled,
@@ -165,7 +171,6 @@ class SecondaryButton extends StatelessWidget {
                           color: resolvedColor,
                           fontWeight: FontWeight.w700,
                         ),
-                        overflow: TextOverflow.ellipsis,
                       ),
                     ),
                     if (trailingIcon != null) ...[

@@ -5,6 +5,7 @@ import 'package:danb_rhs_prep/screens/main_shell.dart';
 import 'package:danb_rhs_prep/screens/mock_exam_screen.dart';
 import 'package:danb_rhs_prep/screens/profile_settings_screen.dart';
 import 'package:danb_rhs_prep/services/fakes/fake_analytics_service.dart';
+import 'package:danb_rhs_prep/services/theme_mode_controller.dart';
 import 'package:danb_rhs_prep/theme/app_theme.dart';
 import 'package:danb_rhs_prep/widgets/app_bottom_navigation.dart';
 
@@ -15,7 +16,8 @@ void main() {
       restorationScopeId: 'test_root',
       home: child,
       routes: {
-        ProfileSettingsScreen.route: (_) => const ProfileSettingsScreen(),
+        ProfileSettingsScreen.route: (_) =>
+            ProfileSettingsScreen(themeModeController: ThemeModeController()),
       },
     );
   }
@@ -114,10 +116,10 @@ void main() {
       final SemanticsHandle handle = tester.ensureSemantics();
       await tester.pumpWidget(wrap(const MainShell()));
 
-      await tester.tap(find.bySemanticsLabel('Wed 19'));
+      await tester.tap(find.bySemanticsLabel(RegExp('Wed')));
       await tester.pump();
       expect(
-        tester.getSemantics(find.bySemanticsLabel('Wed 19')),
+        tester.getSemantics(find.bySemanticsLabel(RegExp('Wed'))),
         matchesSemantics(
             isSelected: true,
             hasSelectedState: true,
@@ -131,7 +133,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(
-        tester.getSemantics(find.bySemanticsLabel('Wed 19')),
+        tester.getSemantics(find.bySemanticsLabel(RegExp('Wed'))),
         matchesSemantics(
             isSelected: true,
             hasSelectedState: true,
@@ -168,7 +170,7 @@ void main() {
       final SemanticsHandle handle = tester.ensureSemantics();
       await tester.pumpWidget(wrap(const MainShell()));
 
-      await tester.tap(find.bySemanticsLabel('Wed 19'));
+      await tester.tap(find.bySemanticsLabel(RegExp('Wed')));
       await tester.pump();
 
       await tester.tap(find.text('Home'));
@@ -176,7 +178,7 @@ void main() {
 
       expect(currentTab(tester), AppTab.home);
       expect(
-        tester.getSemantics(find.bySemanticsLabel('Wed 19')),
+        tester.getSemantics(find.bySemanticsLabel(RegExp('Wed'))),
         matchesSemantics(
             isSelected: true,
             hasSelectedState: true,
@@ -192,7 +194,7 @@ void main() {
       final SemanticsHandle handle = tester.ensureSemantics();
       await tester.pumpWidget(wrap(const MainShell()));
 
-      await tester.tap(find.bySemanticsLabel('Wed 19'));
+      await tester.tap(find.bySemanticsLabel(RegExp('Wed')));
       await tester.pump();
 
       await tester.tap(find.byTooltip('Settings'));
@@ -205,7 +207,7 @@ void main() {
       expect(find.byType(ProfileSettingsScreen), findsNothing);
       expect(currentTab(tester), AppTab.home);
       expect(
-        tester.getSemantics(find.bySemanticsLabel('Wed 19')),
+        tester.getSemantics(find.bySemanticsLabel(RegExp('Wed'))),
         matchesSemantics(
             isSelected: true,
             hasSelectedState: true,

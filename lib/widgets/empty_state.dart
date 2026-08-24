@@ -29,39 +29,60 @@ class EmptyState extends StatelessWidget {
   Widget build(BuildContext context) {
     final textStyles = context.textStyles;
 
-    return Center(
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 320),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            if (icon != null) ...[
-              Icon(icon,
-                  size: 56, color: context.semanticColors.mutedForeground),
-              const SizedBox(height: AppSpacing.lg),
-            ],
-            Text(title, style: textStyles.h3, textAlign: TextAlign.center),
-            if (message != null) ...[
-              const SizedBox(height: AppSpacing.sm),
-              Text(
-                message!,
-                style: textStyles.body,
-                textAlign: TextAlign.center,
-              ),
-            ],
-            if (primaryActionLabel != null) ...[
-              const SizedBox(height: AppSpacing.xl),
-              PrimaryButton(
-                  label: primaryActionLabel!, onPressed: onPrimaryAction),
-            ],
-            if (secondaryActionLabel != null) ...[
-              const SizedBox(height: AppSpacing.sm),
-              SecondaryButton(
-                  label: secondaryActionLabel!, onPressed: onSecondaryAction),
-            ],
+    final Widget content = ConstrainedBox(
+      constraints: const BoxConstraints(maxWidth: 320),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (icon != null) ...[
+            Icon(icon, size: 56, color: context.semanticColors.mutedForeground),
+            const SizedBox(height: AppSpacing.lg),
           ],
-        ),
+          Text(title, style: textStyles.h3, textAlign: TextAlign.center),
+          if (message != null) ...[
+            const SizedBox(height: AppSpacing.sm),
+            Text(
+              message!,
+              style: textStyles.body,
+              textAlign: TextAlign.center,
+            ),
+          ],
+          if (primaryActionLabel != null) ...[
+            const SizedBox(height: AppSpacing.xl),
+            PrimaryButton(
+                label: primaryActionLabel!, onPressed: onPrimaryAction),
+          ],
+          if (secondaryActionLabel != null) ...[
+            const SizedBox(height: AppSpacing.sm),
+            SecondaryButton(
+                label: secondaryActionLabel!, onPressed: onSecondaryAction),
+          ],
+        ],
       ),
+    );
+
+    // LayoutBuilder + a minHeight matching the available space: content
+    // stays exactly centered when it fits (identical to a plain `Center`
+    // at ordinary text sizes), but becomes scrollable instead of
+    // overflowing if large Dynamic Type text makes it taller than the
+    // available space. Only applies when the incoming height is actually
+    // bounded (e.g. AppScaffold's body slot): when EmptyState is nested
+    // inside an ancestor that's already scrollable (unbounded height —
+    // maxHeight would be infinite), `BoxConstraints(minHeight: infinity)`
+    // is itself invalid, and unnecessary besides, since that ancestor
+    // already handles "become scrollable instead of overflowing".
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        if (!constraints.hasBoundedHeight) {
+          return Center(child: content);
+        }
+        return SingleChildScrollView(
+          child: ConstrainedBox(
+            constraints: BoxConstraints(minHeight: constraints.maxHeight),
+            child: Center(child: content),
+          ),
+        );
+      },
     );
   }
 }

@@ -90,7 +90,7 @@ void main() {
     expect(padding.padding, const EdgeInsets.all(4));
   });
 
-  testWidgets('long title does not overflow (ellipsizes instead of throwing)',
+  testWidgets('long title does not overflow (wraps instead of throwing)',
       (tester) async {
     await tester.pumpWidget(
       wrap(

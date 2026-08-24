@@ -27,60 +27,69 @@ class PracticeSummaryScreen extends StatelessWidget {
     final colors = context.colors;
     final textStyles = context.textStyles;
     return AppScaffold(
-      body: Column(
-        children: [
-          const SizedBox(height: 28),
-          Container(
-            width: 56,
-            height: 56,
-            decoration: BoxDecoration(
-              color: colors.primaryContainer,
-              shape: BoxShape.circle,
+      // The whole screen scrolls (rather than only the topic-breakdown
+      // list, with fixed header/footer content around it) so nothing is
+      // clipped when the header text and topic rows grow at large
+      // Dynamic Type sizes on a small device.
+      body: SingleChildScrollView(
+        child: Column(
+          children: [
+            const SizedBox(height: 28),
+            Container(
+              width: 56,
+              height: 56,
+              decoration: BoxDecoration(
+                color: colors.primaryContainer,
+                shape: BoxShape.circle,
+              ),
+              child: Icon(Icons.check_rounded,
+                  color: colors.primary, size: AppIconSize.large),
             ),
-            child: Icon(Icons.check_rounded,
-                color: colors.primary, size: AppIconSize.large),
-          ),
-          const SizedBox(height: 18),
-          Text('Session Complete!', style: textStyles.h1),
-          const SizedBox(height: AppSpacing.sm),
-          Text(
-            'You did an outstanding job reviewing today.',
-            textAlign: TextAlign.center,
-            style: textStyles.body,
-          ),
-          const SizedBox(height: 30),
-          Row(
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('78%', style: textStyles.statNumber),
-                    const SizedBox(height: AppSpacing.xs),
-                    Text('78/100 Correct', style: textStyles.bodySmall),
-                  ],
+            const SizedBox(height: 18),
+            Text('Session Complete!', style: textStyles.h1),
+            const SizedBox(height: AppSpacing.sm),
+            Text(
+              'You did an outstanding job reviewing today.',
+              textAlign: TextAlign.center,
+              style: textStyles.body,
+            ),
+            const SizedBox(height: 30),
+            Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('78%', style: textStyles.statNumber),
+                      const SizedBox(height: AppSpacing.xs),
+                      Text('78/100 Correct', style: textStyles.bodySmall),
+                    ],
+                  ),
                 ),
-              ),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('42m', style: textStyles.statNumber),
-                    const SizedBox(height: AppSpacing.xs),
-                    Text('Time Spent', style: textStyles.bodySmall),
-                  ],
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('42m', style: textStyles.statNumber),
+                      const SizedBox(height: AppSpacing.xs),
+                      Text('Time Spent', style: textStyles.bodySmall),
+                    ],
+                  ),
                 ),
-              ),
-            ],
-          ),
-          const SizedBox(height: AppSpacing.xxl + 4),
-          Align(
-            alignment: Alignment.centerLeft,
-            child: Text('TOPIC BREAKDOWN', style: textStyles.label),
-          ),
-          const SizedBox(height: AppSpacing.sm),
-          Expanded(
-            child: ListView.separated(
+              ],
+            ),
+            const SizedBox(height: AppSpacing.xxl + 4),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: Text('TOPIC BREAKDOWN', style: textStyles.label),
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            // shrinkWrap + NeverScrollableScrollPhysics: this list no longer
+            // owns its own scrolling (the outer SingleChildScrollView does),
+            // it just sizes to its content.
+            ListView.separated(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
               itemCount: _breakdown.length,
               separatorBuilder: (_, __) => const Divider(height: 1),
               itemBuilder: (context, i) {
@@ -90,11 +99,14 @@ class PracticeSummaryScreen extends StatelessWidget {
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text(t.name,
-                          style: TextStyle(
-                              fontWeight: FontWeight.w700,
-                              fontSize: 15,
-                              color: colors.onSurface)),
+                      Expanded(
+                        child: Text(t.name,
+                            style: TextStyle(
+                                fontWeight: FontWeight.w700,
+                                fontSize: 15,
+                                color: colors.onSurface)),
+                      ),
+                      const SizedBox(width: AppSpacing.sm),
                       Text('${t.percent}%',
                           style: TextStyle(
                               fontWeight: FontWeight.w600,
@@ -105,16 +117,19 @@ class PracticeSummaryScreen extends StatelessWidget {
                 );
               },
             ),
-          ),
-          SecondaryButton(label: 'Review Mistakes', onPressed: () {}),
-          const SizedBox(height: AppSpacing.md),
-          PrimaryButton(
-            label: 'Back to Home',
-            onPressed: () => Navigator.of(context)
-                .pushNamedAndRemoveUntil(MainShell.route, (route) => false),
-          ),
-          const SizedBox(height: AppSpacing.lg),
-        ],
+            const SizedBox(height: AppSpacing.md),
+            // Disabled: reviewing missed practice questions requires
+            // stored attempt/answer data that doesn't exist yet.
+            const SecondaryButton(label: 'Review Mistakes', onPressed: null),
+            const SizedBox(height: AppSpacing.md),
+            PrimaryButton(
+              label: 'Back to Home',
+              onPressed: () => Navigator.of(context)
+                  .pushNamedAndRemoveUntil(MainShell.route, (route) => false),
+            ),
+            const SizedBox(height: AppSpacing.lg),
+          ],
+        ),
       ),
     );
   }
