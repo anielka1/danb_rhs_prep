@@ -419,13 +419,98 @@ Returning users should go directly from app bootstrap to the main app.
 
 ## 3.1 App bootstrap
 
-- [ ] Replace the fixed two-second splash delay with real initialization.
-- [ ] Load and validate the selected exam content package.
+- [x] Replace the fixed two-second splash delay with real initialization.
+  (`SplashScreen` no longer owns a `Timer`; its lifetime is entirely
+  determined by `AppBootstrapService.initialize()` completing. Evidence:
+  `test/main_test.dart` — a source-content check that no `Timer(`/
+  `Duration(seconds: 2)` remains, plus "the splash screen stays visible"
+  while a controlled `Completer`-backed content loader is deliberately
+  left unresolved for 5 (virtual) seconds.)
+- [x] Load and validate the selected exam content package. (New
+  `lib/bootstrap/app_bootstrap_service.dart` loads through the existing,
+  plain-Dart `ContentRepository` interface — not the Flutter-importing
+  `ExamContentLoader`/`BundledExamContentLoader` directly — confirms the
+  loaded package's `exam.id` matches the selected exam, and validates
+  with the existing, unmodified `ContentValidator`, no validation logic
+  duplicated. The production adapter, `BundledContentRepository` (new,
+  `lib/features/content/data/bundled_content_repository.dart`), delegates
+  to `BundledExamContentLoader`/`rootBundle` and is wired only from
+  `main.dart`, so `app_bootstrap_service.dart` and everything it directly
+  imports carry no Flutter dependency, direct or transitive — see
+  `test/bootstrap/dependency_direction_test.dart` for a source-level
+  proof of that boundary. Evidence: `test/bootstrap/app_bootstrap_service_test.dart`,
+  including one test that loads the real bundled DANB RHS content
+  through the real `BundledContentRepository`/`BundledExamContentLoader`/
+  `rootBundle`, not a fixture; and `test/bootstrap/production_wiring_test.dart`,
+  which additionally proves the *exact* production wiring — the real
+  `BundledContentRepository` plus `SharedPreferencesBootstrapLocalStore`,
+  no profile repository, no network — succeeds against the real bundled
+  asset end to end, not just algorithm-level test doubles.)
 - [ ] Load local profile, settings, progress, and entitlement cache.
-- [ ] Check whether onboarding is complete.
-- [ ] Route to onboarding or the main app.
-- [ ] Show a recoverable content-error screen if bundled content is invalid.
-- [ ] Never require network access to start studying.
+  **Not fully implemented — left unchecked.** What is genuinely, durably
+  loaded today: selected exam ID, theme preference, the onboarding-complete
+  flag, a readiness/progress *snapshot* (not full practice history), and
+  a cached entitlement snapshot, all through the new
+  `SharedPreferencesBootstrapLocalStore` — genuine local persistence, not
+  an in-memory fake (`InMemoryBootstrapLocalStore` exists only for tests,
+  matching this codebase's established fakes/ convention; see
+  `test/bootstrap/shared_preferences_bootstrap_local_store_test.dart` for
+  round-trip and corrupt-entry-handling evidence, and
+  `test/bootstrap/production_wiring_test.dart` for the same store wired
+  exactly as `main.dart` wires it). What is **not** implemented: no
+  production `UserSettingsRepository` adapter is injected anywhere in
+  `main.dart` (`AppBootstrapService.userSettingsRepository` stays `null`
+  in production — no such adapter exists yet), so a real stored user
+  profile is never loaded, only ever honestly absent; and only a
+  lightweight readiness *snapshot* is cached, not a complete progress-
+  history persistence layer (full practice history belongs in a real
+  database per this store's own scope, not `SharedPreferences`). Both
+  gaps are real, deferred work, not rounding error — this checkbox stays
+  unchecked until a production profile adapter exists and full progress
+  persistence is built.
+
+  The cached entitlement snapshot is a **last-known local cache, not
+  authoritative purchase verification**: it is user-editable
+  `SharedPreferences` data, not a verified receipt, and nothing here
+  contacts StoreKit/Play Billing. A missing, corrupt, or expired
+  entitlement cache always resolves to free tier (see
+  `Entitlement.free`), and no premium feature gating exists anywhere
+  based on this value — real verification is Phase 9's job. See the doc
+  comments on `BootstrapReady.entitlement` and
+  `BootstrapLocalStore.readEntitlementSnapshot` for the same boundary
+  documented in code.
+- [x] Check whether onboarding is complete. (An explicit, persisted
+  boolean in `BootstrapLocalStore` — not inferred from any profile
+  field. Defaults to incomplete when never set.)
+- [x] Route to onboarding or the main app. (`SplashScreen` replaces
+  itself with `OnboardingEntryScreen` or `MainShell` depending on that
+  flag — never Login. Evidence: `test/main_test.dart`'s "successful
+  bootstrap routing" group. `OnboardingEntryScreen`'s own "Continue"
+  save is itself now failure-safe: a persistence failure keeps the user
+  on the onboarding screen with an accessible live-region error and a
+  Retry action, rather than silently entering the main app on an unsaved
+  flag; a secondary "Continue for this session" action lets the user
+  proceed without durable persistence when they choose to, without ever
+  claiming the save succeeded. Evidence:
+  `test/screens/onboarding_entry_screen_test.dart`'s "onboarding-save
+  failure handling" group.)
+- [x] Show a recoverable content-error screen if bundled content is
+  invalid. (`SplashScreen` shows the existing `ErrorState` component
+  with a safe, generic message and a Retry action that re-runs the
+  complete bootstrap operation; duplicate taps while retrying cannot
+  start a concurrent run, since the button itself disappears during
+  loading. Evidence: `test/main_test.dart`'s "content failure" group.)
+- [x] Never require network access to start studying. (`AppBootstrapService`
+  has no HTTP/Supabase/auth/StoreKit-shaped dependency anywhere in its
+  constructor or implementation, nor does anything it directly depends on
+  — evidence includes a source-content check for exactly that
+  (`test/bootstrap/dependency_direction_test.dart`,
+  `test/bootstrap/app_bootstrap_service_test.dart`'s "no remote
+  dependency is reachable" group), plus `test/bootstrap/offline_behavior_test.dart`
+  proving the bootstrap *algorithm* succeeds offline, and
+  `test/bootstrap/production_wiring_test.dart` additionally proving the
+  real production wiring itself — real bundled asset, real
+  `SharedPreferences`-backed store — succeeds with no network access.)
 
 ## 3.2 Welcome screen
 

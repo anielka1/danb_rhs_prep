@@ -4,12 +4,21 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:danb_rhs_prep/main.dart';
 import 'package:danb_rhs_prep/services/theme_mode_controller.dart';
 
+import '../support/app_bootstrap_test_support.dart';
+
 void main() {
   Future<void> launchToHome(
       WidgetTester tester, ThemeModeController controller) async {
-    await tester.pumpWidget(DanbRhsPrepApp(themeModeController: controller));
-    // Flush the splash screen's navigation timer to reach the main shell.
-    await tester.pump(const Duration(seconds: 2));
+    // onboardingComplete: true — a returning user, reaching Home directly
+    // — since this file is about theme selection from Settings, not
+    // onboarding routing.
+    final boot = readyAppBootstrap();
+    await tester.pumpWidget(DanbRhsPrepApp(
+      themeModeController: controller,
+      bootstrapService: boot.bootstrapService,
+      localStore: boot.localStore,
+    ));
+    // Real async bootstrap completion, not a fixed-duration pump.
     await tester.pumpAndSettle();
   }
 

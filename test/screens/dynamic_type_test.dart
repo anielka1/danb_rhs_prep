@@ -1,6 +1,12 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:danb_rhs_prep/bootstrap/app_bootstrap_service.dart';
+import 'package:danb_rhs_prep/domain/repositories/content_repository.dart';
+import 'package:danb_rhs_prep/domain/repositories/fakes/in_memory_bootstrap_local_store.dart';
+import 'package:danb_rhs_prep/features/content/domain/content_package.dart';
 import 'package:danb_rhs_prep/screens/answer_explanation_screen.dart';
 import 'package:danb_rhs_prep/screens/exam_overview_screen.dart';
 import 'package:danb_rhs_prep/screens/home_screen.dart';
@@ -19,13 +25,31 @@ import 'package:danb_rhs_prep/widgets/app_bottom_navigation.dart';
 
 import '../support/dynamic_type_probe.dart';
 
+/// Never resolves — these tests only check the splash screen's *loading*
+/// visual for layout overflow, so bootstrap never needs to actually
+/// complete.
+class _NeverLoadsContentRepository implements ContentRepository {
+  @override
+  Future<ContentPackage> loadContentPackage(String examId) =>
+      Completer<ContentPackage>().future;
+}
+
+Widget _neverReadySplashScreen() {
+  return SplashScreen(
+    bootstrapService: AppBootstrapService(
+      contentRepository: _NeverLoadsContentRepository(),
+      localStore: InMemoryBootstrapLocalStore(),
+    ),
+    localStore: InMemoryBootstrapLocalStore(),
+  );
+}
+
 void main() {
   Widget appWith(Widget home) =>
       MaterialApp(theme: AppTheme.lightTheme, home: home);
 
   group('every screen at 2.0x on a small iPhone', () {
     final screens = <String, Widget>{
-      'SplashScreen': const SplashScreen(),
       'LoginScreen': const LoginScreen(),
       'HomeScreen': const HomeScreen(),
       'ExamOverviewScreen': const ExamOverviewScreen(),
@@ -165,7 +189,6 @@ void main() {
     // clamping is applied anywhere in the app — every screen genuinely
     // renders at this scale.
     final screens = <String, Widget>{
-      'SplashScreen': const SplashScreen(),
       'LoginScreen': const LoginScreen(),
       'HomeScreen': const HomeScreen(),
       'ExamOverviewScreen': const ExamOverviewScreen(),
@@ -241,6 +264,41 @@ void main() {
         expect(tester.getSize(find.byWidget(element.widget)).width,
             greaterThan(0));
       }
+    });
+  });
+
+  group('SplashScreen at large text scale', () {
+    // A single pump, not pumpAtScale (which settles): the loading splash
+    // shows an indeterminate CircularProgressIndicator, which by design
+    // never stops animating on its own — pumpAndSettle would time out
+    // waiting for an animation that isn't supposed to finish while
+    // bootstrap is still pending. One pump is enough to surface a real
+    // layout overflow exception, which is all this checks for.
+    Future<void> pumpSplashOnce(WidgetTester tester, double textScale) async {
+      final double dpr = tester.view.devicePixelRatio;
+      tester.view.physicalSize = Size(
+        ProbeViewport.smallPhone.size.width * dpr,
+        ProbeViewport.smallPhone.size.height * dpr,
+      );
+      addTearDown(tester.view.reset);
+      await tester.pumpWidget(
+        MediaQuery(
+          data: MediaQueryData(textScaler: TextScaler.linear(textScale)),
+          child: appWith(_neverReadySplashScreen()),
+        ),
+      );
+      await tester.pump();
+      expect(tester.takeException(), isNull,
+          reason: 'unexpected overflow/exception at ${textScale}x on '
+              '${ProbeViewport.smallPhone.label}');
+    }
+
+    testWidgets('has no overflow at 2.0x', (tester) async {
+      await pumpSplashOnce(tester, 2.0);
+    });
+
+    testWidgets('has no overflow at 4.0x', (tester) async {
+      await pumpSplashOnce(tester, 4.0);
     });
   });
 }
