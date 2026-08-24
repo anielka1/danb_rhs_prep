@@ -9,6 +9,16 @@ abstract interface class AnalyticsService {
   /// for something that isn't a route — e.g. a tab that became active
   /// inside an `IndexedStack`, which the `Navigator` never sees).
   void trackScreenView(String screenId);
+
+  /// Records a discrete, named user action — e.g. `'onboarding_started'`
+  /// — identified by a stable, snake_case [name]. [properties] must only
+  /// ever hold stable, non-user-facing identifiers (e.g. an exam ID
+  /// sourced from `ExamConfig`), never translated UI copy,
+  /// question/answer text, or personal data (email, profile answers,
+  /// etc.). Callers must treat a throwing implementation the same way
+  /// [trackScreenView] is already treated elsewhere: analytics failure
+  /// must never be allowed to block the action it's reporting on.
+  void trackEvent(String name, {Map<String, Object?> properties});
 }
 
 /// Default implementation: does nothing. Used whenever no analytics
@@ -19,4 +29,7 @@ class NoOpAnalyticsService implements AnalyticsService {
 
   @override
   void trackScreenView(String screenId) {}
+
+  @override
+  void trackEvent(String name, {Map<String, Object?> properties = const {}}) {}
 }

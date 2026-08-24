@@ -13,7 +13,7 @@ import 'navigation/analytics_navigator_observer.dart';
 import 'screens/splash_screen.dart';
 import 'screens/login_screen.dart';
 import 'screens/main_shell.dart';
-import 'screens/onboarding_entry_screen.dart';
+import 'screens/welcome_screen.dart';
 import 'screens/exam_overview_screen.dart';
 import 'screens/practice_question_screen.dart';
 import 'screens/answer_explanation_screen.dart';
@@ -127,7 +127,7 @@ class _DanbRhsPrepAppState extends State<DanbRhsPrepApp> {
                 ),
             LoginScreen.route: (_) => const LoginScreen(),
             MainShell.route: (_) => MainShell(analytics: widget.analytics),
-            OnboardingEntryScreen.route: (_) => OnboardingEntryScreen(
+            WelcomeScreen.route: (_) => WelcomeScreen(
                   localStore: _localStore,
                   analytics: widget.analytics,
                 ),

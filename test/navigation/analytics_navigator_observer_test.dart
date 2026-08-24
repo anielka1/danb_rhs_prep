@@ -10,6 +10,11 @@ class _ThrowingAnalyticsService implements AnalyticsService {
   void trackScreenView(String screenId) {
     throw StateError('backend unavailable');
   }
+
+  @override
+  void trackEvent(String name, {Map<String, Object?> properties = const {}}) {
+    throw StateError('backend unavailable');
+  }
 }
 
 void main() {
