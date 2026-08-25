@@ -5,6 +5,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../domain/models/entitlement.dart';
 import '../domain/models/exam_date_precision.dart';
 import '../domain/models/exam_date_selection.dart';
+import '../domain/models/experience_level.dart';
+import '../domain/models/experience_level_codec.dart';
 import '../domain/models/readiness_snapshot.dart';
 import '../domain/models/readiness_band.dart';
 import '../domain/models/user_profile.dart';
@@ -35,6 +37,12 @@ class SharedPreferencesBootstrapLocalStore implements BootstrapLocalStore {
   static const String _entitlementKey = 'bootstrap.entitlement_snapshot';
   static const String _readinessKeyPrefix = 'bootstrap.readiness_snapshot.';
   static const String _examDateSelectionKey = 'bootstrap.exam_date_selection';
+  static const String _experienceLevelKey = 'bootstrap.experience_level';
+
+  /// The only `version` value this store currently knows how to read for
+  /// the experience-level entry — an entry written with any other value
+  /// (including a missing one) is treated as unsupported/corrupt.
+  static const int _experienceLevelVersion = 1;
 
   @override
   Future<String?> readSelectedExamId() async {
@@ -260,5 +268,36 @@ class SharedPreferencesBootstrapLocalStore implements BootstrapLocalStore {
       'day': date?.day,
     };
     return _preferences.setString(_examDateSelectionKey, jsonEncode(json));
+  }
+
+  @override
+  Future<ExperienceLevel?> readExperienceLevel() async {
+    final String? raw = await _preferences.getString(_experienceLevelKey);
+    if (raw == null) return null;
+    try {
+      final json = jsonDecode(raw);
+      if (json is! Map<String, Object?>) return null;
+      if (json['version'] != _experienceLevelVersion) return null;
+      final String? value = json['value'] as String?;
+      if (value == null) return null;
+      // An unrecognized stored value (e.g. from a future app version)
+      // returns null here too, treated the same as absent.
+      return experienceLevelFromStorageValue(value);
+    } on Object {
+      // A corrupt or unrecognized cache entry is discarded, not treated
+      // as valid user data.
+      return null;
+    }
+  }
+
+  @override
+  Future<void> writeExperienceLevel(ExperienceLevel level) {
+    // Explicit stable string serialization via experienceLevelToStorageValue
+    // — never `.name`/`.index` — see that function's doc comment for why.
+    final json = <String, Object?>{
+      'version': _experienceLevelVersion,
+      'value': experienceLevelToStorageValue(level),
+    };
+    return _preferences.setString(_experienceLevelKey, jsonEncode(json));
   }
 }

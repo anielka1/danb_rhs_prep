@@ -9,7 +9,6 @@ import 'package:danb_rhs_prep/bootstrap/app_bootstrap_service.dart';
 import 'package:danb_rhs_prep/bootstrap/bootstrap_session_controller.dart';
 import 'package:danb_rhs_prep/bootstrap/bootstrap_session_scope.dart';
 import 'package:danb_rhs_prep/domain/models/entitlement.dart';
-import 'package:danb_rhs_prep/domain/models/exam_date_precision.dart';
 import 'package:danb_rhs_prep/domain/models/exam_date_selection.dart';
 import 'package:danb_rhs_prep/domain/models/experience_level.dart';
 import 'package:danb_rhs_prep/domain/models/readiness_snapshot.dart';
@@ -18,16 +17,16 @@ import 'package:danb_rhs_prep/domain/repositories/bootstrap_local_store.dart';
 import 'package:danb_rhs_prep/domain/repositories/fakes/in_memory_bootstrap_local_store.dart';
 import 'package:danb_rhs_prep/features/content/domain/content_package.dart';
 import 'package:danb_rhs_prep/features/exams/domain/exam_config.dart';
-import 'package:danb_rhs_prep/screens/exam_date_screen.dart';
+import 'package:danb_rhs_prep/screens/experience_level_screen.dart';
 import 'package:danb_rhs_prep/theme/app_theme.dart';
 
-/// A real semantics-tree traversal test for `ExamDateScreen` — distinct
-/// from `exam_date_screen_test.dart`'s widget-coordinate "visual layout
-/// order" check, which proves top-to-bottom position, not what a screen
-/// reader would actually announce or in what order. This file walks the
-/// real [SemanticsNode] tree the framework builds, the same structure
-/// VoiceOver/TalkBack read from. It is still not a substitute for
-/// manually operating VoiceOver — that remains a separate, pending
+/// A real semantics-tree traversal test for `ExperienceLevelScreen` —
+/// distinct from `experience_level_screen_test.dart`'s widget-coordinate
+/// "visual layout order" check, which proves top-to-bottom position, not
+/// what a screen reader would actually announce or in what order. This
+/// walks the real [SemanticsNode] tree the framework builds — the same
+/// structure VoiceOver/TalkBack read from. It is still not a substitute
+/// for manually operating VoiceOver, which remains a separate, pending
 /// manual verification step.
 ExamConfig _fakeExamConfig() {
   return const ExamConfig(
@@ -78,7 +77,7 @@ ExamConfig _fakeExamConfig() {
   );
 }
 
-BootstrapReady _readySnapshot({ExamDateSelection? examDateSelection}) {
+BootstrapReady _readySnapshot() {
   return BootstrapReady(
     selectedExamId: 'danb_rhs',
     contentPackage: ContentPackage(
@@ -93,20 +92,20 @@ BootstrapReady _readySnapshot({ExamDateSelection? examDateSelection}) {
     readinessSnapshot: null,
     entitlement: Entitlement.free(lastVerifiedAt: DateTime.utc(2026, 1, 1)),
     onboardingComplete: false,
-    examDateSelection: examDateSelection,
+    examDateSelection: null,
     experienceLevel: null,
   );
 }
 
-/// [writeExamDateSelection] never resolves on its own — lets a test hold
-/// `ExamDateScreen` in its busy/loading state deterministically.
+/// [writeExperienceLevel] never resolves on its own — lets a test hold
+/// `ExperienceLevelScreen` in its busy/loading state deterministically.
 class _NeverCompletingLocalStore implements BootstrapLocalStore {
   _NeverCompletingLocalStore(this._delegate);
   final BootstrapLocalStore _delegate;
   final Completer<void> writeCompleter = Completer<void>();
 
   @override
-  Future<void> writeExamDateSelection(ExamDateSelection selection) =>
+  Future<void> writeExperienceLevel(ExperienceLevel level) =>
       writeCompleter.future;
 
   @override
@@ -141,18 +140,67 @@ class _NeverCompletingLocalStore implements BootstrapLocalStore {
   Future<ExamDateSelection?> readExamDateSelection() =>
       _delegate.readExamDateSelection();
   @override
+  Future<void> writeExamDateSelection(ExamDateSelection selection) =>
+      _delegate.writeExamDateSelection(selection);
+  @override
   Future<ExperienceLevel?> readExperienceLevel() =>
       _delegate.readExperienceLevel();
+}
+
+/// [writeExperienceLevel] always fails — used to reach the recoverable
+/// error state deterministically.
+class _ThrowingSelectionLocalStore implements BootstrapLocalStore {
+  _ThrowingSelectionLocalStore(this._delegate);
+  final BootstrapLocalStore _delegate;
+
   @override
-  Future<void> writeExperienceLevel(ExperienceLevel level) =>
-      _delegate.writeExperienceLevel(level);
+  Future<void> writeExperienceLevel(ExperienceLevel level) async {
+    throw StateError('disk full');
+  }
+
+  @override
+  Future<String?> readSelectedExamId() => _delegate.readSelectedExamId();
+  @override
+  Future<void> writeSelectedExamId(String examId) =>
+      _delegate.writeSelectedExamId(examId);
+  @override
+  Future<bool?> readOnboardingComplete() => _delegate.readOnboardingComplete();
+  @override
+  Future<void> writeOnboardingComplete(bool complete) =>
+      _delegate.writeOnboardingComplete(complete);
+  @override
+  Future<ThemePreference?> readThemePreference() =>
+      _delegate.readThemePreference();
+  @override
+  Future<void> writeThemePreference(ThemePreference preference) =>
+      _delegate.writeThemePreference(preference);
+  @override
+  Future<Entitlement?> readEntitlementSnapshot() =>
+      _delegate.readEntitlementSnapshot();
+  @override
+  Future<void> writeEntitlementSnapshot(Entitlement entitlement) =>
+      _delegate.writeEntitlementSnapshot(entitlement);
+  @override
+  Future<ReadinessSnapshot?> readLatestReadinessSnapshot(String examId) =>
+      _delegate.readLatestReadinessSnapshot(examId);
+  @override
+  Future<void> writeLatestReadinessSnapshot(ReadinessSnapshot snapshot) =>
+      _delegate.writeLatestReadinessSnapshot(snapshot);
+  @override
+  Future<ExamDateSelection?> readExamDateSelection() =>
+      _delegate.readExamDateSelection();
+  @override
+  Future<void> writeExamDateSelection(ExamDateSelection selection) =>
+      _delegate.writeExamDateSelection(selection);
+  @override
+  Future<ExperienceLevel?> readExperienceLevel() =>
+      _delegate.readExperienceLevel();
 }
 
 /// Finds the root [SemanticsNode] via the non-deprecated
-/// [RendererBinding.rootPipelineOwner] tree: the root pipeline owner
-/// itself has no [SemanticsOwner] in a multi-view test harness, so this
-/// walks its children to find the per-view owner that does. (Same
-/// pattern as `test/screens/focus_order_test.dart`.)
+/// [RendererBinding.rootPipelineOwner] tree (same pattern as
+/// `test/screens/focus_order_test.dart` and
+/// `exam_date_screen_semantics_test.dart`).
 SemanticsNode _rootSemanticsNode(WidgetTester tester) {
   SemanticsNode? found;
   void visit(PipelineOwner owner) {
@@ -199,81 +247,67 @@ List<SemanticsNode> _labeledNodes(SemanticsNode root) {
 }
 
 void main() {
-  Widget wrap({
-    required BootstrapLocalStore localStore,
-    ExamDateSelection? restoredSelection,
-    DateTime Function()? now,
-  }) {
+  Widget wrap({required BootstrapLocalStore localStore}) {
     return MaterialApp(
       theme: AppTheme.lightTheme,
       home: BootstrapSessionScope(
-        controller: BootstrapSessionController(
-            _readySnapshot(examDateSelection: restoredSelection)),
-        child: ExamDateScreen(
-          localStore: localStore,
-          now: now ?? (() => DateTime(2026, 3, 10)),
-        ),
+        controller: BootstrapSessionController(_readySnapshot()),
+        child: ExperienceLevelScreen(localStore: localStore),
       ),
     );
   }
 
   testWidgets(
       'default state: heading, copy, all three choices, and Continue '
-      'appear in the required semantic order, with nothing extra',
+      'appear in the required semantic order, each exactly once',
       (tester) async {
     final SemanticsHandle handle = tester.ensureSemantics();
     await tester.pumpWidget(wrap(localStore: InMemoryBootstrapLocalStore()));
 
     final List<String> order = _labelOrder(_rootSemanticsNode(tester));
 
-    final int headingIndex = order.indexOf('When is your exam?');
-    final int copyIndex = order.indexOf(
-        'This helps us shape your study plan. You can change it later.');
-    final int exactIndex =
-        order.indexWhere((l) => l.startsWith('I know the exact date'));
-    final int approximateIndex =
-        order.indexWhere((l) => l.startsWith('I have an approximate date'));
-    final int unscheduledIndex =
-        order.indexWhere((l) => l.startsWith("I haven't scheduled it yet"));
+    final int headingIndex =
+        order.indexOf('Where are you in your preparation?');
+    final int copyIndex =
+        order.indexOf('Choose the option that best describes you right now.');
+    final int justStartingIndex =
+        order.indexWhere((l) => l.startsWith('Just starting'));
+    final int studyingIndex =
+        order.indexWhere((l) => l.startsWith('Studying already'));
+    final int retakingIndex =
+        order.indexWhere((l) => l.startsWith('Taking the exam again'));
     final int continueIndex = order.indexOf('Continue');
 
     for (final index in [
       headingIndex,
       copyIndex,
-      exactIndex,
-      approximateIndex,
-      unscheduledIndex,
+      justStartingIndex,
+      studyingIndex,
+      retakingIndex,
       continueIndex,
     ]) {
       expect(index, greaterThanOrEqualTo(0));
     }
     expect(headingIndex, lessThan(copyIndex));
-    expect(copyIndex, lessThan(exactIndex));
-    expect(exactIndex, lessThan(approximateIndex));
-    expect(approximateIndex, lessThan(unscheduledIndex));
-    expect(unscheduledIndex, lessThan(continueIndex));
+    expect(copyIndex, lessThan(justStartingIndex));
+    expect(justStartingIndex, lessThan(studyingIndex));
+    expect(studyingIndex, lessThan(retakingIndex));
+    expect(retakingIndex, lessThan(continueIndex));
 
-    // The heading, copy, and each choice are announced exactly once —
-    // none of this screen's decorative icons (choice-card radio icons;
-    // none are present yet in this no-error state) contribute a stray
-    // duplicate. (The screen's own back button also appears, ahead of
-    // the heading, which is expected chrome, not part of this order.)
-    expect(order.where((l) => l == 'When is your exam?').length, 1);
+    // Each expected label is announced exactly once — no decorative
+    // icon (the choice cards' radio icons carry no `semanticLabel`)
+    // contributes a stray duplicate.
+    expect(order.where((l) => l == 'Where are you in your preparation?').length,
+        1);
     expect(
         order
             .where((l) =>
-                l ==
-                'This helps us shape your study plan. You can change it '
-                    'later.')
+                l == 'Choose the option that best describes you right now.')
             .length,
         1);
-    expect(order.where((l) => l.startsWith('I know the exact date')).length, 1);
-    expect(
-        order.where((l) => l.startsWith('I have an approximate date')).length,
-        1);
-    expect(
-        order.where((l) => l.startsWith("I haven't scheduled it yet")).length,
-        1);
+    expect(order.where((l) => l.startsWith('Just starting')).length, 1);
+    expect(order.where((l) => l.startsWith('Studying already')).length, 1);
+    expect(order.where((l) => l.startsWith('Taking the exam again')).length, 1);
 
     handle.dispose();
   });
@@ -284,105 +318,61 @@ void main() {
     final SemanticsHandle handle = tester.ensureSemantics();
     await tester.pumpWidget(wrap(localStore: InMemoryBootstrapLocalStore()));
 
-    await tester.tap(find.text('I know the exact date'));
+    await tester.tap(find.text('Studying already'));
     await tester.pump();
 
     final List<SemanticsNode> nodes = _labeledNodes(_rootSemanticsNode(tester));
-    final SemanticsNode exact =
-        nodes.firstWhere((n) => n.label.startsWith('I know the exact date'));
-    final SemanticsNode approximate = nodes
-        .firstWhere((n) => n.label.startsWith('I have an approximate date'));
+    final SemanticsNode studying =
+        nodes.firstWhere((n) => n.label.startsWith('Studying already'));
+    final SemanticsNode justStarting =
+        nodes.firstWhere((n) => n.label.startsWith('Just starting'));
 
-    expect(exact.label, 'I know the exact date, selected');
-    expect(exact.flagsCollection.isSelected, Tristate.isTrue);
-    expect(approximate.label, 'I have an approximate date, not selected');
-    expect(approximate.flagsCollection.isSelected, isNot(Tristate.isTrue));
+    expect(studying.label, 'Studying already, selected');
+    expect(studying.flagsCollection.isSelected, Tristate.isTrue);
+    expect(justStarting.label, 'Just starting, not selected');
+    expect(justStarting.flagsCollection.isSelected, isNot(Tristate.isTrue));
 
     handle.dispose();
   });
 
   testWidgets(
-      'selecting exact reveals a date selector after the three choices '
-      'and before Continue', (tester) async {
+      'a save-failure error appears between the choices and Continue, as '
+      'a live region announced exactly once (no duplicate from the '
+      'decorative icon)', (tester) async {
     final SemanticsHandle handle = tester.ensureSemantics();
-    await tester.pumpWidget(wrap(localStore: InMemoryBootstrapLocalStore()));
+    final localStore =
+        _ThrowingSelectionLocalStore(InMemoryBootstrapLocalStore());
+    await tester.pumpWidget(wrap(localStore: localStore));
 
-    await tester.tap(find.text('I know the exact date'));
+    await tester.tap(find.text('Just starting'));
     await tester.pump();
+    await tester.tap(find.text('Continue'));
+    await tester.pumpAndSettle();
 
     final List<String> order = _labelOrder(_rootSemanticsNode(tester));
-    final int unscheduledIndex =
-        order.indexWhere((l) => l.startsWith("I haven't scheduled it yet"));
-    final int dateSelectorIndex =
-        order.indexWhere((l) => l.startsWith('Exam date,'));
-    final int continueIndex = order.indexOf('Continue');
-
-    expect(dateSelectorIndex, greaterThanOrEqualTo(0));
-    expect(unscheduledIndex, lessThan(dateSelectorIndex));
-    expect(dateSelectorIndex, lessThan(continueIndex));
-
-    handle.dispose();
-  });
-
-  testWidgets(
-      'selecting unscheduled means the date selector is entirely absent '
-      'from the semantics tree, not merely visually hidden', (tester) async {
-    final SemanticsHandle handle = tester.ensureSemantics();
-    await tester.pumpWidget(wrap(localStore: InMemoryBootstrapLocalStore()));
-
-    await tester.tap(find.text("I haven't scheduled it yet"));
-    await tester.pump();
-
-    final List<String> order = _labelOrder(_rootSemanticsNode(tester));
-    expect(order.any((l) => l.startsWith('Exam date,')), isFalse);
-    expect(order.any((l) => l.startsWith('Choose a date')), isFalse);
-
-    handle.dispose();
-  });
-
-  testWidgets(
-      'a stale restored date shows a live-region error between the date '
-      'selector and Continue, and is announced exactly once (no '
-      'duplicate from the decorative icon)', (tester) async {
-    final SemanticsHandle handle = tester.ensureSemantics();
-    final staleSelection = ExamDateSelection(
-        precision: ExamDatePrecision.exact,
-        date: DateTime(2026, 3, 1)); // before the injected "today" (Mar 10)
-    await tester.pumpWidget(wrap(
-      localStore: InMemoryBootstrapLocalStore(),
-      restoredSelection: staleSelection,
-    ));
-
-    final List<String> order = _labelOrder(_rootSemanticsNode(tester));
-    final int dateSelectorIndex =
-        order.indexWhere((l) => l.startsWith('Exam date,'));
+    final int retakingIndex =
+        order.indexWhere((l) => l.startsWith('Taking the exam again'));
     final int errorIndex =
-        order.indexWhere((l) => l.contains('already passed'));
-    // The button stays labeled "Continue" (just disabled) for a stale
-    // *restored* date — "Retry" is reserved for an actual save failure,
-    // a distinct state this test isn't triggering.
-    final int continueIndex = order.indexOf('Continue');
+        order.indexWhere((l) => l.contains("couldn't save this"));
+    final int retryIndex = order.indexOf('Retry');
 
-    expect(dateSelectorIndex, greaterThanOrEqualTo(0));
+    expect(retakingIndex, greaterThanOrEqualTo(0));
     expect(errorIndex, greaterThanOrEqualTo(0));
-    expect(continueIndex, greaterThanOrEqualTo(0));
-    expect(dateSelectorIndex, lessThan(errorIndex));
-    expect(errorIndex, lessThan(continueIndex));
+    expect(retryIndex, greaterThanOrEqualTo(0));
+    expect(retakingIndex, lessThan(errorIndex));
+    expect(errorIndex, lessThan(retryIndex));
 
-    // Exactly one node carries the error message — the decorative
-    // warning icon beside it (no `semanticLabel`) does not add a second,
-    // duplicate announcement.
-    expect(order.where((l) => l.contains('already passed')).length, 1);
+    expect(order.where((l) => l.contains("couldn't save this")).length, 1);
 
     final SemanticsNode errorNode = _labeledNodes(_rootSemanticsNode(tester))
-        .firstWhere((n) => n.label.contains('already passed'));
+        .firstWhere((n) => n.label.contains("couldn't save this"));
     expect(errorNode.flagsCollection.isLiveRegion, isTrue);
 
     handle.dispose();
   });
 
   testWidgets(
-      'Continue exposes a disabled semantic state until a valid '
+      'Continue exposes a disabled semantic state until a '
       'selection is made', (tester) async {
     final SemanticsHandle handle = tester.ensureSemantics();
     await tester.pumpWidget(wrap(localStore: InMemoryBootstrapLocalStore()));
@@ -395,13 +385,13 @@ void main() {
   });
 
   testWidgets(
-      'Continue exposes a loading/busy semantic state while a save is in '
-      'flight, and stays disabled', (tester) async {
+      'Continue exposes a loading/busy semantic state while a save is '
+      'in flight, and stays disabled', (tester) async {
     final SemanticsHandle handle = tester.ensureSemantics();
     final controlled =
         _NeverCompletingLocalStore(InMemoryBootstrapLocalStore());
     await tester.pumpWidget(wrap(localStore: controlled));
-    await tester.tap(find.text("I haven't scheduled it yet"));
+    await tester.tap(find.text('Just starting'));
     await tester.pump();
 
     await tester.tap(find.text('Continue'));

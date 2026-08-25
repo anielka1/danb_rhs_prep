@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../bootstrap/app_bootstrap_service.dart';
+import '../bootstrap/bootstrap_session_controller.dart';
 import '../bootstrap/bootstrap_session_scope.dart';
 import '../domain/repositories/bootstrap_local_store.dart';
 import '../services/analytics_service.dart';
@@ -77,6 +78,13 @@ class _SplashScreenState extends State<SplashScreen> {
   void _navigateAfterReady(BootstrapReady ready) {
     widget.onReady?.call(ready);
 
+    // Created exactly once per app session, here — the only place a
+    // BootstrapReady is first produced. Every route from here on
+    // (Welcome, Exam Date, Experience Level, Main) forwards this same
+    // instance; none of them ever constructs another one.
+    final BootstrapSessionController controller =
+        BootstrapSessionController(ready);
+
     final Widget screen = ready.onboardingComplete
         ? MainShell(analytics: widget.analytics)
         : WelcomeScreen(
@@ -89,14 +97,15 @@ class _SplashScreenState extends State<SplashScreen> {
     // pushReplacement, not push: the splash route must not remain
     // reachable by navigating back to it once startup has resolved.
     // An explicit MaterialPageRoute (rather than pushReplacementNamed)
-    // is what lets this carry the just-computed BootstrapReady snapshot
-    // to the next screen; RouteSettings(name:) on it is what keeps
+    // is what lets this carry the shared BootstrapSessionController to
+    // the next screen; RouteSettings(name:) on it is what keeps
     // AnalyticsNavigatorObserver's named-route reporting working exactly
     // as it did before this screen owned real logic.
     Navigator.of(context).pushReplacement(
       MaterialPageRoute(
         settings: RouteSettings(name: routeName),
-        builder: (_) => BootstrapSessionScope(snapshot: ready, child: screen),
+        builder: (_) =>
+            BootstrapSessionScope(controller: controller, child: screen),
       ),
     );
   }

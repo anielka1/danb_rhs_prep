@@ -1,7 +1,5 @@
 import 'exam_date_precision.dart';
-
-/// Self-reported study experience captured during onboarding.
-enum ExperienceLevel { justStarting, studyingAlready, retakingExam }
+import 'experience_level.dart';
 
 /// Manual theme override; `system` follows the OS setting.
 enum ThemePreference { system, light, dark }

@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:danb_rhs_prep/domain/models/entitlement.dart';
 import 'package:danb_rhs_prep/domain/models/exam_date_precision.dart';
 import 'package:danb_rhs_prep/domain/models/exam_date_selection.dart';
+import 'package:danb_rhs_prep/domain/models/experience_level.dart';
 import 'package:danb_rhs_prep/domain/models/readiness_band.dart';
 import 'package:danb_rhs_prep/domain/models/readiness_snapshot.dart';
 import 'package:danb_rhs_prep/domain/models/user_profile.dart';
@@ -18,6 +19,7 @@ void main() {
     expect(await store.readEntitlementSnapshot(), isNull);
     expect(await store.readLatestReadinessSnapshot('danb_rhs'), isNull);
     expect(await store.readExamDateSelection(), isNull);
+    expect(await store.readExperienceLevel(), isNull);
   });
 
   test('constructor arguments pre-seed each key synchronously', () async {
@@ -46,6 +48,7 @@ void main() {
       entitlement: entitlement,
       readinessSnapshot: snapshot,
       examDateSelection: examDateSelection,
+      experienceLevel: ExperienceLevel.justStarting,
     );
 
     expect(await store.readSelectedExamId(), 'danb_rhs');
@@ -54,6 +57,7 @@ void main() {
     expect(await store.readEntitlementSnapshot(), entitlement);
     expect(await store.readLatestReadinessSnapshot('danb_rhs'), snapshot);
     expect(await store.readExamDateSelection(), examDateSelection);
+    expect(await store.readExperienceLevel(), ExperienceLevel.justStarting);
   });
 
   test('each key round-trips independently through write then read', () async {
@@ -87,6 +91,7 @@ void main() {
     final examDateSelection = ExamDateSelection(
         precision: ExamDatePrecision.approximate, date: DateTime(2026, 4, 1));
     await store.writeExamDateSelection(examDateSelection);
+    await store.writeExperienceLevel(ExperienceLevel.retakingExam);
 
     expect(await store.readSelectedExamId(), 'danb_rhs');
     expect(await store.readOnboardingComplete(), isTrue);
@@ -94,6 +99,7 @@ void main() {
     expect(await store.readEntitlementSnapshot(), entitlement);
     expect(await store.readLatestReadinessSnapshot('danb_rhs'), snapshot);
     expect(await store.readExamDateSelection(), examDateSelection);
+    expect(await store.readExperienceLevel(), ExperienceLevel.retakingExam);
   });
 
   test('readiness snapshots are keyed per exam ID', () async {

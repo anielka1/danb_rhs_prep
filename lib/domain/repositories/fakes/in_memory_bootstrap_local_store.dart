@@ -1,5 +1,6 @@
 import '../../models/entitlement.dart';
 import '../../models/exam_date_selection.dart';
+import '../../models/experience_level.dart';
 import '../../models/readiness_snapshot.dart';
 import '../../models/user_profile.dart';
 import '../bootstrap_local_store.dart';
@@ -17,11 +18,13 @@ class InMemoryBootstrapLocalStore implements BootstrapLocalStore {
     Entitlement? entitlement,
     ReadinessSnapshot? readinessSnapshot,
     ExamDateSelection? examDateSelection,
+    ExperienceLevel? experienceLevel,
   })  : _selectedExamId = selectedExamId,
         _onboardingComplete = onboardingComplete,
         _themePreference = themePreference,
         _entitlement = entitlement,
-        _examDateSelection = examDateSelection {
+        _examDateSelection = examDateSelection,
+        _experienceLevel = experienceLevel {
     if (readinessSnapshot != null) {
       _readinessByExam[readinessSnapshot.examId] = readinessSnapshot;
     }
@@ -32,6 +35,7 @@ class InMemoryBootstrapLocalStore implements BootstrapLocalStore {
   ThemePreference? _themePreference;
   Entitlement? _entitlement;
   ExamDateSelection? _examDateSelection;
+  ExperienceLevel? _experienceLevel;
   final Map<String, ReadinessSnapshot> _readinessByExam = {};
 
   @override
@@ -85,5 +89,13 @@ class InMemoryBootstrapLocalStore implements BootstrapLocalStore {
   @override
   Future<void> writeExamDateSelection(ExamDateSelection selection) async {
     _examDateSelection = selection;
+  }
+
+  @override
+  Future<ExperienceLevel?> readExperienceLevel() async => _experienceLevel;
+
+  @override
+  Future<void> writeExperienceLevel(ExperienceLevel level) async {
+    _experienceLevel = level;
   }
 }

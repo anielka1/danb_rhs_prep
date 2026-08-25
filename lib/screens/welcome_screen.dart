@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../bootstrap/app_bootstrap_service.dart';
+import '../bootstrap/bootstrap_session_controller.dart';
 import '../bootstrap/bootstrap_session_scope.dart';
 import '../domain/repositories/bootstrap_local_store.dart';
 import '../services/analytics_service.dart';
@@ -58,9 +59,10 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
 
     // Captured before the `await` below (and thus before any risk of
     // this screen's context becoming invalid across the navigation) —
-    // the snapshot the *next* route needs must come from this screen's
-    // own ancestor scope.
-    final BootstrapReady snapshot = BootstrapSessionScope.of(context);
+    // the *same* shared controller every route forwards; this screen
+    // never constructs a new one.
+    final BootstrapSessionController controller =
+        BootstrapSessionScope.controllerOf(context);
 
     // Fires on CTA activation, not screen render, and exactly once.
     // Analytics failure must never be able to block onboarding, so any
@@ -70,7 +72,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
       try {
         widget.analytics.trackEvent(
           'onboarding_started',
-          properties: {'exam_id': snapshot.selectedExamId},
+          properties: {'exam_id': controller.snapshot.selectedExamId},
         );
       } on Object {
         // Intentionally swallowed — see doc comment above.
@@ -85,7 +87,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
       MaterialPageRoute(
         settings: const RouteSettings(name: ExamDateScreen.route),
         builder: (_) => BootstrapSessionScope(
-          snapshot: snapshot,
+          controller: controller,
           child: ExamDateScreen(
             localStore: widget.localStore,
             analytics: widget.analytics,
@@ -107,7 +109,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
     // screen string, and never read from a bundled content asset by
     // this screen directly (that's the content pipeline's job, already
     // done by the time bootstrap produces this snapshot).
-    final BootstrapReady snapshot = BootstrapSessionScope.of(context);
+    final BootstrapReady snapshot = BootstrapSessionScope.snapshotOf(context);
     return _WelcomeContent(
       examName: snapshot.contentPackage.exam.name,
       isBusy: _busy,

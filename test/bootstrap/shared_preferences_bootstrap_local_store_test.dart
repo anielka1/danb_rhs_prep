@@ -9,6 +9,7 @@ import 'package:danb_rhs_prep/bootstrap/shared_preferences_bootstrap_local_store
 import 'package:danb_rhs_prep/domain/models/entitlement.dart';
 import 'package:danb_rhs_prep/domain/models/exam_date_precision.dart';
 import 'package:danb_rhs_prep/domain/models/exam_date_selection.dart';
+import 'package:danb_rhs_prep/domain/models/experience_level.dart';
 import 'package:danb_rhs_prep/domain/models/readiness_band.dart';
 import 'package:danb_rhs_prep/domain/models/readiness_snapshot.dart';
 import 'package:danb_rhs_prep/domain/models/user_profile.dart';
@@ -32,6 +33,7 @@ void main() {
     expect(await store.readEntitlementSnapshot(), isNull);
     expect(await store.readLatestReadinessSnapshot('danb_rhs'), isNull);
     expect(await store.readExamDateSelection(), isNull);
+    expect(await store.readExperienceLevel(), isNull);
   });
 
   test(
@@ -407,6 +409,115 @@ void main() {
           'month': 3,
           'day': 15,
         });
+      });
+    });
+  });
+
+  group('experience level', () {
+    test('all three values round-trip through a fresh store instance',
+        () async {
+      for (final level in ExperienceLevel.values) {
+        final writer = SharedPreferencesBootstrapLocalStore();
+        await writer.writeExperienceLevel(level);
+
+        final reader = SharedPreferencesBootstrapLocalStore();
+        expect(await reader.readExperienceLevel(), level);
+      }
+    });
+
+    test(
+        'each value is serialized via the exact expected explicit stable '
+        'string, never the enum index or a derived name', () async {
+      final Map<ExperienceLevel, String> expectedStoredValues = {
+        ExperienceLevel.justStarting: 'justStarting',
+        ExperienceLevel.studyingAlready: 'studyingAlready',
+        ExperienceLevel.retakingExam: 'retakingExam',
+      };
+
+      for (final entry in expectedStoredValues.entries) {
+        final store = SharedPreferencesBootstrapLocalStore();
+        await store.writeExperienceLevel(entry.key);
+
+        final SharedPreferencesAsync raw = SharedPreferencesAsync();
+        final String? stored =
+            await raw.getString('bootstrap.experience_level');
+        expect(stored, isNotNull);
+        final Map<String, Object?> json =
+            jsonDecode(stored!) as Map<String, Object?>;
+        expect(json['value'], entry.value,
+            reason: '${entry.key} must serialize to exactly '
+                '"${entry.value}"');
+      }
+    });
+
+    group(
+        'a corrupt or unsupported cache entry is discarded, not '
+        'fabricated as valid data', () {
+      test('unparsable JSON returns null, not a throw', () async {
+        final SharedPreferencesAsync raw = SharedPreferencesAsync();
+        await raw.setString('bootstrap.experience_level', 'not json{{{');
+        final store = SharedPreferencesBootstrapLocalStore();
+
+        expect(await store.readExperienceLevel(), isNull);
+      });
+
+      test('an unknown value name returns null', () async {
+        final SharedPreferencesAsync raw = SharedPreferencesAsync();
+        await raw.setString(
+          'bootstrap.experience_level',
+          jsonEncode({'version': 1, 'value': 'expertAlready'}),
+        );
+        final store = SharedPreferencesBootstrapLocalStore();
+
+        expect(await store.readExperienceLevel(), isNull);
+      });
+
+      test('an unsupported JSON version is rejected', () async {
+        final SharedPreferencesAsync raw = SharedPreferencesAsync();
+        await raw.setString(
+          'bootstrap.experience_level',
+          jsonEncode({'version': 2, 'value': 'justStarting'}),
+        );
+        final store = SharedPreferencesBootstrapLocalStore();
+
+        expect(await store.readExperienceLevel(), isNull);
+      });
+
+      test('a missing JSON version is rejected', () async {
+        final SharedPreferencesAsync raw = SharedPreferencesAsync();
+        await raw.setString(
+          'bootstrap.experience_level',
+          jsonEncode({'value': 'justStarting'}),
+        );
+        final store = SharedPreferencesBootstrapLocalStore();
+
+        expect(await store.readExperienceLevel(), isNull);
+      });
+
+      test(
+          'a corrupt experience-level entry does not affect exam date, '
+          'onboarding, entitlement or settings', () async {
+        final SharedPreferencesAsync raw = SharedPreferencesAsync();
+        await raw.setString('bootstrap.experience_level', 'garbage');
+        final store = SharedPreferencesBootstrapLocalStore();
+        await store.writeSelectedExamId('danb_rhs');
+        await store.writeOnboardingComplete(true);
+        await store.writeThemePreference(ThemePreference.dark);
+        final selection = ExamDateSelection(
+            precision: ExamDatePrecision.exact, date: DateTime(2026, 3, 1));
+        await store.writeExamDateSelection(selection);
+        final entitlement =
+            Entitlement.free(lastVerifiedAt: DateTime.utc(2026, 1, 1));
+        await store.writeEntitlementSnapshot(entitlement);
+
+        expect(await store.readExperienceLevel(), isNull);
+        expect(await store.readSelectedExamId(), 'danb_rhs');
+        expect(await store.readOnboardingComplete(), isTrue);
+        expect(await store.readThemePreference(), ThemePreference.dark);
+        expect(await store.readExamDateSelection(), selection);
+        final Entitlement? readEntitlement =
+            await store.readEntitlementSnapshot();
+        expect(readEntitlement?.tier, entitlement.tier);
       });
     });
   });
