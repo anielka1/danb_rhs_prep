@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../bootstrap/app_bootstrap_service.dart';
+import '../bootstrap/bootstrap_session_controller.dart';
 import '../bootstrap/bootstrap_session_scope.dart';
 import '../domain/models/exam_date_precision.dart';
 import '../domain/models/exam_date_selection.dart';
@@ -9,16 +10,18 @@ import '../services/analytics_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/app_scaffold.dart';
 import '../widgets/primary_button.dart';
-import 'main_shell.dart';
+import 'experience_level_screen.dart';
 
 /// Section 3.3: the second onboarding screen, reached by pushing (not
 /// replacing) from [WelcomeScreen] so Back returns there. Lets the user
-/// record how firmly their exam date is scheduled, then — since the
-/// real next onboarding step (experience level, Section 3.4) doesn't
-/// exist yet — persists `onboardingComplete` and enters `MainShell`
-/// directly. That completion bridge is isolated to
-/// [_ExamDateScreenState._continue] and documented there as temporary,
-/// exactly like the one this screen took over from `WelcomeScreen`.
+/// record how firmly their exam date is scheduled, saves it, updates the
+/// *shared* `BootstrapSessionController` (see [BootstrapReady.copyWith])
+/// so every route — including one popped-back-to and pushed-forward-
+/// through again later in the same session — sees the latest answer,
+/// then pushes [ExperienceLevelScreen] with that same controller — which
+/// now owns the temporary onboarding-completion bridge this screen used
+/// to own before Section 3.4 existed. This screen never writes
+/// `onboardingComplete` and never routes to `MainShell` itself.
 class ExamDateScreen extends StatefulWidget {
   static const String route = '/onboarding/exam-date';
 
@@ -59,17 +62,14 @@ class _ExamDateScreenState extends State<ExamDateScreen> {
   /// the user picks a new date or a different precision.
   bool _restoredDateExpired = false;
 
-  /// Guards Continue/Retry/Continue-for-this-session against a second
-  /// concurrent activation.
+  /// Guards Continue/Retry against a second concurrent activation, and
+  /// stays true while `ExperienceLevelScreen` is pushed on top (reset
+  /// once the user comes back via Back), so a second tap can't push a
+  /// duplicate copy of it either.
   bool _busy = false;
 
   /// True only after saving the exam-date selection itself failed.
   bool _selectionSaveFailed = false;
-
-  /// True only after the selection saved successfully but the
-  /// subsequent `onboardingComplete` write failed — Section 3.2's
-  /// recoverable behavior, reused here verbatim.
-  bool _completionSaveFailed = false;
 
   @override
   void didChangeDependencies() {
@@ -78,7 +78,7 @@ class _ExamDateScreenState extends State<ExamDateScreen> {
     _restoredFromSession = true;
 
     final ExamDateSelection? saved =
-        BootstrapSessionScope.of(context).examDateSelection;
+        BootstrapSessionScope.snapshotOf(context).examDateSelection;
     if (saved == null) return;
 
     if (saved.precision == ExamDatePrecision.notScheduled) {
@@ -131,7 +131,6 @@ class _ExamDateScreenState extends State<ExamDateScreen> {
       }
       _restoredDateExpired = false;
       _selectionSaveFailed = false;
-      _completionSaveFailed = false;
     });
   }
 
@@ -154,17 +153,15 @@ class _ExamDateScreenState extends State<ExamDateScreen> {
       _selectedDate = normalizeToLocalDate(picked);
       _restoredDateExpired = false;
       _selectionSaveFailed = false;
-      _completionSaveFailed = false;
     });
   }
 
-  /// **Temporary bridge (Section 3.3, pending Section 3.4):** the real
-  /// next onboarding step (experience level) isn't built yet, so a
-  /// successful exam-date save is followed immediately by persisting
-  /// `onboardingComplete` and entering `MainShell`. Section 3.4 replaces
-  /// only the "on success" branch below with real navigation — the
-  /// exam-date save itself, and its own recoverable-failure handling,
-  /// stay exactly as they are.
+  /// Saves the exam-date selection, then — on success — updates the
+  /// in-memory session (via [BootstrapReady.copyWith], so
+  /// `ExperienceLevelScreen` never sees the stale pre-onboarding
+  /// snapshot) and pushes it. This screen never writes
+  /// `onboardingComplete` and never navigates to `MainShell` itself —
+  /// that bridge now belongs to `ExperienceLevelScreen`.
   Future<void> _continue() async {
     if (_busy) return;
     final ExamDateSelection? selection = _buildValidatedSelection();
@@ -173,10 +170,10 @@ class _ExamDateScreenState extends State<ExamDateScreen> {
     setState(() {
       _busy = true;
       _selectionSaveFailed = false;
-      _completionSaveFailed = false;
     });
 
-    final BootstrapReady snapshot = BootstrapSessionScope.of(context);
+    final BootstrapSessionController controller =
+        BootstrapSessionScope.controllerOf(context);
 
     try {
       await widget.localStore.writeExamDateSelection(selection);
@@ -189,57 +186,32 @@ class _ExamDateScreenState extends State<ExamDateScreen> {
       return;
     }
 
-    bool completed = true;
-    try {
-      await widget.localStore.writeOnboardingComplete(true);
-    } on Object {
-      completed = false;
-    }
-
     if (!mounted) return;
-    if (completed) {
-      _navigateToMainShell(snapshot);
-    } else {
-      // The exam-date selection is already durably saved at this point
-      // — only the completion flag failed. Stay on this screen rather
-      // than silently entering the main app on an unsaved flag.
-      setState(() {
-        _busy = false;
-        _completionSaveFailed = true;
-      });
-    }
-  }
+    // Only update the shared session after the write actually succeeded
+    // — a failed write above returns before reaching this line, so the
+    // controller retains whatever it held before.
+    controller
+        .update(controller.snapshot.copyWith(examDateSelection: selection));
 
-  /// Lets the user proceed this session without durable
-  /// `onboardingComplete` persistence, so a local-storage failure can't
-  /// trap them offline. Only offered once the exam-date selection
-  /// itself has already saved successfully. Does not retry the write or
-  /// claim success — onboarding will honestly show again next launch.
-  void _continueForSessionOnly() {
-    if (_busy) return;
-    setState(() => _busy = true);
-    final BootstrapReady snapshot = BootstrapSessionScope.of(context);
-    _navigateToMainShell(snapshot);
-  }
-
-  /// `pushAndRemoveUntil` with a predicate that never matches — not
-  /// `pushReplacement`, which would only remove this screen and leave
-  /// `WelcomeScreen` (and `SplashScreen`, if it's somehow still under
-  /// it) beneath `MainShell` in the stack. Onboarding is finished at
-  /// this point: `MainShell` must become the sole, root route, so a
-  /// system Back gesture/button has nothing left to pop to and can
-  /// never reveal Welcome, Exam Date, or Splash again.
-  void _navigateToMainShell(BootstrapReady snapshot) {
-    Navigator.of(context).pushAndRemoveUntil(
+    // A `push`, not a replace: this screen stays on the stack so Back
+    // returns here with its selection still visible. `_busy` stays true
+    // until the pushed route is popped (the user came back), guarding
+    // against a duplicate push from a second tap in the meantime.
+    await Navigator.of(context).push(
       MaterialPageRoute(
-        settings: const RouteSettings(name: MainShell.route),
+        settings: const RouteSettings(name: ExperienceLevelScreen.route),
         builder: (_) => BootstrapSessionScope(
-          snapshot: snapshot,
-          child: MainShell(analytics: widget.analytics),
+          controller: controller,
+          child: ExperienceLevelScreen(
+            localStore: widget.localStore,
+            analytics: widget.analytics,
+          ),
         ),
       ),
-      (route) => false,
     );
+
+    if (!mounted) return;
+    setState(() => _busy = false);
   }
 
   @override
@@ -249,16 +221,12 @@ class _ExamDateScreenState extends State<ExamDateScreen> {
     final MaterialLocalizations localizations =
         MaterialLocalizations.of(context);
 
-    final bool hasFailure = _selectionSaveFailed || _completionSaveFailed;
     final String? errorMessage = _selectionSaveFailed
         ? "We couldn't save your exam date. Please try again."
-        : _completionSaveFailed
-            ? "We couldn't finish setting up. Check your storage and "
-                'try again.'
-            : _restoredDateExpired
-                ? 'Your saved exam date has already passed. Please '
-                    'choose a new date.'
-                : null;
+        : _restoredDateExpired
+            ? 'Your saved exam date has already passed. Please choose a '
+                'new date.'
+            : null;
     final bool needsDateSelector = _precision == ExamDatePrecision.exact ||
         _precision == ExamDatePrecision.approximate;
 
@@ -335,26 +303,10 @@ class _ExamDateScreenState extends State<ExamDateScreen> {
             ],
             const SizedBox(height: AppSpacing.xxl),
             PrimaryButton(
-              label: hasFailure ? 'Retry' : 'Continue',
+              label: _selectionSaveFailed ? 'Retry' : 'Continue',
               isLoading: _busy,
               onPressed: (_busy || !_canContinue) ? null : _continue,
             ),
-            if (_completionSaveFailed) ...[
-              const SizedBox(height: AppSpacing.md),
-              SecondaryButton(
-                label: 'Continue for this session',
-                onPressed: _busy ? null : _continueForSessionOnly,
-              ),
-              const SizedBox(height: AppSpacing.sm),
-              Text(
-                "This won't be saved — you'll see this setup again next "
-                'time you open the app.',
-                style: textStyles.body.copyWith(
-                  color: colors.onSurfaceVariant,
-                ),
-                textAlign: TextAlign.center,
-              ),
-            ],
             const SizedBox(height: AppSpacing.xl),
           ],
         ),

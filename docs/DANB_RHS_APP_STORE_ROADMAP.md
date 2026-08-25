@@ -656,11 +656,79 @@ replacement.
 
 ## 3.4 Experience-level screen
 
-- [ ] Offer:
+- [x] Offer:
   - Just starting
   - Studying already
   - Taking the exam again
-- [ ] Store selection locally.
+
+  (New `lib/screens/experience_level_screen.dart`, `ExperienceLevelScreen`,
+  route `/onboarding/experience-level` — pushed (not replaced) from
+  `ExamDateScreen`'s `Continue`, so Back returns there with the exam-date
+  selection still visible. Exactly these three mutually-exclusive
+  choices, each exposing a full visible label, selected/unselected
+  semantics, and a radio icon so selection is never conveyed by color
+  alone; none preselected on a fresh install. Evidence:
+  `test/screens/experience_level_screen_test.dart` and the real
+  `SemanticsNode`-tree traversal in
+  `test/screens/experience_level_screen_semantics_test.dart`.)
+- [x] Store selection locally.
+
+  (`ExperienceLevel` extracted, unchanged, into its own leaf file —
+  `lib/domain/models/experience_level.dart` — reusing the existing
+  serialized values (`justStarting`, `studyingAlready`, `retakingExam`;
+  no migration needed since nothing changed). `BootstrapLocalStore`
+  gained `readExperienceLevel`/`writeExperienceLevel`, implemented in
+  both `SharedPreferencesBootstrapLocalStore` (one versioned JSON value
+  — `{version, value}`) and `InMemoryBootstrapLocalStore`. `value` is
+  produced by an explicit mapping —
+  `experienceLevelToStorageValue`/`experienceLevelFromStorageValue` in
+  the new `lib/domain/models/experience_level_codec.dart` leaf — not
+  `.name`/`.index`/`byName`/enum-order lookup, so a later rename of the
+  Dart enum symbol or a reordering of its values cannot silently change
+  what's read from or written to existing installs. All three values
+  round-trip through the exact expected stored string; an unknown value,
+  malformed JSON, or unsupported/missing version all return null safely,
+  and a corrupt entry never affects exam date, onboarding, entitlement,
+  or theme. No production `UserSettingsRepository` adapter exists, so
+  this is never routed through a fake `UserProfile`. Evidence:
+  `test/domain/models/experience_level_dependency_test.dart`,
+  `test/domain/models/experience_level_codec_test.dart` (exact stored
+  strings, unknown-value handling, and source guards proving neither the
+  codec nor the persistence adapter uses `.name`/`.index`/`byName`/
+  enum-order lookup), and
+  `test/bootstrap/shared_preferences_bootstrap_local_store_test.dart`'s
+  "experience level" group.)
+
+`ExamDateScreen`'s `Continue` now saves the exam-date selection, updates
+the current session, and pushes `ExperienceLevelScreen` — it no longer
+writes `onboardingComplete` or routes to `MainShell` itself.
+`ExperienceLevelScreen`'s own `Continue` now owns that temporary
+completion bridge (persist `onboardingComplete`, clear the onboarding
+stack via `pushAndRemoveUntil`, enter `MainShell` with both saved
+answers present in the session), isolated to
+`_ExperienceLevelScreenState._continue` and documented there as pending
+Section 3.5, which replaces only its "on success" branch.
+
+**Session synchronization:** the "current session" above is now one
+shared, genuinely-mutable `BootstrapSessionController`
+(`lib/bootstrap/bootstrap_session_controller.dart`) — not the
+forward-only chain of copied immutable `BootstrapReady` snapshots this
+section originally shipped with, which only updated routes navigated to
+*after* a save and left any route already underneath (e.g. Exam Date,
+once the user had moved on to Experience Level) holding a stale
+snapshot. `SplashScreen` creates the controller exactly once per app
+session; every onboarding route and `MainShell` forward that same
+instance via `BootstrapSessionScope`'s `controllerOf`/`snapshotOf`
+accessors, never constructing a new one. A failed write never updates
+the controller. This means: saving Exam Date, going to Experience Level,
+backing all the way out to Welcome, and starting over reaches a *brand
+new* `ExamDateScreen` that still correctly prefills the previously-saved
+date — the scenario a forward-only copy could not handle. Evidence:
+`test/screens/onboarding_navigation_stack_test.dart`'s "shared session
+controller identity and re-entry" group (controller identity across
+every route, the full backward-navigation/re-entry scenario, and
+experience-level prefill surviving a completion failure), plus its
+existing full-flow, session-sync, and route-analytics coverage.
 
 ## 3.5 Diagnostic
 

@@ -6,6 +6,7 @@ import 'package:danb_rhs_prep/bootstrap/app_bootstrap_service.dart';
 import 'package:danb_rhs_prep/domain/models/entitlement.dart';
 import 'package:danb_rhs_prep/domain/models/exam_date_precision.dart';
 import 'package:danb_rhs_prep/domain/models/exam_date_selection.dart';
+import 'package:danb_rhs_prep/domain/models/experience_level.dart';
 import 'package:danb_rhs_prep/domain/models/readiness_band.dart';
 import 'package:danb_rhs_prep/domain/models/readiness_snapshot.dart';
 import 'package:danb_rhs_prep/domain/models/user_profile.dart';
@@ -256,6 +257,7 @@ void main() {
       expect(result.entitlement.tier, EntitlementTier.free);
       expect(result.onboardingComplete, isFalse);
       expect(result.examDateSelection, isNull);
+      expect(result.experienceLevel, isNull);
     });
 
     test('a cached exam-date selection is included in BootstrapReady',
@@ -272,6 +274,20 @@ void main() {
       final result = await service.initialize() as BootstrapReady;
 
       expect(result.examDateSelection, selection);
+    });
+
+    test('a cached experience level is included in BootstrapReady', () async {
+      final deps = _offlineDeps();
+      await deps.localStore
+          .writeExperienceLevel(ExperienceLevel.studyingAlready);
+      final service = AppBootstrapService(
+        contentRepository: deps.contentRepository,
+        localStore: deps.localStore,
+      );
+
+      final result = await service.initialize() as BootstrapReady;
+
+      expect(result.experienceLevel, ExperienceLevel.studyingAlready);
     });
 
     test('a present profile (via UserSettingsRepository) is included',
@@ -477,6 +493,69 @@ void main() {
               'succeeding proves bootstrap needs nothing that can');
     });
   });
+
+  group('BootstrapReady.copyWith (session-sync mechanism)', () {
+    test('replaces only the given fields, preserving everything else',
+        () async {
+      final deps = _offlineDeps();
+      final service = AppBootstrapService(
+        contentRepository: deps.contentRepository,
+        localStore: deps.localStore,
+      );
+      final ready = await service.initialize() as BootstrapReady;
+
+      final selection = ExamDateSelection(
+          precision: ExamDatePrecision.exact, date: DateTime(2026, 3, 1));
+      final updated = ready.copyWith(examDateSelection: selection);
+
+      expect(updated.examDateSelection, selection);
+      expect(updated.selectedExamId, ready.selectedExamId);
+      expect(updated.contentPackage, ready.contentPackage);
+      expect(updated.onboardingComplete, ready.onboardingComplete);
+      expect(updated.experienceLevel, ready.experienceLevel);
+      expect(updated.entitlement, ready.entitlement);
+      expect(updated.themePreference, ready.themePreference);
+    });
+
+    test(
+        'layered updates accumulate — a later copyWith does not drop an '
+        'earlier one\'s change', () async {
+      final deps = _offlineDeps();
+      final service = AppBootstrapService(
+        contentRepository: deps.contentRepository,
+        localStore: deps.localStore,
+      );
+      final ready = await service.initialize() as BootstrapReady;
+
+      final selection = ExamDateSelection(
+          precision: ExamDatePrecision.exact, date: DateTime(2026, 3, 1));
+      final withDate = ready.copyWith(examDateSelection: selection);
+      final withBoth =
+          withDate.copyWith(experienceLevel: ExperienceLevel.justStarting);
+
+      expect(withBoth.examDateSelection, selection);
+      expect(withBoth.experienceLevel, ExperienceLevel.justStarting);
+    });
+
+    test(
+        'copyWith(onboardingComplete: true) can mark a session complete '
+        'without any durable write happening', () async {
+      final deps = _offlineDeps();
+      final service = AppBootstrapService(
+        contentRepository: deps.contentRepository,
+        localStore: deps.localStore,
+      );
+      final ready = await service.initialize() as BootstrapReady;
+      expect(ready.onboardingComplete, isFalse);
+
+      final sessionOnly = ready.copyWith(onboardingComplete: true);
+
+      expect(sessionOnly.onboardingComplete, isTrue);
+      expect(await deps.localStore.readOnboardingComplete(), isNot(isTrue),
+          reason: 'copyWith only ever affects the in-memory value — it '
+              'must never itself write to durable storage');
+    });
+  });
 }
 
 /// Wraps a real [InMemoryBootstrapLocalStore] but makes the entitlement
@@ -521,4 +600,10 @@ class _CorruptEntitlementLocalStore implements BootstrapLocalStore {
   @override
   Future<void> writeExamDateSelection(ExamDateSelection selection) =>
       _delegate.writeExamDateSelection(selection);
+  @override
+  Future<ExperienceLevel?> readExperienceLevel() =>
+      _delegate.readExperienceLevel();
+  @override
+  Future<void> writeExperienceLevel(ExperienceLevel level) =>
+      _delegate.writeExperienceLevel(level);
 }

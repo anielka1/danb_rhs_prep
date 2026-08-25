@@ -1,5 +1,6 @@
 import '../models/entitlement.dart';
 import '../models/exam_date_selection.dart';
+import '../models/experience_level.dart';
 import '../models/readiness_snapshot.dart';
 import '../models/user_profile.dart';
 
@@ -52,4 +53,10 @@ abstract interface class BootstrapLocalStore {
   /// returns null rather than throwing, and never affects any other key.
   Future<ExamDateSelection?> readExamDateSelection();
   Future<void> writeExamDateSelection(ExamDateSelection selection);
+
+  /// The onboarding experience-level screen's saved selection, if any.
+  /// Like every other key here: a missing or corrupt value returns null
+  /// rather than throwing, and never affects any other key.
+  Future<ExperienceLevel?> readExperienceLevel();
+  Future<void> writeExperienceLevel(ExperienceLevel level);
 }

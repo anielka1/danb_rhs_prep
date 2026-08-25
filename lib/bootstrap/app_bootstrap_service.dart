@@ -1,5 +1,6 @@
 import '../domain/models/entitlement.dart';
 import '../domain/models/exam_date_selection.dart';
+import '../domain/models/experience_level.dart';
 import '../domain/models/readiness_snapshot.dart';
 import '../domain/models/user_profile.dart';
 import '../domain/repositories/bootstrap_local_store.dart';
@@ -36,6 +37,7 @@ final class BootstrapReady extends BootstrapResult {
     required this.entitlement,
     required this.onboardingComplete,
     required this.examDateSelection,
+    required this.experienceLevel,
   });
 
   final String selectedExamId;
@@ -73,6 +75,45 @@ final class BootstrapReady extends BootstrapResult {
   /// yet. Lets `ExamDateScreen` prefill a returning user's prior choice
   /// without re-reading local storage itself.
   final ExamDateSelection? examDateSelection;
+
+  /// The onboarding experience-level screen's saved selection, if any —
+  /// null on a fresh install or if the user hasn't reached/completed
+  /// that screen yet.
+  final ExperienceLevel? experienceLevel;
+
+  /// Returns a copy with the given fields replaced — used to keep the
+  /// in-memory session snapshot synchronized with local storage as
+  /// onboarding progresses (e.g. after `ExamDateScreen` or
+  /// `ExperienceLevelScreen` successfully saves an answer), without
+  /// waiting for a fresh `AppBootstrapService.initialize()`/`retry()`
+  /// run. Each onboarding screen builds an updated snapshot this way
+  /// immediately after its own write succeeds, and passes it — not the
+  /// stale one it received — into the `BootstrapSessionScope` wrapping
+  /// whatever it navigates to next. A failed write must never reach this
+  /// method with the value it failed to persist.
+  BootstrapReady copyWith({
+    String? selectedExamId,
+    ContentPackage? contentPackage,
+    UserProfile? profile,
+    ThemePreference? themePreference,
+    ReadinessSnapshot? readinessSnapshot,
+    Entitlement? entitlement,
+    bool? onboardingComplete,
+    ExamDateSelection? examDateSelection,
+    ExperienceLevel? experienceLevel,
+  }) {
+    return BootstrapReady(
+      selectedExamId: selectedExamId ?? this.selectedExamId,
+      contentPackage: contentPackage ?? this.contentPackage,
+      profile: profile ?? this.profile,
+      themePreference: themePreference ?? this.themePreference,
+      readinessSnapshot: readinessSnapshot ?? this.readinessSnapshot,
+      entitlement: entitlement ?? this.entitlement,
+      onboardingComplete: onboardingComplete ?? this.onboardingComplete,
+      examDateSelection: examDateSelection ?? this.examDateSelection,
+      experienceLevel: experienceLevel ?? this.experienceLevel,
+    );
+  }
 }
 
 /// The selected exam's bundled content could not be loaded or is invalid
@@ -225,6 +266,9 @@ class AppBootstrapService {
       final ExamDateSelection? examDateSelection =
           await _localStore.readExamDateSelection();
 
+      final ExperienceLevel? experienceLevel =
+          await _localStore.readExperienceLevel();
+
       return BootstrapReady(
         selectedExamId: examId,
         contentPackage: package,
@@ -234,6 +278,7 @@ class AppBootstrapService {
         entitlement: entitlement,
         onboardingComplete: onboardingComplete,
         examDateSelection: examDateSelection,
+        experienceLevel: experienceLevel,
       );
     } on Object catch (error, stackTrace) {
       return BootstrapUnexpectedFailure(error: error, stackTrace: stackTrace);

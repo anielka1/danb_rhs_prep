@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:danb_rhs_prep/bootstrap/app_bootstrap_service.dart';
+import 'package:danb_rhs_prep/bootstrap/bootstrap_session_controller.dart';
 import 'package:danb_rhs_prep/bootstrap/bootstrap_session_scope.dart';
 import 'package:danb_rhs_prep/domain/models/entitlement.dart';
 import 'package:danb_rhs_prep/domain/repositories/fakes/in_memory_bootstrap_local_store.dart';
@@ -68,6 +69,7 @@ BootstrapReady _readySnapshot({String? examName}) {
     entitlement: Entitlement.free(lastVerifiedAt: DateTime.utc(2026, 1, 1)),
     onboardingComplete: false,
     examDateSelection: null,
+    experienceLevel: null,
   );
 }
 
@@ -92,7 +94,8 @@ void main() {
     return MaterialApp(
       theme: theme ?? AppTheme.lightTheme,
       home: BootstrapSessionScope(
-        snapshot: _readySnapshot(examName: examName),
+        controller:
+            BootstrapSessionController(_readySnapshot(examName: examName)),
         child: WelcomeScreen(
           localStore: InMemoryBootstrapLocalStore(),
           analytics: analytics ?? const NoOpAnalyticsService(),
@@ -207,7 +210,7 @@ void main() {
         MaterialApp(
           theme: AppTheme.lightTheme,
           home: BootstrapSessionScope(
-            snapshot: _readySnapshot(),
+            controller: BootstrapSessionController(_readySnapshot()),
             child: WelcomeScreen(localStore: localStore, analytics: analytics),
           ),
         ),

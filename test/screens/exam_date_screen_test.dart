@@ -4,10 +4,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:danb_rhs_prep/bootstrap/app_bootstrap_service.dart';
+import 'package:danb_rhs_prep/bootstrap/bootstrap_session_controller.dart';
 import 'package:danb_rhs_prep/bootstrap/bootstrap_session_scope.dart';
 import 'package:danb_rhs_prep/domain/models/entitlement.dart';
 import 'package:danb_rhs_prep/domain/models/exam_date_precision.dart';
 import 'package:danb_rhs_prep/domain/models/exam_date_selection.dart';
+import 'package:danb_rhs_prep/domain/models/experience_level.dart';
 import 'package:danb_rhs_prep/domain/models/readiness_snapshot.dart';
 import 'package:danb_rhs_prep/domain/models/user_profile.dart';
 import 'package:danb_rhs_prep/domain/repositories/bootstrap_local_store.dart';
@@ -15,7 +17,7 @@ import 'package:danb_rhs_prep/domain/repositories/fakes/in_memory_bootstrap_loca
 import 'package:danb_rhs_prep/features/content/domain/content_package.dart';
 import 'package:danb_rhs_prep/features/exams/domain/exam_config.dart';
 import 'package:danb_rhs_prep/screens/exam_date_screen.dart';
-import 'package:danb_rhs_prep/screens/main_shell.dart';
+import 'package:danb_rhs_prep/screens/experience_level_screen.dart';
 import 'package:danb_rhs_prep/theme/app_theme.dart';
 import 'package:danb_rhs_prep/widgets/primary_button.dart';
 
@@ -87,6 +89,7 @@ BootstrapReady _readySnapshot({ExamDateSelection? examDateSelection}) {
     entitlement: Entitlement.free(lastVerifiedAt: DateTime.utc(2026, 1, 1)),
     onboardingComplete: false,
     examDateSelection: examDateSelection,
+    experienceLevel: null,
   );
 }
 
@@ -131,6 +134,12 @@ class _DelegatingLocalStore implements BootstrapLocalStore {
   @override
   Future<void> writeExamDateSelection(ExamDateSelection selection) =>
       _delegate.writeExamDateSelection(selection);
+  @override
+  Future<ExperienceLevel?> readExperienceLevel() =>
+      _delegate.readExperienceLevel();
+  @override
+  Future<void> writeExperienceLevel(ExperienceLevel level) =>
+      _delegate.writeExperienceLevel(level);
 }
 
 /// [writeExamDateSelection] always fails — the exam-date selection
@@ -142,19 +151,6 @@ class _ThrowingExamDateWriteLocalStore extends _DelegatingLocalStore {
   @override
   Future<void> writeExamDateSelection(ExamDateSelection selection) async {
     writeAttempts++;
-    throw StateError('disk full');
-  }
-}
-
-/// [writeExamDateSelection] succeeds normally, but [writeOnboardingComplete]
-/// always fails — the selection is durably saved, only completion fails.
-class _ThrowingCompletionWriteLocalStore extends _DelegatingLocalStore {
-  _ThrowingCompletionWriteLocalStore(super.delegate);
-  int completionWriteAttempts = 0;
-
-  @override
-  Future<void> writeOnboardingComplete(bool complete) async {
-    completionWriteAttempts++;
     throw StateError('disk full');
   }
 }
@@ -185,7 +181,8 @@ void main() {
     return MaterialApp(
       theme: theme ?? AppTheme.lightTheme,
       home: BootstrapSessionScope(
-        snapshot: _readySnapshot(examDateSelection: restoredSelection),
+        controller: BootstrapSessionController(
+            _readySnapshot(examDateSelection: restoredSelection)),
         child: ExamDateScreen(
           localStore: localStore,
           now: now ?? (() => fixedToday),
@@ -420,8 +417,8 @@ void main() {
 
   group('save behavior', () {
     testWidgets(
-        'Continue saves the selection and reaches MainShell only after '
-        'both writes succeed', (tester) async {
+        'Continue saves the selection and pushes ExperienceLevelScreen — '
+        'never MainShell, and never writes onboardingComplete', (tester) async {
       final localStore = InMemoryBootstrapLocalStore();
       await tester.pumpWidget(wrap(localStore: localStore));
       await tester.tap(find.text("I haven't scheduled it yet"));
@@ -432,8 +429,34 @@ void main() {
 
       expect(await localStore.readExamDateSelection(),
           ExamDateSelection(precision: ExamDatePrecision.notScheduled));
-      expect(await localStore.readOnboardingComplete(), isTrue);
-      expect(find.byType(MainShell), findsOneWidget);
+      expect(await localStore.readOnboardingComplete(), isNot(isTrue),
+          reason: 'ExamDateScreen must never write onboardingComplete — '
+              'that is ExperienceLevelScreen\'s responsibility now');
+      expect(find.byType(ExperienceLevelScreen), findsOneWidget);
+      expect(find.byType(ExamDateScreen), findsNothing);
+    });
+
+    testWidgets(
+        'a successful save updates the current session — '
+        'ExperienceLevelScreen receives the saved ExamDateSelection, not '
+        'a stale snapshot', (tester) async {
+      final localStore = InMemoryBootstrapLocalStore();
+      await tester.pumpWidget(wrap(localStore: localStore));
+      await tester.tap(find.text('I know the exact date'));
+      await tester.pump();
+      await pickDay(tester, fixedToday.day);
+
+      await tester.tap(find.text('Continue'));
+      await tester.pumpAndSettle();
+
+      final BuildContext nextContext =
+          tester.element(find.byType(ExperienceLevelScreen));
+      final ExamDateSelection? sessionSelection =
+          BootstrapSessionScope.snapshotOf(nextContext).examDateSelection;
+      expect(
+          sessionSelection,
+          ExamDateSelection(
+              precision: ExamDatePrecision.exact, date: fixedToday));
     });
 
     testWidgets(
@@ -449,7 +472,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.byType(ExamDateScreen), findsOneWidget);
-      expect(find.byType(MainShell), findsNothing);
+      expect(find.byType(ExperienceLevelScreen), findsNothing);
       expect(find.text('Retry'), findsOneWidget);
       expect(
           find.textContaining("couldn't save your exam date"), findsOneWidget);
@@ -479,36 +502,6 @@ void main() {
       expect(find.text('Retry'), findsOneWidget);
     });
 
-    testWidgets(
-        'a failed onboarding-completion save after a successful exam-date '
-        'save is recoverable, with a session-only continuation available',
-        (tester) async {
-      final localStore =
-          _ThrowingCompletionWriteLocalStore(InMemoryBootstrapLocalStore());
-      await tester.pumpWidget(wrap(localStore: localStore));
-      await tester.tap(find.text("I haven't scheduled it yet"));
-      await tester.pump();
-
-      await tester.tap(find.text('Continue'));
-      await tester.pumpAndSettle();
-
-      expect(find.byType(MainShell), findsNothing);
-      expect(find.text('Retry'), findsOneWidget);
-      expect(find.text('Continue for this session'), findsOneWidget);
-      expect(await localStore.readExamDateSelection(), isNotNull,
-          reason: 'the exam-date selection itself already saved '
-              'successfully');
-      expect(await localStore.readOnboardingComplete(), isNot(isTrue));
-
-      await tester.tap(find.text('Continue for this session'));
-      await tester.pumpAndSettle();
-
-      expect(find.byType(MainShell), findsOneWidget);
-      expect(await localStore.readOnboardingComplete(), isNot(isTrue),
-          reason: 'session-only continuation must not claim persistence '
-              'succeeded');
-    });
-
     testWidgets('duplicate taps do not duplicate writes or navigation',
         (tester) async {
       final controlled =
@@ -528,7 +521,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(controlled.writeAttempts, 1);
-      expect(find.byType(MainShell), findsOneWidget);
+      expect(find.byType(ExperienceLevelScreen), findsOneWidget);
     });
 
     testWidgets('Back without tapping Continue writes nothing', (tester) async {
@@ -543,7 +536,8 @@ void main() {
                   onPressed: () => Navigator.of(context).push(
                     MaterialPageRoute(
                       builder: (_) => BootstrapSessionScope(
-                        snapshot: _readySnapshot(),
+                        controller:
+                            BootstrapSessionController(_readySnapshot()),
                         child: ExamDateScreen(
                           localStore: localStore,
                           now: () => fixedToday,
