@@ -43,3 +43,10 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# Content-authoring private source materials: a local-only workspace for a
+# qualified reviewer's own legitimately obtained licensed/restricted source
+# documents. A citation is not proof of redistribution rights, so these
+# files must never be committed — see content_workbench/private_sources/README.md.
+content_workbench/private_sources/*
+!content_workbench/private_sources/README.md

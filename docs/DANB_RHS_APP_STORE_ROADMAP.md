@@ -740,6 +740,46 @@ existing full-flow, session-sync, and route-analytics coverage.
 - [ ] Persist in-progress answers.
 - [ ] Calculate initial readiness from actual performance.
 
+**Blocked pending human-approved content inventory.** The mandatory
+approved-content preflight (attempted before any engine work) found zero
+`approved` questions in any of the three configured domains — only
+`rhs-dev-001`/`rhs-dev-002` exist, both `draft`, and `infection_control` has
+no questions at all. A 15-question blueprint-balanced diagnostic needs at
+least 7/4/4 approved questions across `purpose_technique`/
+`radiation_protection`/`infection_control` respectively; see
+`content_workbench/danb_rhs/content_inventory.md` for the full gate result
+and per-domain gap. A follow-up task built the unbundled content-authoring
+workbench (`content_workbench/danb_rhs/`), authoring guide, review
+checklist, approval workflow, and a structural validator
+(`tool/validate_candidate_questions.dart`) — but drafting candidate
+questions was also withheld, because the repository contains no
+authoritative source material (no bundled DANB RHS outline document, no
+CDC/FDA/ADA guidance, no textbook) for any domain beyond the existing
+domain/topic/weight structure, which alone is insufficient for factual
+questions. Section 3.5 implementation begins only once a qualified human
+reviewer supplies real source material, candidate questions are drafted and
+reviewed against it, and at least 7/4/4 approved questions are promoted
+into `assets/content/danb_rhs/content.json`.
+
+A narrow correction pass hardened the workbench itself (still no
+questions drafted, no Section 3.5 checkbox touched): reviewer approvals
+are now bound to content via SHA-256 over deterministic canonical JSON
+(`sha256-canonical-json-v1`, domain-separated), replacing an earlier
+FNV-1a fingerprint that wasn't collision-resistant enough for this
+purpose — a decision recorded under any other or missing algorithm is
+treated as unsupported/legacy and requires renewed review, never silently
+accepted. Source-document handling was corrected to a safe policy:
+licensed/restricted material must never be committed to this repository
+merely to support authoring (a citation is not proof of redistribution
+rights) — it stays in the reviewer's own authorized storage, optionally
+mirrored locally in the git-ignored `content_workbench/private_sources/`;
+only genuinely redistributable public documents may be committed, as a
+deliberate per-document decision. `tool/validate_candidate_questions.dart`
+gained a `--require-ready` mode that evaluates the actual *bundled*
+production content (not the workbench) for the configured approved-inventory
+allocation, exiting `2` specifically when validation succeeds but bundled
+approved inventory is insufficient — currently the case, honestly.
+
 ## 3.6 Diagnostic result
 
 - [ ] Show readiness score and label.
