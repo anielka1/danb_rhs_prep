@@ -49,11 +49,8 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen> {
                 color: colors.primaryContainer,
                 border: Border.all(color: colors.surfaceContainer, width: 4),
                 boxShadow: [
-                  // Shadow color is intentionally invariant black across
-                  // themes: it represents physical light occlusion, not a
-                  // surface/text/icon role.
                   BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.05),
+                      color: AppShadowColors.base.withValues(alpha: 0.05),
                       blurRadius: 10,
                       offset: const Offset(0, 4)),
                 ],
