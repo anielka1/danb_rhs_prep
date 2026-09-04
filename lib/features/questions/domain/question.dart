@@ -35,9 +35,8 @@ class QuestionReference {
 
   factory QuestionReference.fromJson(Map<String, Object?> json) {
     final rawUrl = _nullableString(json['url']);
-    final parsedUrl = rawUrl == null
-        ? null
-        : Uri.tryParse(rawUrl) ?? Uri(path: rawUrl);
+    final parsedUrl =
+        rawUrl == null ? null : Uri.tryParse(rawUrl) ?? Uri(path: rawUrl);
     return QuestionReference(
       title: _string(json['title']),
       source: _string(json['source']),

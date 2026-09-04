@@ -10,7 +10,8 @@ void main() {
   late String validSource;
 
   setUp(() {
-    validSource = File('assets/content/danb_rhs/content.json').readAsStringSync();
+    validSource =
+        File('assets/content/danb_rhs/content.json').readAsStringSync();
   });
 
   test('bundled development package decodes and validates', () {
@@ -18,7 +19,11 @@ void main() {
     final result = const ContentValidator().validate(package);
 
     expect(package.exam.id, 'danb_rhs');
-    expect(package.exam.domains.map((domain) => domain.weight).reduce((a, b) => a + b), 1);
+    expect(
+        package.exam.domains
+            .map((domain) => domain.weight)
+            .reduce((a, b) => a + b),
+        1);
     expect(package.exam.mockExam.questionCount, 75);
     expect(package.exam.mockExam.durationMinutes, 60);
     expect(result.errors, isEmpty);

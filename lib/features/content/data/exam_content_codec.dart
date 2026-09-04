@@ -28,9 +28,7 @@ class ExamContentCodec {
       generatedAt: DateTime.tryParse(_string(decoded['generatedAt'])),
       questions: questionsJson
           .map((item) => Question.fromJson(
-                item is Map<String, Object?>
-                    ? item
-                    : const <String, Object?>{},
+                item is Map<String, Object?> ? item : const <String, Object?>{},
               ))
           .toList(growable: false),
     );

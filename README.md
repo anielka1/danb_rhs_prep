@@ -206,6 +206,20 @@ Release-related tasks must additionally run the build named in their Jira
 acceptance criteria. Never report a format, analysis, test, or build as passing
 unless it was actually executed.
 
+## Continuous integration
+
+`.github/workflows/ci.yml` runs the same quality checks above automatically
+on every pull request targeting `main`, every push to `main`, and on-demand
+via `workflow_dispatch`. The `quality` job runs on a pinned Flutter version
+(matching `.metadata`, not an unpinned `stable` float) with `contents: read`
+permissions and cancels superseded runs on the same ref. It executes, in
+order: `flutter pub get`, the formatting check, `flutter analyze`,
+`flutter test`, the content-workbench validator in `--report` mode (not
+`--require-ready` — the approved question bank does not yet meet that gate,
+so requiring it would block all merges), and `git diff --check`. CI does not
+build the iOS app; that remains a required local pre-merge/pre-release step
+and a separate, not-yet-implemented workflow.
+
 ## Content and compliance rules
 
 - Do not copy, reconstruct, solicit, or store recalled live exam questions.

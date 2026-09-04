@@ -18,7 +18,8 @@ class BundledExamContentLoader implements ExamContentLoader {
 
   @override
   Future<ContentPackage> load(String examId) async {
-    final source = await bundle.loadString('assets/content/$examId/content.json');
+    final source =
+        await bundle.loadString('assets/content/$examId/content.json');
     return codec.decode(source);
   }
 }

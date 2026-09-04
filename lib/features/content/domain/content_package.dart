@@ -16,6 +16,7 @@ class ContentPackage {
   final DateTime? generatedAt;
   final List<Question> questions;
 
-  List<Question> get approvedQuestions =>
-      questions.where((question) => question.isApproved).toList(growable: false);
+  List<Question> get approvedQuestions => questions
+      .where((question) => question.isApproved)
+      .toList(growable: false);
 }
