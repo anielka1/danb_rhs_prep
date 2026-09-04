@@ -1,0 +1,7 @@
+# Markdown files use trailing double-spaces as an intentional hard line
+# break (a standard Markdown convention), not accidental trailing
+# whitespace. Excluded here so CI's `git diff --check` (see
+# .github/workflows/ci.yml) doesn't flag it as a whitespace error —
+# conflict-marker detection is a separate check and stays active for
+# every file, markdown included.
+*.md whitespace=-trailing-space,-blank-at-eol,-blank-at-eof
