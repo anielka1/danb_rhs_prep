@@ -59,3 +59,42 @@ jobs:
 
       - name: Check for merge-conflict markers / whitespace errors
         run: git diff --check
+
+  secret-scan:
+    name: secret-scan
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout (full history)
+        uses: actions/checkout@v4
+        with:
+          # gitleaks needs every commit, not just the PR diff, so a
+          # secret introduced and later "removed" in an earlier commit on
+          # this branch is still caught — a shallow (PR-diff-only) clone
+          # would miss that.
+          fetch-depth: 0
+
+      # Installed as a pinned, checksum-verified binary from gitleaks'
+      # own GitHub Releases (open source, MIT-licensed) rather than a
+      # third-party marketplace Action: no telemetry call, no license
+      # key, and no code or scan results ever leave this runner.
+      - name: Install gitleaks (pinned, checksum-verified)
+        env:
+          GITLEAKS_VERSION: "8.30.1"
+          GITLEAKS_SHA256: "551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb"
+        run: |
+          set -euo pipefail
+          asset="gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz"
+          curl -sSL -o "$asset" \
+            "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/${asset}"
+          echo "${GITLEAKS_SHA256}  ${asset}" | sha256sum -c -
+          tar -xzf "$asset" gitleaks
+          chmod +x gitleaks
+
+      # --redact keeps any matched secret's value out of this job's log
+      # even when a leak is found; only the rule name, file and line are
+      # printed. --exit-code 1 (gitleaks' default on a finding) fails the
+      # job, which is the actual PR gate — nothing here uploads a report
+      # or the repository content to any external service.
+      - name: Scan working tree and full git history for secrets
+        run: ./gitleaks detect --source . --redact --exit-code 1
