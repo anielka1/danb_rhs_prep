@@ -57,5 +57,14 @@ jobs:
       - name: Validate content workbench (report)
         run: dart run tool/validate_candidate_questions.dart --report
 
+      # A bare `git diff --check` right after `actions/checkout` compares
+      # the working tree to the index — which are identical immediately
+      # after a clean checkout, so it always reports zero findings
+      # regardless of the commit's actual content. Diffing the full tree
+      # against git's fixed empty-tree object (every line then reads as
+      # "added", which is what --check's whitespace/conflict-marker scan
+      # actually inspects) makes this check operate on the real checked
+      # out content instead of a no-op. See .gitattributes for the
+      # Markdown trailing-space exception this depends on.
       - name: Check for merge-conflict markers / whitespace errors
-        run: git diff --check
+        run: git diff --check 4b825dc642cb6eb9a060e54bf8d69288fbee4904 HEAD
