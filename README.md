@@ -216,9 +216,18 @@ permissions and cancels superseded runs on the same ref. It executes, in
 order: `flutter pub get`, the formatting check, `flutter analyze`,
 `flutter test`, the content-workbench validator in `--report` mode (not
 `--require-ready` — the approved question bank does not yet meet that gate,
-so requiring it would block all merges), and `git diff --check`. CI does not
-build the iOS app; that remains a required local pre-merge/pre-release step
-and a separate, not-yet-implemented workflow.
+so requiring it would block all merges), and `git diff --check`.
+
+A second job, `ios-build`, runs on `macos-latest` after `quality` succeeds,
+and only when the change touches `lib/`, `ios/`, `pubspec.yaml`, or
+`pubspec.lock` (a manual `workflow_dispatch` run always builds). It runs
+`flutter build ios --release --no-codesign` — verifying the app compiles and
+links, not that it's distributable, since no signing identity or
+provisioning profile exists in CI — and uploads the full verbose build log
+as a workflow artifact (`ios-build-log`) so a CocoaPods or Xcode failure can
+still be diagnosed after the raw job log is gone. Actual device/TestFlight
+builds still require real code signing and remain a required local
+pre-release step.
 
 ## Content and compliance rules
 

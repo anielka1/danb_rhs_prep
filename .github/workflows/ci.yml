@@ -68,3 +68,103 @@ jobs:
       # Markdown trailing-space exception this depends on.
       - name: Check for merge-conflict markers / whitespace errors
         run: git diff --check 4b825dc642cb6eb9a060e54bf8d69288fbee4904 HEAD
+
+  ios-build:
+    name: ios-build
+    needs: quality
+    # GitHub retires hosted macOS runner images on its own schedule; a
+    # pinned label (e.g. macos-14) can start failing with "unsupported
+    # runner image" the moment GitHub drops it, entirely outside this
+    # repo's control. Unlike Flutter (pinned exactly below) or gitleaks
+    # (pinned + checksum-verified), the macOS/Xcode image itself isn't
+    # something this repo can reproducibly pin without that risk, so it
+    # deliberately floats on GitHub's current default instead.
+    runs-on: macos-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout (full history for path-relevance check)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # Only worth spending macOS runner minutes on when the iOS build
+      # output could actually change: application code, the iOS project
+      # itself, or the dependency manifest Flutter/CocoaPods resolve
+      # against. workflow_dispatch has no base commit to diff against, so
+      # it always runs the real build; an unresolvable base (force-push,
+      # a brand-new branch) fails open to a real build rather than
+      # silently skipping it.
+      - name: Determine whether app/iOS/pubspec changed
+        id: changes
+        run: |
+          set -euo pipefail
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "relevant=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            base="${{ github.event.pull_request.base.sha }}"
+          else
+            base="${{ github.event.before }}"
+          fi
+          if ! git rev-parse --verify --quiet "${base}^{commit}" > /dev/null; then
+            echo "relevant=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          if git diff --name-only "${base}" "${{ github.sha }}" \
+              | grep -qE '^(lib/|ios/|pubspec\.ya?ml|pubspec\.lock)'; then
+            echo "relevant=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "relevant=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Set up Flutter
+        if: steps.changes.outputs.relevant == 'true'
+        uses: subosito/flutter-action@v2
+        with:
+          # Same pinned version as the quality job (see its own comment
+          # above) so an iOS-only build failure can never be explained by
+          # a different Flutter/Dart toolchain than the one quality
+          # already validated against.
+          flutter-version: "3.41.2"
+          channel: "stable"
+          cache: true
+
+      - name: Install dependencies
+        if: steps.changes.outputs.relevant == 'true'
+        run: flutter pub get
+
+      # --verbose surfaces every underlying shell command flutter runs
+      # (including the CocoaPods `pod install` invocation and the
+      # `xcodebuild` call), and the combined output is also saved to disk
+      # and uploaded below so a CocoaPods or Xcode failure can still be
+      # diagnosed from the artifact after the raw job log is truncated or
+      # expires. --no-codesign: this job verifies the app compiles and
+      # links, not that it's distributable — no signing identity or
+      # provisioning profile exists in CI, and none should.
+      - name: Build iOS (release, unsigned)
+        if: steps.changes.outputs.relevant == 'true'
+        run: |
+          set -o pipefail
+          flutter --verbose build ios --release --no-codesign 2>&1 | tee ios_build.log
+
+      # CocoaPods' own failure output is sometimes more detailed than
+      # what flutter's wrapper surfaces (e.g. a native dependency version
+      # conflict) — re-running pod install directly, and printing the
+      # resolved Podfile.lock, gives that detail a place to show up when
+      # the build step above has already failed.
+      - name: CocoaPods diagnostics (only runs if the build above failed)
+        if: failure() && steps.changes.outputs.relevant == 'true'
+        run: |
+          echo "--- ios/Podfile.lock ---"
+          cat ios/Podfile.lock || true
+          echo "--- pod install --verbose (re-run for diagnosis) ---"
+          (cd ios && pod install --repo-update --verbose) || true
+
+      - name: Upload iOS build log
+        if: always() && steps.changes.outputs.relevant == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-build-log
+          path: ios_build.log
+          retention-days: 14
