@@ -69,6 +69,19 @@ class AppTapTarget {
   static const double minInteractive = 44;
 }
 
+/// Shadow color for `BoxShadow`s (e.g. the avatar and selected-pill
+/// shadows on the login and profile screens). Deliberately invariant
+/// across light/dark themes — unlike every other color in this file it
+/// has no separate light/dark value, because it represents physical light
+/// occlusion, not a surface/text/icon role that should flip with theme
+/// brightness. Callers apply their own alpha via `.withValues(alpha: ...)`
+/// for the shadow's intensity.
+class AppShadowColors {
+  AppShadowColors._();
+
+  static const Color base = Colors.black;
+}
+
 /// App-specific semantic colors that Material's [ColorScheme] has no
 /// dedicated role for (success/warning aren't part of the Material color
 /// system), plus a couple of prototype accents that don't map cleanly onto

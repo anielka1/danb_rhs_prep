@@ -253,11 +253,8 @@ class _SegmentedToggle extends StatelessWidget {
               borderRadius: BorderRadius.circular(AppRadii.pill),
               boxShadow: selected
                   ? [
-                      // Shadow color is intentionally invariant black
-                      // across themes: it represents physical light
-                      // occlusion, not a surface/text/icon role.
                       BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.06),
+                        color: AppShadowColors.base.withValues(alpha: 0.06),
                         blurRadius: 8,
                         offset: const Offset(0, 2),
                       ),
