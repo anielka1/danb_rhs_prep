@@ -11,7 +11,6 @@ import 'services/analytics_service.dart';
 import 'services/theme_mode_controller.dart';
 import 'navigation/analytics_navigator_observer.dart';
 import 'screens/splash_screen.dart';
-import 'screens/login_screen.dart';
 import 'screens/main_shell.dart';
 import 'screens/welcome_screen.dart';
 import 'screens/exam_date_screen.dart';
@@ -127,7 +126,6 @@ class _DanbRhsPrepAppState extends State<DanbRhsPrepApp> {
                   analytics: widget.analytics,
                   onReady: _applyBootstrapTheme,
                 ),
-            LoginScreen.route: (_) => const LoginScreen(),
             MainShell.route: (_) => MainShell(analytics: widget.analytics),
             WelcomeScreen.route: (_) => WelcomeScreen(
                   localStore: _localStore,

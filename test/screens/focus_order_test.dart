@@ -102,10 +102,10 @@ void main() {
     final List<String> order = semanticsLabelOrder(root);
 
     final int backIndex = order.indexOf('Back');
-    final int signOutIndex = order.indexOf('Sign Out');
+    final int changePasswordIndex = order.indexOf('Change Password');
     expect(backIndex, greaterThanOrEqualTo(0));
-    expect(signOutIndex, greaterThanOrEqualTo(0));
-    expect(backIndex, lessThan(signOutIndex),
+    expect(changePasswordIndex, greaterThanOrEqualTo(0));
+    expect(backIndex, lessThan(changePasswordIndex),
         reason: 'the toolbar back action should be reachable before scrolling '
             'through the page content below it');
 
