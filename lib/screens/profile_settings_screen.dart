@@ -3,7 +3,6 @@ import '../services/theme_mode_controller.dart';
 import '../theme/app_theme.dart';
 import '../widgets/app_scaffold.dart';
 import '../widgets/primary_button.dart';
-import 'login_screen.dart';
 
 class ProfileSettingsScreen extends StatefulWidget {
   static const String route = 'settings';
@@ -153,27 +152,6 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen> {
             // that doesn't exist yet.
             const _AccountRow(title: 'Edit Profile', onTap: null),
             const _AccountRow(title: 'Change Password', onTap: null),
-            const SizedBox(height: AppSpacing.xl + 2),
-            ConstrainedBox(
-              // A minimum, not an exact height, so the label can wrap and
-              // grow at large Dynamic Type sizes instead of being clipped.
-              constraints: const BoxConstraints(
-                  minWidth: double.infinity, minHeight: 54),
-              child: OutlinedButton(
-                onPressed: () => Navigator.of(context)
-                    .pushNamedAndRemoveUntil(LoginScreen.route, (r) => false),
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: colors.error,
-                  side: BorderSide(
-                      color: colors.error, width: AppBorderWidth.regular),
-                ),
-                child: Text('Sign Out',
-                    style: TextStyle(
-                        color: colors.error,
-                        fontWeight: FontWeight.w700,
-                        fontSize: 15)),
-              ),
-            ),
             const SizedBox(height: 90),
           ],
         ),
