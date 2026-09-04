@@ -40,10 +40,16 @@ class DanbRhsPrepApp extends StatefulWidget {
 
   final AnalyticsService analytics;
 
-  /// Test-only injection points, mirroring [analytics]'s pattern — let a
-  /// test observe/drive these directly, or supply deterministic fakes.
-  /// Null in production, where the State creates (and, for the ones it
-  /// created itself, owns/disposes) its own.
+  /// Test and demo-entrypoint injection points, mirroring [analytics]'s
+  /// pattern — let a test observe/drive these directly, or supply
+  /// deterministic fakes; `lib/main_demo.dart` (run explicitly via
+  /// `flutter run -t lib/main_demo.dart`, never by plain `flutter run` or
+  /// a release build) is the one non-test caller that supplies
+  /// [bootstrapService] itself. Null in production, where the State
+  /// creates (and, for the ones it created itself, owns/disposes) its
+  /// own — this file must never import or reference
+  /// `DebugDemoEnvironment` (see `lib/main_demo.dart` and
+  /// `test/main_test.dart`'s isolation check).
   final ThemeModeController? _injectedThemeModeController;
   final BootstrapLocalStore? _injectedLocalStore;
   final AppBootstrapService? _injectedBootstrapService;
