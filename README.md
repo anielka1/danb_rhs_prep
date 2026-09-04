@@ -220,6 +220,12 @@ so requiring it would block all merges), and `git diff --check`. CI does not
 build the iOS app; that remains a required local pre-merge/pre-release step
 and a separate, not-yet-implemented workflow.
 
+A separate `secret-scan` job runs [gitleaks](https://gitleaks.io/) (a pinned,
+checksum-verified binary, not a third-party marketplace Action) against the
+full working tree and commit history on the same triggers, and fails the
+build if it finds anything — secret values are redacted from its output, and
+nothing it scans is sent to any external service.
+
 ## Content and compliance rules
 
 - Do not copy, reconstruct, solicit, or store recalled live exam questions.
