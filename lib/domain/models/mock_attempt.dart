@@ -22,9 +22,27 @@ class MockAttempt {
     required this.durationMinutes,
     this.completedAt,
     this.correctCount,
+    this.currentQuestionIndex = 0,
+    this.contentVersion,
   })  : questionIds = List.unmodifiable(questionIds),
         answers = Map.unmodifiable(answers),
         flaggedQuestionIds = Set.unmodifiable(flaggedQuestionIds) {
+    if (id.isEmpty ||
+        examId.isEmpty ||
+        this.questionIds.isEmpty ||
+        this.questionIds.any((id) => id.isEmpty) ||
+        this.questionIds.toSet().length != this.questionIds.length ||
+        durationMinutes <= 0 ||
+        currentQuestionIndex < 0 ||
+        currentQuestionIndex >= this.questionIds.length) {
+      throw ArgumentError(
+          'Invalid mock attempt identity, question set or position.');
+    }
+    if (correctCount != null &&
+            (correctCount! < 0 || correctCount! > answers.length) ||
+        completedAt != null && completedAt!.isBefore(startedAt)) {
+      throw ArgumentError('Invalid mock attempt score or completion time.');
+    }
     if ((completedAt != null) != (status == MockAttemptStatus.completed)) {
       throw ArgumentError(
         'completedAt must be set if and only if the attempt is completed.',
@@ -59,6 +77,8 @@ class MockAttempt {
   /// Always stored in UTC.
   final DateTime startedAt;
   final int durationMinutes;
+  final int currentQuestionIndex;
+  final String? contentVersion;
 
   /// Always stored in UTC. Null unless [status] is completed.
   final DateTime? completedAt;
@@ -74,6 +94,7 @@ class MockAttempt {
     MockAttemptStatus? status,
     DateTime? completedAt,
     int? correctCount,
+    int? currentQuestionIndex,
   }) {
     return MockAttempt(
       id: id,
@@ -86,6 +107,8 @@ class MockAttempt {
       durationMinutes: durationMinutes,
       completedAt: completedAt ?? this.completedAt,
       correctCount: correctCount ?? this.correctCount,
+      currentQuestionIndex: currentQuestionIndex ?? this.currentQuestionIndex,
+      contentVersion: contentVersion,
     );
   }
 
@@ -101,6 +124,8 @@ class MockAttempt {
         other.status == status &&
         other.startedAt == startedAt &&
         other.durationMinutes == durationMinutes &&
+        other.currentQuestionIndex == currentQuestionIndex &&
+        other.contentVersion == contentVersion &&
         other.completedAt == completedAt &&
         other.correctCount == correctCount;
   }
@@ -117,6 +142,8 @@ class MockAttempt {
         status,
         startedAt,
         durationMinutes,
+        currentQuestionIndex,
+        contentVersion,
         completedAt,
         correctCount,
       );

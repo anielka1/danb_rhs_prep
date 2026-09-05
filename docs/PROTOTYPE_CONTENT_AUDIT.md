@@ -1,5 +1,15 @@
 # Prototype Content Audit
 
+## PREP-650 update (2026-09-05)
+
+The Mock Exam rows and unreachable-results conclusion below are historical.
+`MockExamScreen` now starts/resumes an injected, validated exam. Results require
+a completed attempt and contain no fabricated score, official pass label or
+review placeholder. Demo is debug/test only; release keeps the unavailable gate
+without eligible content and storage. See [Mock Exam flow](MOCK_EXAM_FLOW.md).
+
+## Original audit snapshot
+
 Scope: every screen that is currently **reachable** by a real navigation
 path from app launch, per the Phase 2 exit-criteria task. Reachability was
 checked by grepping every `.pushNamed`/`.pushReplacementNamed`/

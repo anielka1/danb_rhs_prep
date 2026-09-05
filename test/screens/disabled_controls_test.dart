@@ -113,8 +113,9 @@ void main() {
         (tester) async {
       final SemanticsHandle handle = tester.ensureSemantics();
       await tester.pumpWidget(wrap(const MockExamResultsScreen()));
-      expect(_hasTapAction(tester.getSemantics(find.text('Review Answers'))),
-          isFalse);
+      expect(find.text('Review Answers'), findsNothing,
+          reason:
+              'No completed mock means no review action or invented result.');
 
       await tester.pumpWidget(wrap(PracticeSessionScope(
         controller: buildDemoPracticeSessionController(),

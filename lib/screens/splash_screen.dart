@@ -4,6 +4,7 @@ import '../bootstrap/app_bootstrap_service.dart';
 import '../bootstrap/bootstrap_session_controller.dart';
 import '../bootstrap/bootstrap_session_scope.dart';
 import '../domain/repositories/bootstrap_local_store.dart';
+import '../domain/repositories/progress_repository.dart';
 import '../services/analytics_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/error_state.dart';
@@ -24,11 +25,13 @@ class SplashScreen extends StatefulWidget {
     required this.localStore,
     this.analytics = const NoOpAnalyticsService(),
     this.onReady,
+    this.progressRepository,
   });
 
   final AppBootstrapService bootstrapService;
   final BootstrapLocalStore localStore;
   final AnalyticsService analytics;
+  final ProgressRepository? progressRepository;
 
   /// Called once, synchronously, with a [BootstrapReady] result before
   /// this screen navigates away — the app shell's hook for applying
@@ -82,8 +85,9 @@ class _SplashScreenState extends State<SplashScreen> {
     // BootstrapReady is first produced. Every route from here on
     // (Welcome, Exam Date, Experience Level, Main) forwards this same
     // instance; none of them ever constructs another one.
-    final BootstrapSessionController controller =
-        BootstrapSessionController(ready);
+    final BootstrapSessionController controller = BootstrapSessionController(
+        ready,
+        progressRepository: widget.progressRepository);
 
     final Widget screen = ready.onboardingComplete
         ? MainShell(analytics: widget.analytics)

@@ -39,8 +39,11 @@ void main() {
       addTearDown(() => directory.deleteSync(recursive: true));
       final environment =
           File('lib/debug/debug_demo_environment.dart').absolute.uri;
+      final blueprint =
+          File('lib/mock_exam/mock_exam_blueprint.dart').absolute.uri;
       final probe = File('${directory.path}/probe.dart')..writeAsStringSync('''
 import '$environment';
+import '$blueprint';
 void main() {
   final accessors = <Object? Function()>[
     () => DebugDemoEnvironment.demoProfile,
@@ -62,6 +65,12 @@ void main() {
       continue;
     }
     throw StateError('Fixture accessor \$i was available');
+  }
+  try {
+    MockExamBlueprint.ensureDemoAllowed();
+    throw StateError('Mock demo mode was available');
+  } on MockExamUnavailable {
+    // Expected in product and profile AOT.
   }
   print('All fixture accessors blocked');
 }

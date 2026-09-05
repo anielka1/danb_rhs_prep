@@ -185,9 +185,12 @@ No device preferences or production data are read or written. Changes last
 only for the process lifetime; restarting restores the deterministic fixtures.
 
 `DebugDemoEnvironment.buildProgressRepository()` also provides independent
-seeded practice/mock history for repository consumers and tests. Practice and
-mock session UI is a separate task; this environment does not enable controls
-whose study flow is not implemented yet.
+seeded practice/mock history for repository consumers and tests. After accountless
+onboarding, the Mock Exam tab supports instructions, saved answers and flags,
+question navigation, confirmation, and a result calculated from the attempt.
+It uses only `Above practice threshold` / `Below practice threshold`, always
+with the practice-estimate disclaimer. See [PREP-650](docs/MOCK_EXAM_FLOW.md)
+for selection, persistence, release gates and verification details.
 
 Production `lib/main.dart` does not import the demo environment. Even an explicit
 release/profile build targeting `lib/main_demo.dart` refuses to start. Fixture
