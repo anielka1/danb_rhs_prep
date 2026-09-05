@@ -137,8 +137,25 @@ class MockExamResult {
   final MockAttempt attempt;
   final double threshold;
   final bool isDemo;
-  String get outcome =>
-      attempt.correctCount! * 100 >= threshold * attempt.questionIds.length
+  String get outcome => outcomeFor(
+        correctCount: attempt.correctCount!,
+        totalQuestions: attempt.questionIds.length,
+        thresholdPercent: threshold,
+      );
+
+  /// The same "Above/Below practice threshold" wording as [outcome], as a
+  /// pure function over a score — lets other screens (e.g. a progress
+  /// history list) describe a past attempt's outcome consistently without
+  /// re-running this class's full, stricter attempt/blueprint validation,
+  /// which is about proving a *current* attempt is genuine, not about
+  /// looking up how an already-trusted historical record compares to
+  /// today's threshold.
+  static String outcomeFor({
+    required int correctCount,
+    required int totalQuestions,
+    required double thresholdPercent,
+  }) =>
+      correctCount * 100 >= thresholdPercent * totalQuestions
           ? 'Above practice threshold'
           : 'Below practice threshold';
 }

@@ -26,8 +26,12 @@ void main() {
           DebugDemoEnvironment.demoPracticeSession);
       expect(DebugDemoEnvironment.demoMockAttempt,
           DebugDemoEnvironment.demoMockAttempt);
+      expect(DebugDemoEnvironment.demoMockAttemptEarlier,
+          DebugDemoEnvironment.demoMockAttemptEarlier);
       expect(DebugDemoEnvironment.demoReadinessSnapshot,
           DebugDemoEnvironment.demoReadinessSnapshot);
+      expect(DebugDemoEnvironment.demoReadinessSnapshotEarlier,
+          DebugDemoEnvironment.demoReadinessSnapshotEarlier);
     });
   });
 
