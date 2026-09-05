@@ -48,6 +48,11 @@ jobs:
       - name: Run tests
         run: flutter test
 
+      - name: Verify demo entrypoint refuses release and profile activation
+        run: |
+          flutter test --dart-define=dart.vm.product=true test/debug/demo_entrypoint_mode_test.dart
+          flutter test --dart-define=dart.vm.profile=true test/debug/demo_entrypoint_mode_test.dart
+
       # --report only, deliberately not --require-ready: the production
       # diagnostic inventory is intentionally insufficient pending Section
       # 3.5 content review, so --require-ready correctly exits 2 today and

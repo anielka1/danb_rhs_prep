@@ -336,6 +336,43 @@ void main() {
       expect(find.text('Today'), findsOneWidget);
     });
   });
+
+  group('DebugDemoEnvironment isolation', () {
+    // Isolation is a separate entrypoint (lib/main_demo.dart), not a
+    // runtime flag inside lib/main.dart — see that entrypoint's own doc
+    // comment. This is the source-level half of the proof: the file
+    // plain `flutter run` and `flutter build ios --release --no-codesign`
+    // always build from must have zero reference to DebugDemoEnvironment,
+    // not merely a guarded one. test/main_demo_test.dart proves the other
+    // half — that lib/main_demo.dart does inject it.
+    test(
+        'lib/main.dart has no import or reference to DebugDemoEnvironment '
+        "in actual code (a doc comment explaining this file's own "
+        "isolation boundary doesn't count)", () {
+      final String code = _stripComments(
+        File('lib/main.dart').readAsStringSync(),
+      );
+
+      expect(code.contains('DebugDemoEnvironment'), isFalse,
+          reason: 'lib/main.dart must never import or reference '
+              'DebugDemoEnvironment — demo data is wired only from the '
+              'separate lib/main_demo.dart entrypoint '
+              '(flutter run -t lib/main_demo.dart), never reachable from a '
+              'plain flutter run or a release build.');
+    });
+  });
+}
+
+/// Removes `//` line comments and `///`/`/** */` doc/block comments so
+/// textual checks above only ever see real code, not names mentioned in
+/// prose explaining the very boundary being verified.
+String _stripComments(String source) {
+  final String noBlockComments =
+      source.replaceAll(RegExp(r'/\*.*?\*/', dotAll: true), '');
+  return noBlockComments.split('\n').map((line) {
+    final int index = line.indexOf('//');
+    return index == -1 ? line : line.substring(0, index);
+  }).join('\n');
 }
 
 class _ThrowingAnalyticsService implements AnalyticsService {
