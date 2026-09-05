@@ -21,22 +21,11 @@ import '../features/questions/domain/question.dart';
 /// exercising app screens without a real backend, a real reviewed content
 /// bank, or a real user account.
 ///
-/// **Debug/test only — never activated in release.** Nothing in this file
-/// imports Flutter (proven by
-/// `test/debug/debug_demo_environment_dependency_direction_test.dart`,
-/// mirroring `test/bootstrap/dependency_direction_test.dart`'s existing
-/// boundary check), and this class does not decide *when* it is allowed
-/// to run. Isolation is a separate **entrypoint**, not a runtime flag:
-/// `lib/main.dart` — what plain `flutter run` and
-/// `flutter build ios --release --no-codesign` always build from — has
-/// zero import or reference to this class at all
-/// (`test/main_test.dart`'s isolation check proves this at the source
-/// level). The only place this environment is ever activated is
-/// `lib/main_demo.dart`, a distinct entrypoint run explicitly via
-/// `flutter run -t lib/main_demo.dart` (see that file's own doc comment
-/// for exactly what it wires and why). Since `lib/main.dart` has no code
-/// path that can reach `DebugDemoEnvironment`, there is nothing for a
-/// release build to strip — it was never reachable to begin with.
+/// Debug/test only. Every fixture accessor uses compile-time VM mode
+/// constants, so release/profile throw before constructing any demo value.
+/// The compiler can remove the unreachable fixture literals. AOT tests verify
+/// both denial of access and absence of synthetic content from the binary.
+/// Production main.dart also has no dependency on this library.
 ///
 /// All values below are fixed literals — no `DateTime.now()`, no
 /// `Random()` — so every fixture is byte-for-byte identical across runs;
@@ -47,11 +36,13 @@ import '../features/questions/domain/question.dart';
 class DebugDemoEnvironment {
   DebugDemoEnvironment._();
 
-  /// Distinct from the real, bundled exam ID (`kDefaultExamId` /
-  /// `'danb_rhs'`, see `AppBootstrapService`) so a demo [ContentRepository]
-  /// built from this environment can never satisfy a real bootstrap's
-  /// request for the real exam, even if it were wired in by mistake —
-  /// `AppBootstrapService` only ever resolves and requests `'danb_rhs'`.
+  static const bool _enabled = !bool.fromEnvironment('dart.vm.product') &&
+      !bool.fromEnvironment('dart.vm.profile');
+
+  static Never _unavailable() =>
+      throw UnsupportedError('Demo fixtures require debug/test mode.');
+
+  /// Separate namespace: synthetic content never impersonates the real exam.
   static const String demoExamId = 'demo_exam';
 
   static const String _demoQuestionId1 = 'demo-question-1';
@@ -63,17 +54,19 @@ class DebugDemoEnvironment {
   static const String _demoAnswerIncorrect = 'b';
 
   /// A deterministic, fully onboarded demo profile.
-  static UserProfile get demoProfile => UserProfile(
-        examId: demoExamId,
-        experienceLevel: ExperienceLevel.studyingAlready,
-        examDatePrecision: ExamDatePrecision.notScheduled,
-        dailyGoalQuestions: 10,
-        notificationsEnabled: false,
-        themePreference: ThemePreference.system,
-        onboardingComplete: true,
-        createdAt: DateTime.utc(2026, 1, 1),
-        updatedAt: DateTime.utc(2026, 1, 1),
-      );
+  static UserProfile get demoProfile => _enabled
+      ? UserProfile(
+          examId: demoExamId,
+          experienceLevel: ExperienceLevel.studyingAlready,
+          examDatePrecision: ExamDatePrecision.notScheduled,
+          dailyGoalQuestions: 10,
+          notificationsEnabled: false,
+          themePreference: ThemePreference.system,
+          onboardingComplete: true,
+          createdAt: DateTime.utc(2026, 1, 1),
+          updatedAt: DateTime.utc(2026, 1, 1),
+        )
+      : _unavailable();
 
   /// Five small, synthetic, clearly-labeled demo questions — never the
   /// real reviewed content bank, and never required to hold
@@ -82,113 +75,115 @@ class DebugDemoEnvironment {
   /// not anything resembling a dental radiation-health-and-safety claim —
   /// demo content must never carry a clinical assertion that would need
   /// professional review, since it never goes through that review.
-  static List<Question> get demoQuestions => [
-        Question(
-          id: _demoQuestionId1,
-          examId: demoExamId,
-          domainId: 'demo_domain',
-          topicId: 'demo_topic',
-          questionText: '[Demo] What is 2 + 2?',
-          answers: const [
-            Answer(id: _demoAnswerCorrect, text: '4'),
-            Answer(id: _demoAnswerIncorrect, text: '5'),
-          ],
-          correctAnswerId: _demoAnswerCorrect,
-          explanation: 'This is a synthetic demo question, not real exam '
-              'content.',
-          references: const [],
-          difficulty: 1,
-          status: QuestionStatus.draft,
-          version: 1,
-          updatedAt: DateTime.utc(2026, 1, 1),
-          sourceVersion: 'demo-fixtures-v1',
-          tags: const ['demo'],
-        ),
-        Question(
-          id: _demoQuestionId2,
-          examId: demoExamId,
-          domainId: 'demo_domain',
-          topicId: 'demo_topic',
-          questionText: '[Demo] What color is the sky on a clear day?',
-          answers: const [
-            Answer(id: _demoAnswerCorrect, text: 'Blue'),
-            Answer(id: _demoAnswerIncorrect, text: 'Green'),
-          ],
-          correctAnswerId: _demoAnswerCorrect,
-          explanation: 'This is a synthetic demo question, not real exam '
-              'content.',
-          references: const [],
-          difficulty: 1,
-          status: QuestionStatus.draft,
-          version: 1,
-          updatedAt: DateTime.utc(2026, 1, 1),
-          sourceVersion: 'demo-fixtures-v1',
-          tags: const ['demo'],
-        ),
-        Question(
-          id: _demoQuestionId3,
-          examId: demoExamId,
-          domainId: 'demo_domain',
-          topicId: 'demo_topic',
-          questionText: '[Demo] How many days are in a week?',
-          answers: const [
-            Answer(id: _demoAnswerCorrect, text: '7'),
-            Answer(id: _demoAnswerIncorrect, text: '10'),
-          ],
-          correctAnswerId: _demoAnswerCorrect,
-          explanation: 'This is a synthetic demo question, not real exam '
-              'content.',
-          references: const [],
-          difficulty: 1,
-          status: QuestionStatus.draft,
-          version: 1,
-          updatedAt: DateTime.utc(2026, 1, 1),
-          sourceVersion: 'demo-fixtures-v1',
-          tags: const ['demo'],
-        ),
-        Question(
-          id: _demoQuestionId4,
-          examId: demoExamId,
-          domainId: 'demo_domain',
-          topicId: 'demo_topic',
-          questionText: '[Demo] What is the capital of France?',
-          answers: const [
-            Answer(id: _demoAnswerCorrect, text: 'Paris'),
-            Answer(id: _demoAnswerIncorrect, text: 'Berlin'),
-          ],
-          correctAnswerId: _demoAnswerCorrect,
-          explanation: 'This is a synthetic demo question, not real exam '
-              'content.',
-          references: const [],
-          difficulty: 1,
-          status: QuestionStatus.draft,
-          version: 1,
-          updatedAt: DateTime.utc(2026, 1, 1),
-          sourceVersion: 'demo-fixtures-v1',
-          tags: const ['demo'],
-        ),
-        Question(
-          id: _demoQuestionId5,
-          examId: demoExamId,
-          domainId: 'demo_domain',
-          topicId: 'demo_topic',
-          questionText: '[Demo] Which shape has exactly three sides?',
-          answers: const [
-            Answer(id: _demoAnswerCorrect, text: 'Triangle'),
-            Answer(id: _demoAnswerIncorrect, text: 'Square'),
-          ],
-          correctAnswerId: _demoAnswerCorrect,
-          explanation: 'This is a synthetic demo question, not real exam '
-              'content.',
-          references: const [],
-          difficulty: 1,
-          status: QuestionStatus.draft,
-          version: 1,
-          updatedAt: DateTime.utc(2026, 1, 1),
-          sourceVersion: 'demo-fixtures-v1',
-          tags: const ['demo'],
-        ),
-      ];
+  static List<Question> get demoQuestions => _enabled
+      ? [
+          Question(
+            id: _demoQuestionId1,
+            examId: demoExamId,
+            domainId: 'demo_domain',
+            topicId: 'demo_topic',
+            questionText: '[Demo] What is 2 + 2?',
+            answers: const [
+              Answer(id: _demoAnswerCorrect, text: '4'),
+              Answer(id: _demoAnswerIncorrect, text: '5'),
+            ],
+            correctAnswerId: _demoAnswerCorrect,
+            explanation: 'This is a synthetic demo question, not real exam '
+                'content.',
+            references: const [],
+            difficulty: 1,
+            status: QuestionStatus.draft,
+            version: 1,
+            updatedAt: DateTime.utc(2026, 1, 1),
+            sourceVersion: 'demo-fixtures-v1',
+            tags: const ['demo'],
+          ),
+          Question(
+            id: _demoQuestionId2,
+            examId: demoExamId,
+            domainId: 'demo_domain',
+            topicId: 'demo_topic',
+            questionText: '[Demo] What color is the sky on a clear day?',
+            answers: const [
+              Answer(id: _demoAnswerCorrect, text: 'Blue'),
+              Answer(id: _demoAnswerIncorrect, text: 'Green'),
+            ],
+            correctAnswerId: _demoAnswerCorrect,
+            explanation: 'This is a synthetic demo question, not real exam '
+                'content.',
+            references: const [],
+            difficulty: 1,
+            status: QuestionStatus.draft,
+            version: 1,
+            updatedAt: DateTime.utc(2026, 1, 1),
+            sourceVersion: 'demo-fixtures-v1',
+            tags: const ['demo'],
+          ),
+          Question(
+            id: _demoQuestionId3,
+            examId: demoExamId,
+            domainId: 'demo_domain',
+            topicId: 'demo_topic',
+            questionText: '[Demo] How many days are in a week?',
+            answers: const [
+              Answer(id: _demoAnswerCorrect, text: '7'),
+              Answer(id: _demoAnswerIncorrect, text: '10'),
+            ],
+            correctAnswerId: _demoAnswerCorrect,
+            explanation: 'This is a synthetic demo question, not real exam '
+                'content.',
+            references: const [],
+            difficulty: 1,
+            status: QuestionStatus.draft,
+            version: 1,
+            updatedAt: DateTime.utc(2026, 1, 1),
+            sourceVersion: 'demo-fixtures-v1',
+            tags: const ['demo'],
+          ),
+          Question(
+            id: _demoQuestionId4,
+            examId: demoExamId,
+            domainId: 'demo_domain',
+            topicId: 'demo_topic',
+            questionText: '[Demo] What is the capital of France?',
+            answers: const [
+              Answer(id: _demoAnswerCorrect, text: 'Paris'),
+              Answer(id: _demoAnswerIncorrect, text: 'Berlin'),
+            ],
+            correctAnswerId: _demoAnswerCorrect,
+            explanation: 'This is a synthetic demo question, not real exam '
+                'content.',
+            references: const [],
+            difficulty: 1,
+            status: QuestionStatus.draft,
+            version: 1,
+            updatedAt: DateTime.utc(2026, 1, 1),
+            sourceVersion: 'demo-fixtures-v1',
+            tags: const ['demo'],
+          ),
+          Question(
+            id: _demoQuestionId5,
+            examId: demoExamId,
+            domainId: 'demo_domain',
+            topicId: 'demo_topic',
+            questionText: '[Demo] Which shape has exactly three sides?',
+            answers: const [
+              Answer(id: _demoAnswerCorrect, text: 'Triangle'),
+              Answer(id: _demoAnswerIncorrect, text: 'Square'),
+            ],
+            correctAnswerId: _demoAnswerCorrect,
+            explanation: 'This is a synthetic demo question, not real exam '
+                'content.',
+            references: const [],
+            difficulty: 1,
+            status: QuestionStatus.draft,
+            version: 1,
+            updatedAt: DateTime.utc(2026, 1, 1),
+            sourceVersion: 'demo-fixtures-v1',
+            tags: const ['demo'],
+          ),
+        ]
+      : _unavailable();
 
   /// A minimal but fully valid [ExamConfig] so [demoContentPackage] can be
   /// served through the same [ContentRepository] interface production
@@ -210,7 +205,7 @@ class DebugDemoEnvironment {
     mockExam: MockExamConfig(
       questionCount: 5,
       durationMinutes: 10,
-      practicePassingPercent: 0.7,
+      practicePassingPercent: 70,
       allowsBackNavigation: true,
       timed: false,
     ),
@@ -254,123 +249,128 @@ class DebugDemoEnvironment {
     disclaimer: 'This is synthetic demo content, not a real exam.',
   );
 
-  static ContentPackage get demoContentPackage => ContentPackage(
-        exam: _demoExamConfig,
-        contentVersion: 'demo-1',
-        sourceVersion: 'demo-fixtures-v1',
-        generatedAt: DateTime.utc(2026, 1, 1),
-        questions: demoQuestions,
-      );
+  static ContentPackage get demoContentPackage => _enabled
+      ? ContentPackage(
+          exam: _demoExamConfig,
+          contentVersion: 'demo-1',
+          sourceVersion: 'demo-fixtures-v1',
+          generatedAt: DateTime.utc(2026, 1, 1),
+          questions: demoQuestions,
+        )
+      : _unavailable();
 
-  static PracticeSession get demoPracticeSession => PracticeSession(
-        id: 'demo-practice-session-1',
-        examId: demoExamId,
-        mode: PracticeMode.quickPractice,
-        questionIds: const [_demoQuestionId1, _demoQuestionId2],
-        status: SessionStatus.completed,
-        startedAt: DateTime.utc(2026, 1, 1, 9),
-        completedAt: DateTime.utc(2026, 1, 1, 9, 10),
-      );
-
-  static MockAttempt get demoMockAttempt => MockAttempt(
-        id: 'demo-mock-attempt-1',
-        examId: demoExamId,
-        questionIds: const [_demoQuestionId1, _demoQuestionId2],
-        answers: const {
-          _demoQuestionId1: _demoAnswerCorrect,
-          _demoQuestionId2: _demoAnswerCorrect,
-        },
-        flaggedQuestionIds: const {},
-        status: MockAttemptStatus.completed,
-        startedAt: DateTime.utc(2026, 1, 1, 10),
-        durationMinutes: 10,
-        completedAt: DateTime.utc(2026, 1, 1, 10, 10),
-        correctCount: 2,
-      );
-
-  static List<AnswerAttempt> get demoAnswerAttempts => [
-        AnswerAttempt(
-          id: 'demo-attempt-1',
+  static PracticeSession get demoPracticeSession => _enabled
+      ? PracticeSession(
+          id: 'demo-practice-session-1',
           examId: demoExamId,
-          questionId: _demoQuestionId1,
-          domainId: 'demo_domain',
-          topicId: 'demo_topic',
-          difficulty: 1,
-          sessionId: demoPracticeSession.id,
-          sessionType: AttemptSessionType.practice,
-          selectedAnswerId: _demoAnswerCorrect,
-          isCorrect: true,
-          answeredAt: DateTime.utc(2026, 1, 1, 9, 5),
-        ),
-        AnswerAttempt(
-          id: 'demo-attempt-2',
-          examId: demoExamId,
-          questionId: _demoQuestionId2,
-          domainId: 'demo_domain',
-          topicId: 'demo_topic',
-          difficulty: 1,
-          sessionId: demoPracticeSession.id,
-          sessionType: AttemptSessionType.practice,
-          selectedAnswerId: _demoAnswerCorrect,
-          isCorrect: true,
-          answeredAt: DateTime.utc(2026, 1, 1, 9, 9),
-        ),
-      ];
+          mode: PracticeMode.quickPractice,
+          questionIds: const [_demoQuestionId1, _demoQuestionId2],
+          status: SessionStatus.completed,
+          startedAt: DateTime.utc(2026, 1, 1, 9),
+          completedAt: DateTime.utc(2026, 1, 1, 9, 10),
+        )
+      : _unavailable();
 
-  static List<QuestionState> get demoQuestionStates => [
-        QuestionState(
+  static MockAttempt get demoMockAttempt => _enabled
+      ? MockAttempt(
+          id: 'demo-mock-attempt-1',
           examId: demoExamId,
-          questionId: _demoQuestionId1,
-          bookmarked: false,
-          timesSeen: 1,
-          timesCorrect: 1,
-          timesIncorrect: 0,
-          consecutiveCorrect: 1,
-          lastAnsweredAt: DateTime.utc(2026, 1, 1, 9, 5),
-        ),
-        QuestionState(
+          questionIds: const [_demoQuestionId1, _demoQuestionId2],
+          answers: const {
+            _demoQuestionId1: _demoAnswerCorrect,
+            _demoQuestionId2: _demoAnswerCorrect,
+          },
+          flaggedQuestionIds: const {},
+          status: MockAttemptStatus.completed,
+          startedAt: DateTime.utc(2026, 1, 1, 10),
+          durationMinutes: 10,
+          completedAt: DateTime.utc(2026, 1, 1, 10, 10),
+          correctCount: 2,
+        )
+      : _unavailable();
+
+  static List<AnswerAttempt> get demoAnswerAttempts => _enabled
+      ? [
+          AnswerAttempt(
+            id: 'demo-attempt-1',
+            examId: demoExamId,
+            questionId: _demoQuestionId1,
+            domainId: 'demo_domain',
+            topicId: 'demo_topic',
+            difficulty: 1,
+            sessionId: demoPracticeSession.id,
+            sessionType: AttemptSessionType.practice,
+            selectedAnswerId: _demoAnswerCorrect,
+            isCorrect: true,
+            answeredAt: DateTime.utc(2026, 1, 1, 9, 5),
+          ),
+          AnswerAttempt(
+            id: 'demo-attempt-2',
+            examId: demoExamId,
+            questionId: _demoQuestionId2,
+            domainId: 'demo_domain',
+            topicId: 'demo_topic',
+            difficulty: 1,
+            sessionId: demoPracticeSession.id,
+            sessionType: AttemptSessionType.practice,
+            selectedAnswerId: _demoAnswerCorrect,
+            isCorrect: true,
+            answeredAt: DateTime.utc(2026, 1, 1, 9, 9),
+          ),
+        ]
+      : _unavailable();
+
+  static List<QuestionState> get demoQuestionStates => _enabled
+      ? [
+          QuestionState(
+            examId: demoExamId,
+            questionId: _demoQuestionId1,
+            bookmarked: false,
+            timesSeen: 1,
+            timesCorrect: 1,
+            timesIncorrect: 0,
+            consecutiveCorrect: 1,
+            lastAnsweredAt: DateTime.utc(2026, 1, 1, 9, 5),
+          ),
+          QuestionState(
+            examId: demoExamId,
+            questionId: _demoQuestionId2,
+            bookmarked: false,
+            timesSeen: 1,
+            timesCorrect: 1,
+            timesIncorrect: 0,
+            consecutiveCorrect: 1,
+            lastAnsweredAt: DateTime.utc(2026, 1, 1, 9, 9),
+          ),
+        ]
+      : _unavailable();
+
+  static ReadinessSnapshot get demoReadinessSnapshot => _enabled
+      ? ReadinessSnapshot(
+          id: 'demo-readiness-1',
           examId: demoExamId,
-          questionId: _demoQuestionId2,
-          bookmarked: false,
-          timesSeen: 1,
-          timesCorrect: 1,
-          timesIncorrect: 0,
-          consecutiveCorrect: 1,
-          lastAnsweredAt: DateTime.utc(2026, 1, 1, 9, 9),
-        ),
-      ];
+          calculatedAt: DateTime.utc(2026, 1, 1, 11),
+          overallScore: 72,
+          band: ReadinessBand.gettingClose,
+          recentAccuracyComponent: 0.8,
+          domainMasteryComponent: 0.7,
+          mockPerformanceComponent: 0.75,
+          repeatedMasteryComponent: 0.6,
+          coverageComponent: 0.5,
+          evidenceConfidence: 0.6,
+          uniqueQuestionsAnswered: 2,
+        )
+      : _unavailable();
 
-  static ReadinessSnapshot get demoReadinessSnapshot => ReadinessSnapshot(
-        id: 'demo-readiness-1',
-        examId: demoExamId,
-        calculatedAt: DateTime.utc(2026, 1, 1, 11),
-        overallScore: 72,
-        band: ReadinessBand.gettingClose,
-        recentAccuracyComponent: 0.8,
-        domainMasteryComponent: 0.7,
-        mockPerformanceComponent: 0.75,
-        repeatedMasteryComponent: 0.6,
-        coverageComponent: 0.5,
-        evidenceConfidence: 0.6,
-        uniqueQuestionsAnswered: 2,
-      );
-
-  /// A synchronously fully-seeded [UserSettingsRepository] — the only
-  /// fixture wired into the app today, and only from the demo entrypoint
-  /// (see `lib/main_demo.dart`'s own doc comment, and
-  /// `AppBootstrapService.userSettingsRepository`, the injection point it
-  /// uses). [ProgressRepository]/[ContentRepository]
-  /// below have no existing production injection point yet (progress,
-  /// readiness, and practice/mock content wiring are explicitly deferred
-  /// to later phases per `BootstrapLocalStore`'s own doc comment) — they
-  /// exist as ready-to-use fixtures for when that wiring is added, and
-  /// are exercised today only by
-  /// `test/debug/debug_demo_environment_test.dart`.
+  /// Fresh repositories isolate mutations and reset deterministically on restart.
+  /// Consumers depend on the existing repository contracts, never these fixtures.
   static UserSettingsRepository buildUserSettingsRepository() {
+    if (!_enabled) _unavailable();
     return InMemoryUserSettingsRepository(seedProfile: demoProfile);
   }
 
   static ProgressRepository buildProgressRepository() {
+    if (!_enabled) _unavailable();
     return InMemoryProgressRepository(
       seedAnswerAttempts: demoAnswerAttempts,
       seedQuestionStates: demoQuestionStates,
@@ -381,6 +381,7 @@ class DebugDemoEnvironment {
   }
 
   static ContentRepository buildContentRepository() {
+    if (!_enabled) _unavailable();
     return InMemoryContentRepository({demoExamId: demoContentPackage});
   }
 }

@@ -2,13 +2,8 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 
-/// Proves, at the source level, that `DebugDemoEnvironment` is plain Dart:
-/// it must never import Flutter, so it stays usable identically from any
-/// context. Isolation itself is a separate entrypoint
-/// (`lib/main_demo.dart`), not anything inside this file — see that
-/// entrypoint's own doc comment. Mirrors
-/// `test/bootstrap/dependency_direction_test.dart`'s existing boundary
-/// check for `AppBootstrapService`.
+/// The fixture library remains plain Dart, including its VM-constant mode gate.
+/// This lets AOT isolation tests compile it without the Flutter engine.
 void main() {
   const String environmentPath = 'lib/debug/debug_demo_environment.dart';
 
@@ -32,9 +27,9 @@ void main() {
     final String code =
         _stripComments(File(environmentPath).readAsStringSync());
     expect(code.contains('kDebugMode'), isFalse,
-        reason: 'the debug/release gate belongs in main.dart only — this '
-            'file must be usable identically from any context (debug, '
-            'test, or a future consumer) with no gating logic of its own.');
+        reason:
+            'The environment uses plain-Dart VM constants for its mode gate, '
+            'without depending on Flutter foundation constants.');
     expect(code.contains('kReleaseMode'), isFalse);
   });
 }

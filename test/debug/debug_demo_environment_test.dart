@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:danb_rhs_prep/debug/debug_demo_environment.dart';
 import 'package:danb_rhs_prep/domain/models/practice_session.dart';
 import 'package:danb_rhs_prep/features/questions/domain/question.dart';
+import 'package:danb_rhs_prep/features/content/domain/content_validation.dart';
 
 void main() {
   group('determinism', () {
@@ -14,8 +15,8 @@ void main() {
     });
 
     test('demoQuestions are identical across repeated access', () {
-      expect(DebugDemoEnvironment.demoQuestions.map((q) => q.id).toList(),
-          DebugDemoEnvironment.demoQuestions.map((q) => q.id).toList());
+      expect(DebugDemoEnvironment.demoQuestions.map(_questionValues).toList(),
+          DebugDemoEnvironment.demoQuestions.map(_questionValues).toList());
     });
 
     test(
@@ -120,6 +121,27 @@ void main() {
   });
 
   group('ProgressRepository fixture', () {
+    test('writes are readable, isolated and reset for a fresh environment',
+        () async {
+      final first = DebugDemoEnvironment.buildProgressRepository();
+      final second = DebugDemoEnvironment.buildProgressRepository();
+      const examId = DebugDemoEnvironment.demoExamId;
+      final question = DebugDemoEnvironment.demoQuestions.first;
+      final state = await first.questionState(examId, question.id);
+      await first.saveQuestionState(state.copyWith(bookmarked: true));
+      expect(
+          (await first.questionState(examId, question.id)).bookmarked, isTrue);
+      expect((await second.questionState(examId, question.id)).bookmarked,
+          isFalse);
+      final restarted = DebugDemoEnvironment.buildProgressRepository();
+      expect((await restarted.questionState(examId, question.id)).bookmarked,
+          isFalse);
+      expect(await first.answerAttemptsForExam('unknown'), isEmpty);
+      expect(await first.mockAttempt('unknown'), isNull);
+      expect(await first.latestReadinessSnapshot('unknown'), isNull);
+      expect((await first.questionState(examId, 'unknown')).timesSeen, 0);
+    });
+
     test(
         'buildProgressRepository returns the seeded practice session, '
         'mock attempt, readiness snapshot, question states, and answer '
@@ -153,6 +175,13 @@ void main() {
   });
 
   group('ContentRepository fixture', () {
+    test('demo package passes the unchanged content validator', () {
+      final package = DebugDemoEnvironment.demoContentPackage;
+      final result = const ContentValidator().validate(package);
+      expect(result.errors, isEmpty);
+      expect(package.exam.mockExam.practicePassingPercent, 70);
+    });
+
     test(
         'buildContentRepository serves the demo content package only '
         'under demoExamId', () async {
@@ -175,3 +204,21 @@ void main() {
     });
   });
 }
+
+List<Object?> _questionValues(Question q) => [
+      q.id,
+      q.examId,
+      q.domainId,
+      q.topicId,
+      q.questionText,
+      q.answers.map((a) => [a.id, a.text, a.distractorExplanation]).toList(),
+      q.correctAnswerId,
+      q.explanation,
+      q.references.map((r) => [r.title, r.source, r.section, r.url]).toList(),
+      q.difficulty,
+      q.status,
+      q.version,
+      q.updatedAt,
+      q.sourceVersion,
+      q.tags,
+    ];

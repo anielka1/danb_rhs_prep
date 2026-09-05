@@ -175,6 +175,26 @@ flutter pub get
 flutter run
 ```
 
+## Debug demo environment
+
+Run `flutter run -t lib/main_demo.dart` for an offline, accountless demo.
+The entrypoint injects synthetic content, profile and readiness through the
+existing bootstrap/repository contracts. IDs use a separate `demo_exam`
+namespace; questions are marked `[Demo]`, tagged `demo`, and remain `draft`.
+No device preferences or production data are read or written. Changes last
+only for the process lifetime; restarting restores the deterministic fixtures.
+
+`DebugDemoEnvironment.buildProgressRepository()` also provides independent
+seeded practice/mock history for repository consumers and tests. Practice and
+mock session UI is a separate task; this environment does not enable controls
+whose study flow is not implemented yet.
+
+Production `lib/main.dart` does not import the demo environment. Even an explicit
+release/profile build targeting `lib/main_demo.dart` refuses to start. Fixture
+getters and repository factories also reject these modes. Tests compile AOT
+probes with both VM modes, execute every accessor, and scan the binaries for
+synthetic content to guard against accidental packaging or activation.
+
 ## Quality checks
 
 Run the checks applicable to every code change:
