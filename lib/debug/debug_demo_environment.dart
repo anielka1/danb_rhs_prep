@@ -271,6 +271,27 @@ class DebugDemoEnvironment {
         )
       : _unavailable();
 
+  /// A second, distinct, still-unfinished session — separate from
+  /// [demoPracticeSession] (already completed) — so a consumer that
+  /// checks for a resumable session (`ProgressRepository
+  /// .inProgressPracticeSession`) has a genuine, deterministic
+  /// in-progress case to find, not just a completed one that would
+  /// correctly resolve to "nothing to resume."
+  static PracticeSession get demoInProgressPracticeSession => _enabled
+      ? PracticeSession(
+          id: 'demo-practice-session-2',
+          examId: demoExamId,
+          mode: PracticeMode.quickPractice,
+          questionIds: const [
+            _demoQuestionId3,
+            _demoQuestionId4,
+            _demoQuestionId5,
+          ],
+          status: SessionStatus.inProgress,
+          startedAt: DateTime.utc(2026, 1, 1, 13),
+        )
+      : _unavailable();
+
   static MockAttempt get demoMockAttempt => _enabled
       ? MockAttempt(
           id: 'demo-mock-attempt-1',
@@ -374,7 +395,10 @@ class DebugDemoEnvironment {
     return InMemoryProgressRepository(
       seedAnswerAttempts: demoAnswerAttempts,
       seedQuestionStates: demoQuestionStates,
-      seedPracticeSessions: [demoPracticeSession],
+      seedPracticeSessions: [
+        demoPracticeSession,
+        demoInProgressPracticeSession,
+      ],
       seedMockAttempts: [demoMockAttempt],
       seedReadinessSnapshots: [demoReadinessSnapshot],
     );

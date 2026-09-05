@@ -6,6 +6,7 @@ import 'bootstrap/app_bootstrap_service.dart';
 import 'bootstrap/shared_preferences_bootstrap_local_store.dart';
 import 'domain/models/user_profile.dart';
 import 'domain/repositories/bootstrap_local_store.dart';
+import 'domain/repositories/progress_repository.dart';
 import 'features/content/data/bundled_content_repository.dart';
 import 'services/analytics_service.dart';
 import 'services/theme_mode_controller.dart';
@@ -34,6 +35,7 @@ class DanbRhsPrepApp extends StatefulWidget {
     ThemeModeController? themeModeController,
     BootstrapLocalStore? localStore,
     AppBootstrapService? bootstrapService,
+    this.progressRepository,
   })  : _injectedThemeModeController = themeModeController,
         _injectedLocalStore = localStore,
         _injectedBootstrapService = bootstrapService;
@@ -53,6 +55,17 @@ class DanbRhsPrepApp extends StatefulWidget {
   final ThemeModeController? _injectedThemeModeController;
   final BootstrapLocalStore? _injectedLocalStore;
   final AppBootstrapService? _injectedBootstrapService;
+
+  /// Threaded straight to [MainShell]/[HomeScreen] — never constructed
+  /// here, unlike the fields above. Always null in production: no real
+  /// [ProgressRepository] adapter exists yet (progress/readiness wiring
+  /// is explicitly deferred, see `BootstrapLocalStore`'s own doc
+  /// comment), so `HomeScreen` has nothing to query and shows its default
+  /// honest empty state. `lib/main_demo.dart` supplies
+  /// `DebugDemoEnvironment.buildProgressRepository()` here so the
+  /// "continue an in-progress session" path is genuinely demonstrable in
+  /// debug/test without fabricating anything in release.
+  final ProgressRepository? progressRepository;
 
   @override
   State<DanbRhsPrepApp> createState() => _DanbRhsPrepAppState();
@@ -132,7 +145,10 @@ class _DanbRhsPrepAppState extends State<DanbRhsPrepApp> {
                   analytics: widget.analytics,
                   onReady: _applyBootstrapTheme,
                 ),
-            MainShell.route: (_) => MainShell(analytics: widget.analytics),
+            MainShell.route: (_) => MainShell(
+                  analytics: widget.analytics,
+                  progressRepository: widget.progressRepository,
+                ),
             WelcomeScreen.route: (_) => WelcomeScreen(
                   localStore: _localStore,
                   analytics: widget.analytics,

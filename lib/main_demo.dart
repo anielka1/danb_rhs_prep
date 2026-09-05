@@ -11,7 +11,9 @@ import 'main.dart';
 /// All state is in memory and resets on restart; production storage is untouched.
 /// Profile, content and readiness use the same synthetic exam namespace.
 /// Practice/mock history is available through the environment's injectable
-/// ProgressRepository; study-session UI is implemented in separate tasks.
+/// ProgressRepository (PREP-648 wires it into HomeScreen's "Continue"
+/// card — see [DebugDemoEnvironment.demoInProgressPracticeSession]);
+/// study-session UI beyond that card is implemented in separate tasks.
 ///
 /// Onboarding starts incomplete on purpose (see [createDebugDemoApp]):
 /// this is the vehicle for demonstrating that Welcome -> Exam Date ->
@@ -43,5 +45,6 @@ DanbRhsPrepApp createDebugDemoApp() {
   return DanbRhsPrepApp(
     bootstrapService: bootstrapService,
     localStore: localStore,
+    progressRepository: DebugDemoEnvironment.buildProgressRepository(),
   );
 }

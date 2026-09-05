@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../domain/repositories/progress_repository.dart';
 import '../services/analytics_service.dart';
 import '../widgets/app_bottom_navigation.dart';
 import 'exam_overview_screen.dart';
@@ -21,9 +22,18 @@ import 'progress_screen.dart';
 class MainShell extends StatefulWidget {
   static const String route = '/main';
 
-  const MainShell({super.key, this.analytics = const NoOpAnalyticsService()});
+  const MainShell({
+    super.key,
+    this.analytics = const NoOpAnalyticsService(),
+    this.progressRepository,
+  });
 
   final AnalyticsService analytics;
+
+  /// Forwarded straight to [HomeScreen]. Null in production (no real
+  /// adapter exists yet); see [HomeScreen.progressRepository]'s own doc
+  /// comment for what it enables.
+  final ProgressRepository? progressRepository;
 
   @override
   State<MainShell> createState() => _MainShellState();
@@ -87,11 +97,11 @@ class _MainShellState extends State<MainShell> with RestorationMixin {
     return Scaffold(
       body: IndexedStack(
         index: _currentTab.index,
-        children: const [
-          HomeScreen(),
-          ExamOverviewScreen(),
-          MockExamScreen(),
-          ProgressScreen(),
+        children: [
+          HomeScreen(progressRepository: widget.progressRepository),
+          const ExamOverviewScreen(),
+          const MockExamScreen(),
+          const ProgressScreen(),
         ],
       ),
       bottomNavigationBar:
