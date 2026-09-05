@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:danb_rhs_prep/practice_session/practice_session_scope.dart';
 import 'package:danb_rhs_prep/screens/exam_overview_screen.dart';
 import 'package:danb_rhs_prep/screens/main_shell.dart';
 import 'package:danb_rhs_prep/screens/mock_exam_screen.dart';
@@ -12,6 +13,8 @@ import 'package:danb_rhs_prep/services/theme_mode_controller.dart';
 import 'package:danb_rhs_prep/theme/app_theme.dart';
 import 'package:danb_rhs_prep/widgets/app_bottom_navigation.dart';
 import 'package:danb_rhs_prep/widgets/app_dialog.dart';
+
+import '../support/practice_session_test_support.dart';
 
 /// Finds the root [SemanticsNode] via the non-deprecated
 /// [RendererBinding.rootPipelineOwner] tree: the root pipeline owner
@@ -54,7 +57,10 @@ void main() {
     final SemanticsHandle handle = tester.ensureSemantics();
     await tester.pumpWidget(MaterialApp(
       theme: AppTheme.lightTheme,
-      home: const PracticeQuestionScreen(),
+      home: PracticeSessionScope(
+        controller: buildDemoPracticeSessionController(),
+        child: const PracticeQuestionScreen(),
+      ),
     ));
 
     final SemanticsNode root = _rootSemanticsNode(tester);

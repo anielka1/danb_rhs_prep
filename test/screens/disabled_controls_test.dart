@@ -2,15 +2,17 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:danb_rhs_prep/practice_session/practice_session_scope.dart';
 import 'package:danb_rhs_prep/screens/answer_explanation_screen.dart';
 import 'package:danb_rhs_prep/screens/home_screen.dart';
 import 'package:danb_rhs_prep/screens/login_screen.dart';
 import 'package:danb_rhs_prep/screens/mock_exam_results_screen.dart';
-import 'package:danb_rhs_prep/screens/practice_question_screen.dart';
 import 'package:danb_rhs_prep/screens/practice_summary_screen.dart';
 import 'package:danb_rhs_prep/screens/profile_settings_screen.dart';
 import 'package:danb_rhs_prep/services/theme_mode_controller.dart';
 import 'package:danb_rhs_prep/theme/app_theme.dart';
+
+import '../support/practice_session_test_support.dart';
 
 /// Every one of these controls is reachable in the running app but has no
 /// backing feature yet (no auth, no session/attempt storage, no
@@ -79,25 +81,15 @@ void main() {
   group('AnswerExplanationScreen', () {
     testWidgets('bookmark has no tap action', (tester) async {
       final SemanticsHandle handle = tester.ensureSemantics();
-      await tester.pumpWidget(wrap(const AnswerExplanationScreen()));
+      await tester.pumpWidget(wrap(PracticeSessionScope(
+        controller: buildDemoPracticeSessionController(),
+        child: const AnswerExplanationScreen(),
+      )));
 
       expect(
           _hasTapAction(
               tester.getSemantics(find.bySemanticsLabel('Bookmark question'))),
           isFalse);
-
-      handle.dispose();
-    });
-  });
-
-  group('PracticeQuestionScreen', () {
-    testWidgets('Previous and Next have no tap action', (tester) async {
-      final SemanticsHandle handle = tester.ensureSemantics();
-      await tester.pumpWidget(wrap(const PracticeQuestionScreen()));
-
-      expect(
-          _hasTapAction(tester.getSemantics(find.text('Previous'))), isFalse);
-      expect(_hasTapAction(tester.getSemantics(find.text('Next'))), isFalse);
 
       handle.dispose();
     });
@@ -124,7 +116,10 @@ void main() {
       expect(_hasTapAction(tester.getSemantics(find.text('Review Answers'))),
           isFalse);
 
-      await tester.pumpWidget(wrap(const PracticeSummaryScreen()));
+      await tester.pumpWidget(wrap(PracticeSessionScope(
+        controller: buildDemoPracticeSessionController(),
+        child: const PracticeSummaryScreen(),
+      )));
       expect(_hasTapAction(tester.getSemantics(find.text('Review Mistakes'))),
           isFalse);
 

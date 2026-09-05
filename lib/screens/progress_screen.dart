@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../bootstrap/bootstrap_session_scope.dart';
+import '../domain/repositories/progress_repository.dart';
 import '../theme/app_theme.dart';
 import '../widgets/app_scaffold.dart';
 import '../widgets/empty_state.dart';
@@ -13,7 +15,12 @@ import 'exam_overview_screen.dart';
 /// docs/PROTOTYPE_CONTENT_AUDIT.md.
 class ProgressScreen extends StatelessWidget {
   static const String route = '/progress';
-  const ProgressScreen({super.key});
+  const ProgressScreen({super.key, this.progressRepository});
+
+  /// Forwarded to the `ExamOverviewScreen` this screen's own "Start
+  /// Practicing" pushes — see `MainShell.progressRepository`'s doc
+  /// comment for what it enables. Null in production today.
+  final ProgressRepository? progressRepository;
 
   @override
   Widget build(BuildContext context) {
@@ -32,11 +39,26 @@ class ProgressScreen extends StatelessWidget {
               message: 'Your activity, accuracy, and subject mastery will '
                   'appear here once you start practicing.',
               primaryActionLabel: 'Start Practicing',
-              onPrimaryAction: () =>
-                  Navigator.of(context).pushNamed(ExamOverviewScreen.route),
+              onPrimaryAction: () => _openExamOverview(context),
             ),
             const SizedBox(height: 90),
           ],
+        ),
+      ),
+    );
+  }
+
+  // Not `Navigator.pushNamed`: see `HomeScreen._openExamOverview`'s doc
+  // comment for why `ExamOverviewScreen` needs its content threaded in
+  // directly rather than read from an ambient scope.
+  void _openExamOverview(BuildContext context) {
+    final snapshot = BootstrapSessionScope.snapshotOf(context);
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        settings: const RouteSettings(name: ExamOverviewScreen.route),
+        builder: (_) => ExamOverviewScreen(
+          contentPackage: snapshot.contentPackage,
+          progressRepository: progressRepository,
         ),
       ),
     );
