@@ -164,13 +164,16 @@ void main() {
           await repo.questionStatesForExam(DebugDemoEnvironment.demoExamId);
       expect(states, hasLength(DebugDemoEnvironment.demoQuestionStates.length));
 
-      // The seeded session is already completed, so it must not be
-      // returned as an in-progress session to resume.
+      // demoPracticeSession is already completed, so it must not be
+      // returned as an in-progress session to resume — that role belongs
+      // only to the separate demoInProgressPracticeSession fixture.
       final inProgress =
           await repo.inProgressPracticeSession(DebugDemoEnvironment.demoExamId);
-      expect(inProgress, isNull);
+      expect(inProgress, DebugDemoEnvironment.demoInProgressPracticeSession);
       expect(DebugDemoEnvironment.demoPracticeSession.status,
           SessionStatus.completed);
+      expect(DebugDemoEnvironment.demoInProgressPracticeSession.status,
+          SessionStatus.inProgress);
     });
   });
 

@@ -1,14 +1,30 @@
 import 'package:flutter/material.dart';
+import '../bootstrap/bootstrap_session_scope.dart';
+import '../domain/models/practice_session.dart';
+import '../domain/repositories/progress_repository.dart';
 import '../theme/app_theme.dart';
 import '../widgets/app_scaffold.dart';
 import '../widgets/empty_state.dart';
+import '../widgets/loading_state.dart';
 import '../widgets/primary_button.dart';
 import 'exam_overview_screen.dart';
 import 'profile_settings_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   static const String route = '/home';
-  const HomeScreen({super.key});
+
+  const HomeScreen({super.key, this.progressRepository});
+
+  /// Null in production — no real [ProgressRepository] adapter exists
+  /// yet (progress/readiness wiring is explicitly deferred, see
+  /// `BootstrapLocalStore`'s own doc comment), so this screen always
+  /// falls back to its default "no study tasks yet" empty state there.
+  /// When present (only ever `DebugDemoEnvironment.buildProgressRepository()`,
+  /// wired from `lib/main_demo.dart`), this screen queries it for a
+  /// resumable session and offers a real "Continue" action instead of
+  /// starting a new one, exactly reflecting what the repository reports —
+  /// never a fabricated or hardcoded state.
+  final ProgressRepository? progressRepository;
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
@@ -51,6 +67,35 @@ class _HomeScreenState extends State<HomeScreen> {
 
   String get _formattedToday =>
       '${_monthNames[_today.month - 1]} ${_today.day}, ${_today.year}';
+
+  /// Null whenever [HomeScreen.progressRepository] is null (production
+  /// today) — nothing to query, so the study-tasks card below skips
+  /// straight to its default empty state with no async work and no
+  /// loading flicker. Only set, and only queried once per screen
+  /// instance, when a repository is actually present.
+  Future<PracticeSession?>? _inProgressSessionFuture;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final ProgressRepository? repository = widget.progressRepository;
+    if (repository == null || _inProgressSessionFuture != null) return;
+    final String examId =
+        BootstrapSessionScope.snapshotOf(context).selectedExamId;
+    // A repository is free to fail either synchronously (throwing before
+    // ever producing a Future) or asynchronously (a rejected Future) — the
+    // try/catch normalizes the former into the latter so the FutureBuilder
+    // below can handle both the same way, via `snapshot.hasError`, instead
+    // of a synchronous throw escaping this lifecycle method uncaught.
+    try {
+      _inProgressSessionFuture = repository.inProgressPracticeSession(examId);
+    } catch (error, stackTrace) {
+      _inProgressSessionFuture = Future<PracticeSession?>.error(
+        error,
+        stackTrace,
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -101,17 +146,9 @@ class _HomeScreenState extends State<HomeScreen> {
               onSelect: (i) => setState(() => _selectedDayIndex = i),
             ),
             const SizedBox(height: AppSpacing.xxl),
-            // No real study-schedule data exists yet (see
-            // docs/PROTOTYPE_CONTENT_AUDIT.md) — an honest empty state,
-            // not fabricated tasks, stands in until study planning is
-            // built. "Start Practicing" is a real, working action.
-            EmptyState(
-              icon: Icons.event_note_rounded,
-              title: 'No study tasks yet',
-              message: 'Your scheduled practice sessions will appear here once '
-                  'study planning is available.',
-              primaryActionLabel: 'Start Practicing',
-              onPrimaryAction: () =>
+            _StudyTasksCard(
+              inProgressSessionFuture: _inProgressSessionFuture,
+              onGoToPractice: () =>
                   Navigator.of(context).pushNamed(ExamOverviewScreen.route),
             ),
             const SizedBox(height: 90),
@@ -128,6 +165,67 @@ class _HomeScreenState extends State<HomeScreen> {
         child: const Icon(Icons.add, size: AppIconSize.large),
       ),
       floatingActionButtonLocation: FloatingActionButtonLocation.startFloat,
+    );
+  }
+}
+
+/// The "what should I study today" card: an honest empty state by
+/// default, or — only when [inProgressSessionFuture] is non-null and
+/// resolves to a real unfinished session — a "continue where you left
+/// off" state instead. Both states navigate to the same real
+/// [ExamOverviewScreen] destination via [onGoToPractice]; this widget
+/// never invents a way to jump back into the exact question a session
+/// left off on, since no screen can resume one at that granularity yet
+/// — "Continue" honestly means "go back to studying," not "resume
+/// exactly where you were."
+class _StudyTasksCard extends StatelessWidget {
+  const _StudyTasksCard({
+    required this.inProgressSessionFuture,
+    required this.onGoToPractice,
+  });
+
+  final Future<PracticeSession?>? inProgressSessionFuture;
+  final VoidCallback onGoToPractice;
+
+  @override
+  Widget build(BuildContext context) {
+    final Future<PracticeSession?>? future = inProgressSessionFuture;
+    if (future == null) {
+      return _emptyState(hasInProgressSession: false);
+    }
+
+    return FutureBuilder<PracticeSession?>(
+      future: future,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const LoadingState(message: 'Checking your progress…');
+        }
+        // A repository failure and the natural "no session" result both
+        // fall back to the same honest default — never a stack trace or
+        // a broken screen, and never a fabricated session.
+        final bool hasInProgressSession =
+            !snapshot.hasError && snapshot.data != null;
+        return _emptyState(hasInProgressSession: hasInProgressSession);
+      },
+    );
+  }
+
+  // No real study-schedule data exists yet (see
+  // docs/PROTOTYPE_CONTENT_AUDIT.md) — an honest empty state, not
+  // fabricated tasks, stands in until study planning is built.
+  Widget _emptyState({required bool hasInProgressSession}) {
+    return EmptyState(
+      icon: Icons.event_note_rounded,
+      title: hasInProgressSession
+          ? 'Pick up where you left off'
+          : 'No study tasks yet',
+      message: hasInProgressSession
+          ? "You have a practice session you haven't finished yet."
+          : 'Your scheduled practice sessions will appear here once '
+              'study planning is available.',
+      primaryActionLabel:
+          hasInProgressSession ? 'Continue' : 'Start Practicing',
+      onPrimaryAction: onGoToPractice,
     );
   }
 }
