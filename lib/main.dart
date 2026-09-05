@@ -144,6 +144,7 @@ class _DanbRhsPrepAppState extends State<DanbRhsPrepApp> {
                   localStore: _localStore,
                   analytics: widget.analytics,
                   onReady: _applyBootstrapTheme,
+                  progressRepository: widget.progressRepository,
                 ),
             MainShell.route: (_) => MainShell(
                   analytics: widget.analytics,

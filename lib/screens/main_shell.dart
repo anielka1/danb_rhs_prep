@@ -109,20 +109,23 @@ class _MainShellState extends State<MainShell> with RestorationMixin {
     // its own honest "not available" state (null contentPackage) rather
     // than every such test having to grow bootstrap scaffolding it has
     // nothing to do with.
-    final contentPackage = BootstrapSessionScope.maybeControllerOf(context)
-        ?.snapshot
-        .contentPackage;
+    final session = BootstrapSessionScope.maybeControllerOf(context);
+    final contentPackage = session?.snapshot.contentPackage;
+    final progressRepository =
+        widget.progressRepository ?? session?.progressRepository;
     return Scaffold(
       body: IndexedStack(
         index: _currentTab.index,
         children: [
-          HomeScreen(progressRepository: widget.progressRepository),
+          HomeScreen(progressRepository: progressRepository),
           ExamOverviewScreen(
             contentPackage: contentPackage,
-            progressRepository: widget.progressRepository,
+            progressRepository: progressRepository,
           ),
-          MockExamScreen(progressRepository: widget.progressRepository),
-          ProgressScreen(progressRepository: widget.progressRepository),
+          MockExamScreen(
+              contentPackage: contentPackage,
+              progressRepository: progressRepository),
+          ProgressScreen(progressRepository: progressRepository),
         ],
       ),
       bottomNavigationBar:

@@ -78,7 +78,8 @@ void main() {
       await tester.pumpWidget(wrap(const MockExamResultsScreen(), theme));
       await tester.pumpAndSettle();
       expect(tester.takeException(), isNull);
-      expect(find.text('Review Answers'), findsOneWidget);
+      expect(find.text('No completed mock exam'), findsOneWidget);
+      expect(find.text('Review Answers'), findsNothing);
     });
 
     testWidgets('PracticeSummaryScreen renders without error in $label theme',

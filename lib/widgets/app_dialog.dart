@@ -80,6 +80,7 @@ class AppDialog {
       builder: (dialogContext) {
         final ColorScheme colors = Theme.of(dialogContext).colorScheme;
         return AlertDialog(
+          scrollable: true,
           title: Text(title),
           content: message == null ? null : Text(message),
           actions: [

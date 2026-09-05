@@ -12,15 +12,17 @@ import 'package:danb_rhs_prep/screens/mock_exam_screen.dart';
 import 'package:danb_rhs_prep/theme/app_theme.dart';
 
 void main() {
-  testWidgets('shows an honest "coming soon" placeholder, not fake exam data',
+  testWidgets(
+      'shows an honest gate without content/storage, not fake exam data',
       (tester) async {
     await tester.pumpWidget(MaterialApp(
       theme: AppTheme.lightTheme,
       home: const MockExamScreen(),
     ));
 
-    expect(find.text('Mock Exam'), findsOneWidget);
-    expect(find.textContaining('coming soon'), findsOneWidget);
+    expect(find.text('Mock Exam unavailable'), findsOneWidget);
+    expect(find.textContaining('No result will be generated'), findsOneWidget);
+    expect(find.text('Start Mock Exam'), findsNothing);
     expect(find.text('View Exam Info'), findsOneWidget);
   });
 

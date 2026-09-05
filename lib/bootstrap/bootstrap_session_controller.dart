@@ -1,4 +1,5 @@
 import 'app_bootstrap_service.dart';
+import '../domain/repositories/progress_repository.dart';
 
 /// Holds the single, shared, in-memory [BootstrapReady] snapshot for the
 /// current app session, and lets it be updated in place as onboarding
@@ -23,7 +24,11 @@ import 'app_bootstrap_service.dart';
 /// `BootstrapSessionScope`. No route may construct a new one; each only
 /// ever forwards the instance it was given.
 class BootstrapSessionController {
-  BootstrapSessionController(BootstrapReady initial) : _snapshot = initial;
+  BootstrapSessionController(BootstrapReady initial, {this.progressRepository})
+      : _snapshot = initial;
+
+  /// The injected repository follows the session through pushed onboarding routes.
+  final ProgressRepository? progressRepository;
 
   BootstrapReady _snapshot;
 
