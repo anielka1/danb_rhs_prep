@@ -1,31 +1,59 @@
 import 'package:flutter/material.dart';
+import '../features/questions/domain/question.dart';
+import '../practice_session/practice_session_controller.dart';
+import '../practice_session/practice_session_scope.dart';
 import '../theme/app_theme.dart';
 import '../widgets/answer_option_tile.dart';
 import '../widgets/app_scaffold.dart';
+import '../widgets/empty_state.dart';
 import '../widgets/primary_button.dart';
-
-class _ReviewOption {
-  final String letter;
-  final String text;
-  final AnswerOptionState state;
-  const _ReviewOption(this.letter, this.text, this.state);
-}
+import 'practice_question_screen.dart';
+import 'practice_summary_screen.dart';
 
 class AnswerExplanationScreen extends StatelessWidget {
   static const String route = '/answer-explanation';
   const AnswerExplanationScreen({super.key});
 
-  static const List<_ReviewOption> _options = [
-    _ReviewOption('A', '5 rem (0.05 Sv)', AnswerOptionState.correct),
-    _ReviewOption('B', '10 rem (0.10 Sv)', AnswerOptionState.incorrect),
-    _ReviewOption('C', '15 rem (0.15 Sv)', AnswerOptionState.disabled),
-  ];
+  Future<void> _next(
+      BuildContext context, PracticeSessionController controller) async {
+    if (controller.isLastQuestion) {
+      await controller.complete();
+      if (!context.mounted) return;
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(
+          settings: const RouteSettings(name: PracticeSummaryScreen.route),
+          builder: (_) => PracticeSessionScope(
+            controller: controller,
+            child: const PracticeSummaryScreen(),
+          ),
+        ),
+      );
+      return;
+    }
+    controller.moveTo(controller.currentIndex + 1);
+    Navigator.of(context).pushReplacement(
+      MaterialPageRoute(
+        settings: const RouteSettings(name: PracticeQuestionScreen.route),
+        builder: (_) => PracticeSessionScope(
+          controller: controller,
+          child: const PracticeQuestionScreen(),
+        ),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
+    final PracticeSessionController? controller =
+        PracticeSessionScope.maybeOf(context);
+    if (controller == null) return const _NoActiveSessionView();
+
     final colors = context.colors;
     final semanticColors = context.semanticColors;
     final textStyles = context.textStyles;
+    final Question question = controller.currentQuestion;
+    final String? selection = controller.selectedAnswerFor(question.id);
+
     return AppScaffold(
       leading: CircleIconButton(
         icon: Icons.chevron_left_rounded,
@@ -35,15 +63,10 @@ class AnswerExplanationScreen extends StatelessWidget {
       title: 'Review Question',
       centerTitle: true,
       actions: [
-        // Disabled: `ProgressRepository`/`QuestionState.bookmarked` exist
-        // at the repository layer, but this screen's question is entirely
-        // hardcoded prototype content with no real examId/questionId to
-        // bookmark against — wiring this up would mean either fabricating
-        // a fake identity (which would misreport what got saved) or
-        // threading a real `Question` through this screen, which is a
-        // content-wiring change beyond a control fix. Disabling, not
-        // hiding, so the affordance stays visible for when that wiring
-        // lands.
+        // Disabled: bookmarking is a separate feature (its own UI/flow)
+        // not in this task's scope. A real examId/questionId now exists
+        // here (unlike before), but that alone isn't a reason to build
+        // the feature as a side effect of this fix.
         CircleIconButton(
           icon: Icons.bookmark_border_rounded,
           background: colors.surfaceContainer,
@@ -69,33 +92,30 @@ class AnswerExplanationScreen extends StatelessWidget {
                 color: colors.surfaceContainer,
                 borderRadius: BorderRadius.circular(AppRadii.card),
               ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'RADIATION PROTECTION STANDARDS',
-                    style: textStyles.label.copyWith(color: colors.primary),
-                  ),
-                  const SizedBox(height: 10),
-                  Text(
-                    'What is the maximum permissible dose (MPD) of radiation for '
-                    'occupational workers per year?',
-                    style: TextStyle(
-                      fontWeight: FontWeight.w700,
-                      fontSize: 16,
-                      color: colors.onSurface,
-                      height: 1.3,
-                    ),
-                  ),
-                ],
+              child: Text(
+                question.questionText,
+                style: TextStyle(
+                  fontWeight: FontWeight.w700,
+                  fontSize: 16,
+                  color: colors.onSurface,
+                  height: 1.3,
+                ),
               ),
             ),
             const SizedBox(height: AppSpacing.lg),
-            ..._options.map((o) => Padding(
-                  padding: const EdgeInsets.only(bottom: AppSpacing.md),
-                  child: AnswerOptionTile(
-                      letter: o.letter, text: o.text, state: o.state),
-                )),
+            for (var i = 0; i < question.answers.length; i++)
+              Padding(
+                padding: const EdgeInsets.only(bottom: AppSpacing.md),
+                child: AnswerOptionTile(
+                  letter: String.fromCharCode(65 + i),
+                  text: question.answers[i].text,
+                  state: question.answers[i].id == question.correctAnswerId
+                      ? AnswerOptionState.correct
+                      : question.answers[i].id == selection
+                          ? AnswerOptionState.incorrect
+                          : AnswerOptionState.disabled,
+                ),
+              ),
             const SizedBox(height: 6),
             Container(
               width: double.infinity,
@@ -117,7 +137,7 @@ class AnswerExplanationScreen extends StatelessWidget {
                       const SizedBox(width: AppSpacing.sm),
                       Flexible(
                         child: Text(
-                          'Correct Explanation',
+                          'Explanation',
                           style: TextStyle(
                             fontWeight: FontWeight.w700,
                             color: semanticColors.onSuccessContainer,
@@ -128,16 +148,12 @@ class AnswerExplanationScreen extends StatelessWidget {
                   ),
                   const SizedBox(height: 10),
                   Text(
-                    'According to the National Council on Radiation Protection and '
-                    'Measurements (NCRP), the annual maximum permissible dose (MPD) for '
-                    'occupationally exposed dental personnel is 5 rem (or 50 mSv / 0.05 Sv) '
-                    'per year to ensure professional safety.',
-                    // onSuccessContainer (same role used by the "Correct
-                    // Explanation" header right above), not an
-                    // alpha-faded onSurface: fading onSurface to 75%
-                    // only reaches ~4.03:1 against successContainer in
-                    // light mode, under the 4.5:1 floor for this
-                    // normal-size body text.
+                    question.explanation,
+                    // onSuccessContainer (same role used by the header right
+                    // above), not an alpha-faded onSurface: fading onSurface
+                    // to 75% only reaches ~4.03:1 against successContainer in
+                    // light mode, under the 4.5:1 floor for this normal-size
+                    // body text.
                     style: textStyles.body
                         .copyWith(color: semanticColors.onSuccessContainer),
                   ),
@@ -146,13 +162,38 @@ class AnswerExplanationScreen extends StatelessWidget {
             ),
             const SizedBox(height: AppSpacing.lg),
             PrimaryButton(
-              label: 'Next Question',
+              label: controller.isLastQuestion ? 'Finish' : 'Next Question',
               trailingIcon: Icons.arrow_forward_rounded,
-              onPressed: () => Navigator.of(context).maybePop(),
+              onPressed: () => _next(context, controller),
             ),
             const SizedBox(height: AppSpacing.md),
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// Shown when this screen is reached with no active
+/// [PracticeSessionController] — see `PracticeQuestionScreen`'s own
+/// `_NoActiveSessionView` for why.
+class _NoActiveSessionView extends StatelessWidget {
+  const _NoActiveSessionView();
+
+  @override
+  Widget build(BuildContext context) {
+    return AppScaffold(
+      leading: CircleIconButton(
+        icon: Icons.chevron_left_rounded,
+        onPressed: () => Navigator.of(context).maybePop(),
+        semanticLabel: 'Back',
+      ),
+      title: 'Review Question',
+      centerTitle: true,
+      body: const EmptyState(
+        icon: Icons.quiz_rounded,
+        title: 'No active practice session',
+        message: 'Start a session from Exam Info to begin practicing.',
       ),
     );
   }

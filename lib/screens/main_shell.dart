@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../bootstrap/bootstrap_session_scope.dart';
 import '../domain/repositories/progress_repository.dart';
 import '../services/analytics_service.dart';
 import '../widgets/app_bottom_navigation.dart';
@@ -94,14 +95,34 @@ class _MainShellState extends State<MainShell> with RestorationMixin {
 
   @override
   Widget build(BuildContext context) {
+    // Read once here rather than inside ExamOverviewScreen itself: it's
+    // pushed as its own route elsewhere (Home's "Start Practicing"), and
+    // a separately-pushed route is a sibling in the Navigator's Overlay,
+    // not a descendant of MainShell — it cannot see this ambient scope,
+    // so its content is threaded in as a plain constructor value instead.
+    //
+    // The nullable, non-asserting lookup, not `snapshotOf`: MainShell is
+    // always wrapped in a real BootstrapSessionScope in the running app,
+    // but plenty of existing tests construct a bare MainShell on its own
+    // to check unrelated things (tab layout, dynamic type, ...) — that
+    // must keep working, with ExamOverviewScreen simply falling back to
+    // its own honest "not available" state (null contentPackage) rather
+    // than every such test having to grow bootstrap scaffolding it has
+    // nothing to do with.
+    final contentPackage = BootstrapSessionScope.maybeControllerOf(context)
+        ?.snapshot
+        .contentPackage;
     return Scaffold(
       body: IndexedStack(
         index: _currentTab.index,
         children: [
           HomeScreen(progressRepository: widget.progressRepository),
-          const ExamOverviewScreen(),
-          const MockExamScreen(),
-          const ProgressScreen(),
+          ExamOverviewScreen(
+            contentPackage: contentPackage,
+            progressRepository: widget.progressRepository,
+          ),
+          MockExamScreen(progressRepository: widget.progressRepository),
+          ProgressScreen(progressRepository: widget.progressRepository),
         ],
       ),
       bottomNavigationBar:

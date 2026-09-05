@@ -4,9 +4,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:danb_rhs_prep/bootstrap/app_bootstrap_service.dart';
+import 'package:danb_rhs_prep/debug/debug_demo_environment.dart';
 import 'package:danb_rhs_prep/domain/repositories/content_repository.dart';
 import 'package:danb_rhs_prep/domain/repositories/fakes/in_memory_bootstrap_local_store.dart';
 import 'package:danb_rhs_prep/features/content/domain/content_package.dart';
+import 'package:danb_rhs_prep/practice_session/practice_session_scope.dart';
 import 'package:danb_rhs_prep/screens/answer_explanation_screen.dart';
 import 'package:danb_rhs_prep/screens/exam_overview_screen.dart';
 import 'package:danb_rhs_prep/screens/home_screen.dart';
@@ -24,6 +26,7 @@ import 'package:danb_rhs_prep/theme/app_theme.dart';
 import 'package:danb_rhs_prep/widgets/app_bottom_navigation.dart';
 
 import '../support/dynamic_type_probe.dart';
+import '../support/practice_session_test_support.dart';
 
 /// Never resolves — these tests only check the splash screen's *loading*
 /// visual for layout overflow, so bootstrap never needs to actually
@@ -121,28 +124,52 @@ void main() {
   group('essential text is never lost to overflow at large scale', () {
     testWidgets('PracticeQuestionScreen keeps the full question visible',
         (tester) async {
-      await pumpAtScale(tester, appWith(const PracticeQuestionScreen()),
-          viewport: ProbeViewport.smallPhone, textScale: 3.0);
+      await pumpAtScale(
+        tester,
+        appWith(PracticeSessionScope(
+          controller: buildDemoPracticeSessionController(),
+          child: const PracticeQuestionScreen(),
+        )),
+        viewport: ProbeViewport.smallPhone,
+        textScale: 3.0,
+      );
       expect(
-        find.textContaining('maximum permissible dose'),
+        find.text(DebugDemoEnvironment.demoQuestions.first.questionText),
         findsOneWidget,
       );
     });
 
     testWidgets('AnswerExplanationScreen keeps the full explanation visible',
         (tester) async {
-      await pumpAtScale(tester, appWith(const AnswerExplanationScreen()),
-          viewport: ProbeViewport.smallPhone, textScale: 3.0);
+      final controller = buildDemoPracticeSessionController();
+      await controller.submitAnswer(
+          DebugDemoEnvironment.demoQuestions.first.correctAnswerId);
+      await pumpAtScale(
+        tester,
+        appWith(PracticeSessionScope(
+          controller: controller,
+          child: const AnswerExplanationScreen(),
+        )),
+        viewport: ProbeViewport.smallPhone,
+        textScale: 3.0,
+      );
       expect(
-        find.textContaining('National Council on Radiation Protection'),
+        find.text(DebugDemoEnvironment.demoQuestions.first.explanation),
         findsOneWidget,
       );
     });
 
     testWidgets('PrimaryButton labels are never lost to ellipsis',
         (tester) async {
-      await pumpAtScale(tester, appWith(const PracticeQuestionScreen()),
-          viewport: ProbeViewport.smallPhone, textScale: 3.0);
+      await pumpAtScale(
+        tester,
+        appWith(PracticeSessionScope(
+          controller: buildDemoPracticeSessionController(),
+          child: const PracticeQuestionScreen(),
+        )),
+        viewport: ProbeViewport.smallPhone,
+        textScale: 3.0,
+      );
       expect(find.text('Submit Answer'), findsOneWidget);
     });
   });
@@ -167,8 +194,15 @@ void main() {
 
     testWidgets('PrimaryButton stays at least the minimum height at 3.0x',
         (tester) async {
-      await pumpAtScale(tester, appWith(const PracticeQuestionScreen()),
-          viewport: ProbeViewport.smallPhone, textScale: 3.0);
+      await pumpAtScale(
+        tester,
+        appWith(PracticeSessionScope(
+          controller: buildDemoPracticeSessionController(),
+          child: const PracticeQuestionScreen(),
+        )),
+        viewport: ProbeViewport.smallPhone,
+        textScale: 3.0,
+      );
       final Size size = tester.getSize(find.ancestor(
         of: find.text('Submit Answer'),
         matching: find.byType(ElevatedButton),
@@ -233,18 +267,38 @@ void main() {
 
     testWidgets('essential text and primary actions remain present at 4.0x',
         (tester) async {
-      await pumpAtScale(tester, appWith(const PracticeQuestionScreen()),
-          viewport: ProbeViewport.smallPhone, textScale: 4.0);
-      expect(find.textContaining('maximum permissible dose'), findsOneWidget,
-          reason: 'the question text must not be replaced by an ellipsis');
+      await pumpAtScale(
+        tester,
+        appWith(PracticeSessionScope(
+          controller: buildDemoPracticeSessionController(),
+          child: const PracticeQuestionScreen(),
+        )),
+        viewport: ProbeViewport.smallPhone,
+        textScale: 4.0,
+      );
+      expect(
+        find.text(DebugDemoEnvironment.demoQuestions.first.questionText),
+        findsOneWidget,
+        reason: 'the question text must not be replaced by an ellipsis',
+      );
       expect(find.text('Submit Answer'), findsOneWidget,
           reason:
               'the primary action label must not be replaced by an ellipsis');
 
-      await pumpAtScale(tester, appWith(const AnswerExplanationScreen()),
-          viewport: ProbeViewport.smallPhone, textScale: 4.0);
+      final controller = buildDemoPracticeSessionController();
+      await controller.submitAnswer(
+          DebugDemoEnvironment.demoQuestions.first.correctAnswerId);
+      await pumpAtScale(
+        tester,
+        appWith(PracticeSessionScope(
+          controller: controller,
+          child: const AnswerExplanationScreen(),
+        )),
+        viewport: ProbeViewport.smallPhone,
+        textScale: 4.0,
+      );
       expect(
-        find.textContaining('National Council on Radiation Protection'),
+        find.text(DebugDemoEnvironment.demoQuestions.first.explanation),
         findsOneWidget,
         reason: 'the explanation text must not be replaced by an ellipsis',
       );

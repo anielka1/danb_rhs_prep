@@ -97,6 +97,27 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
+  /// Not `Navigator.pushNamed`: a screen pushed via the static route
+  /// table in `main.dart` would have no `BootstrapSessionScope` ancestor
+  /// (that scope only ever wraps `MainShell`'s own page, inserted once by
+  /// `SplashScreen`/`ExperienceLevelScreen` — a separately-pushed route is
+  /// a sibling in the `Navigator`'s `Overlay`, not a descendant of it).
+  /// `ExamOverviewScreen` needs the real, already-loaded content package
+  /// to offer a genuine practice session, so it's passed in directly here
+  /// instead, read once from this tab's own ambient scope.
+  void _openExamOverview(BuildContext context) {
+    final snapshot = BootstrapSessionScope.snapshotOf(context);
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        settings: const RouteSettings(name: ExamOverviewScreen.route),
+        builder: (_) => ExamOverviewScreen(
+          contentPackage: snapshot.contentPackage,
+          progressRepository: widget.progressRepository,
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final colors = context.colors;
@@ -148,8 +169,7 @@ class _HomeScreenState extends State<HomeScreen> {
             const SizedBox(height: AppSpacing.xxl),
             _StudyTasksCard(
               inProgressSessionFuture: _inProgressSessionFuture,
-              onGoToPractice: () =>
-                  Navigator.of(context).pushNamed(ExamOverviewScreen.route),
+              onGoToPractice: () => _openExamOverview(context),
             ),
             const SizedBox(height: 90),
           ],

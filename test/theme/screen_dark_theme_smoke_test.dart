@@ -1,12 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:danb_rhs_prep/practice_session/practice_session_scope.dart';
 import 'package:danb_rhs_prep/screens/answer_explanation_screen.dart';
 import 'package:danb_rhs_prep/screens/login_screen.dart';
 import 'package:danb_rhs_prep/screens/mock_exam_results_screen.dart';
 import 'package:danb_rhs_prep/screens/practice_question_screen.dart';
 import 'package:danb_rhs_prep/screens/practice_summary_screen.dart';
 import 'package:danb_rhs_prep/theme/app_theme.dart';
+
+import '../support/practice_session_test_support.dart';
 
 /// The full-theme task ("Pelny motyw jasny i ciemny") calls for manually
 /// checking every screen under both themes. These five are the app's
@@ -42,7 +45,13 @@ void main() {
     testWidgets('AnswerExplanationScreen renders without error in $label theme',
         (tester) async {
       final SemanticsHandle handle = tester.ensureSemantics();
-      await tester.pumpWidget(wrap(const AnswerExplanationScreen(), theme));
+      await tester.pumpWidget(wrap(
+        PracticeSessionScope(
+          controller: buildDemoPracticeSessionController(),
+          child: const AnswerExplanationScreen(),
+        ),
+        theme,
+      ));
       await tester.pumpAndSettle();
       expect(tester.takeException(), isNull);
       expect(find.bySemanticsLabel('Bookmark question'), findsOneWidget);
@@ -51,7 +60,13 @@ void main() {
 
     testWidgets('PracticeQuestionScreen renders without error in $label theme',
         (tester) async {
-      await tester.pumpWidget(wrap(const PracticeQuestionScreen(), theme));
+      await tester.pumpWidget(wrap(
+        PracticeSessionScope(
+          controller: buildDemoPracticeSessionController(),
+          child: const PracticeQuestionScreen(),
+        ),
+        theme,
+      ));
       await tester.pumpAndSettle();
       expect(tester.takeException(), isNull);
       expect(find.text('Previous'), findsOneWidget);
@@ -68,7 +83,13 @@ void main() {
 
     testWidgets('PracticeSummaryScreen renders without error in $label theme',
         (tester) async {
-      await tester.pumpWidget(wrap(const PracticeSummaryScreen(), theme));
+      await tester.pumpWidget(wrap(
+        PracticeSessionScope(
+          controller: buildDemoPracticeSessionController(),
+          child: const PracticeSummaryScreen(),
+        ),
+        theme,
+      ));
       await tester.pumpAndSettle();
       expect(tester.takeException(), isNull);
       expect(find.text('Review Mistakes'), findsOneWidget);

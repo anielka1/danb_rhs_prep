@@ -1,16 +1,14 @@
 import 'package:flutter/material.dart';
+import '../features/questions/domain/question.dart';
+import '../practice_session/practice_session_controller.dart';
+import '../practice_session/practice_session_scope.dart';
 import '../theme/app_theme.dart';
 import '../widgets/answer_option_tile.dart';
 import '../widgets/app_scaffold.dart';
+import '../widgets/empty_state.dart';
 import '../widgets/primary_button.dart';
 import '../widgets/progress_bar.dart';
 import 'answer_explanation_screen.dart';
-
-class _Option {
-  final String letter;
-  final String text;
-  const _Option(this.letter, this.text);
-}
 
 class PracticeQuestionScreen extends StatefulWidget {
   static const String route = '/practice-question';
@@ -21,27 +19,75 @@ class PracticeQuestionScreen extends StatefulWidget {
 }
 
 class _PracticeQuestionScreenState extends State<PracticeQuestionScreen> {
-  static const int totalQuestions = 100;
-  static const int currentQuestion = 12;
+  /// The tap not yet submitted for the current (unanswered) question —
+  /// local UI-only state; a submitted answer lives on
+  /// [PracticeSessionController] instead, keyed by question id, so it
+  /// survives navigating away and back via Previous/Next.
+  String? _pendingSelection;
+  bool _submitting = false;
 
-  static const List<_Option> _options = [
-    _Option('A', '5 rem (0.05 Sv)'),
-    _Option('B', '10 rem (0.10 Sv)'),
-    _Option('C', '15 rem (0.15 Sv)'),
-    _Option('D', '50 rem (0.50 Sv)'),
-  ];
+  Future<void> _submit(PracticeSessionController controller) async {
+    final String? answerId = _pendingSelection;
+    if (answerId == null || _submitting) return;
+    setState(() => _submitting = true);
+    await controller.submitAnswer(answerId);
+    if (!mounted) return;
+    setState(() {
+      _submitting = false;
+      _pendingSelection = null;
+    });
+    await Navigator.of(context).push(
+      MaterialPageRoute(
+        settings: const RouteSettings(name: AnswerExplanationScreen.route),
+        builder: (_) => PracticeSessionScope(
+          controller: controller,
+          child: const AnswerExplanationScreen(),
+        ),
+      ),
+    );
+  }
 
-  String _selected = 'A';
+  void _viewExplanation(PracticeSessionController controller) {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        settings: const RouteSettings(name: AnswerExplanationScreen.route),
+        builder: (_) => PracticeSessionScope(
+          controller: controller,
+          child: const AnswerExplanationScreen(),
+        ),
+      ),
+    );
+  }
+
+  void _goToPrevious(PracticeSessionController controller) {
+    if (!controller.canGoToPrevious) return;
+    setState(() {
+      controller.moveTo(controller.currentIndex - 1);
+      _pendingSelection = null;
+    });
+  }
+
+  void _goToNext(PracticeSessionController controller) {
+    if (!controller.canGoToNext) return;
+    setState(() {
+      controller.moveTo(controller.currentIndex + 1);
+      _pendingSelection = null;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
+    final PracticeSessionController? controller =
+        PracticeSessionScope.maybeOf(context);
+    if (controller == null) return const _NoActiveSessionView();
+
     final colors = context.colors;
     final textStyles = context.textStyles;
+    final Question question = controller.currentQuestion;
+    final bool alreadyAnswered = controller.isAnswered(question.id);
+    final String? recordedSelection = controller.selectedAnswerFor(question.id);
+
     return AppScaffold(
-      // The whole screen scrolls (rather than only the options list, with
-      // fixed header/footer content around it) so nothing is clipped when
-      // the header, question text, and options grow at large Dynamic
-      // Type sizes on a small device.
       body: SingleChildScrollView(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -55,9 +101,10 @@ class _PracticeQuestionScreenState extends State<PracticeQuestionScreen> {
                   semanticLabel: 'Close',
                 ),
                 const SizedBox(width: 14),
-                const Expanded(
+                Expanded(
                   child: ProgressBar(
-                    value: currentQuestion / totalQuestions,
+                    value: (controller.currentIndex + 1) /
+                        controller.totalQuestions,
                     semanticLabel: 'Question progress',
                   ),
                 ),
@@ -66,7 +113,7 @@ class _PracticeQuestionScreenState extends State<PracticeQuestionScreen> {
                     size: AppIconSize.medium - 2, color: colors.onSurface),
                 const SizedBox(width: AppSpacing.xs),
                 Flexible(
-                  child: Text('24:18',
+                  child: Text(_formatElapsed(controller.elapsed),
                       style: TextStyle(
                           fontWeight: FontWeight.w700,
                           color: colors.onSurface)),
@@ -74,7 +121,9 @@ class _PracticeQuestionScreenState extends State<PracticeQuestionScreen> {
               ],
             ),
             const SizedBox(height: AppSpacing.xl + 2),
-            Text('QUESTION $currentQuestion OF $totalQuestions',
+            Text(
+                'QUESTION ${controller.currentIndex + 1} OF '
+                '${controller.totalQuestions}',
                 style: textStyles.label),
             const SizedBox(height: AppSpacing.md + 2),
             Container(
@@ -85,8 +134,7 @@ class _PracticeQuestionScreenState extends State<PracticeQuestionScreen> {
                 borderRadius: BorderRadius.circular(AppRadii.card),
               ),
               child: Text(
-                'What is the maximum permissible dose (MPD) of radiation for '
-                'occupational workers per year?',
+                question.questionText,
                 style: TextStyle(
                     fontWeight: FontWeight.w700,
                     fontSize: 17,
@@ -96,61 +144,80 @@ class _PracticeQuestionScreenState extends State<PracticeQuestionScreen> {
             ),
             const SizedBox(height: 18),
             Column(
-              children: _options
-                  .map((o) => Padding(
-                        padding: const EdgeInsets.only(bottom: AppSpacing.md),
-                        child: AnswerOptionTile(
-                          letter: o.letter,
-                          text: o.text,
-                          state: _selected == o.letter
-                              ? AnswerOptionState.selected
-                              : AnswerOptionState.unselected,
-                          onTap: () => setState(() => _selected = o.letter),
-                        ),
-                      ))
-                  .toList(),
+              children: [
+                for (var i = 0; i < question.answers.length; i++)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: AppSpacing.md),
+                    child: AnswerOptionTile(
+                      letter: String.fromCharCode(65 + i),
+                      text: question.answers[i].text,
+                      state: _optionState(
+                        answerId: question.answers[i].id,
+                        question: question,
+                        alreadyAnswered: alreadyAnswered,
+                        recordedSelection: recordedSelection,
+                      ),
+                      onTap: alreadyAnswered
+                          ? null
+                          : () => setState(
+                              () => _pendingSelection = question.answers[i].id),
+                    ),
+                  ),
+              ],
             ),
             PrimaryButton(
-              label: 'Submit Answer',
-              onPressed: () => Navigator.of(context)
-                  .pushNamed(AnswerExplanationScreen.route),
+              label: alreadyAnswered ? 'View Explanation' : 'Submit Answer',
+              isLoading: _submitting,
+              onPressed: alreadyAnswered
+                  ? () => _viewExplanation(controller)
+                  : (_pendingSelection != null
+                      ? () => _submit(controller)
+                      : null),
             ),
             const SizedBox(height: AppSpacing.md + 2),
-            // Disabled: moving between questions without submitting
-            // requires a multi-question practice session engine that
-            // doesn't exist yet — this screen only ever shows one
-            // hardcoded question.
             Row(
               children: [
                 Flexible(
                   child: TextButton.icon(
-                    onPressed: null,
+                    onPressed: controller.canGoToPrevious
+                        ? () => _goToPrevious(controller)
+                        : null,
                     icon: Icon(Icons.arrow_back_rounded,
                         size: AppIconSize.small,
-                        color: context.semanticColors.mutedForeground),
+                        color: controller.canGoToPrevious
+                            ? colors.onSurface
+                            : context.semanticColors.mutedForeground),
                     label: Text('Previous',
                         style: TextStyle(
-                            color: context.semanticColors.mutedForeground,
+                            color: controller.canGoToPrevious
+                                ? colors.onSurface
+                                : context.semanticColors.mutedForeground,
                             fontWeight: FontWeight.w600)),
                   ),
                 ),
                 const Spacer(),
                 Flexible(
                   child: TextButton(
-                    onPressed: null,
+                    onPressed: controller.canGoToNext
+                        ? () => _goToNext(controller)
+                        : null,
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Flexible(
                           child: Text('Next',
                               style: TextStyle(
-                                  color: context.semanticColors.mutedForeground,
+                                  color: controller.canGoToNext
+                                      ? colors.onSurface
+                                      : context.semanticColors.mutedForeground,
                                   fontWeight: FontWeight.w600)),
                         ),
                         const SizedBox(width: AppSpacing.xs),
                         Icon(Icons.arrow_forward_rounded,
                             size: AppIconSize.small,
-                            color: context.semanticColors.mutedForeground),
+                            color: controller.canGoToNext
+                                ? colors.onSurface
+                                : context.semanticColors.mutedForeground),
                       ],
                     ),
                   ),
@@ -160,6 +227,56 @@ class _PracticeQuestionScreenState extends State<PracticeQuestionScreen> {
             const SizedBox(height: 10),
           ],
         ),
+      ),
+    );
+  }
+
+  AnswerOptionState _optionState({
+    required String answerId,
+    required Question question,
+    required bool alreadyAnswered,
+    required String? recordedSelection,
+  }) {
+    if (!alreadyAnswered) {
+      return answerId == _pendingSelection
+          ? AnswerOptionState.selected
+          : AnswerOptionState.unselected;
+    }
+    if (answerId == question.correctAnswerId) return AnswerOptionState.correct;
+    if (answerId == recordedSelection) return AnswerOptionState.incorrect;
+    return AnswerOptionState.disabled;
+  }
+}
+
+String _formatElapsed(Duration elapsed) {
+  final int totalSeconds = elapsed.inSeconds.clamp(0, 999 * 60 + 59);
+  final int minutes = totalSeconds ~/ 60;
+  final int seconds = totalSeconds % 60;
+  return '${minutes.toString().padLeft(2, '0')}:'
+      '${seconds.toString().padLeft(2, '0')}';
+}
+
+/// Shown when this screen is reached with no active
+/// [PracticeSessionController] (e.g. the static named-route fallback) —
+/// an honest empty state rather than the fake single hardcoded question
+/// and no-op Previous/Next controls this screen used to always show.
+class _NoActiveSessionView extends StatelessWidget {
+  const _NoActiveSessionView();
+
+  @override
+  Widget build(BuildContext context) {
+    return AppScaffold(
+      actions: [
+        CircleIconButton(
+          icon: Icons.close_rounded,
+          onPressed: () => Navigator.of(context).maybePop(),
+          semanticLabel: 'Close',
+        ),
+      ],
+      body: const EmptyState(
+        icon: Icons.quiz_rounded,
+        title: 'No active practice session',
+        message: 'Start a session from Exam Info to begin practicing.',
       ),
     );
   }
