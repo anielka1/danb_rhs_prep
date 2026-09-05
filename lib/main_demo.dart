@@ -12,6 +12,13 @@ import 'main.dart';
 /// Profile, content and readiness use the same synthetic exam namespace.
 /// Practice/mock history is available through the environment's injectable
 /// ProgressRepository; study-session UI is implemented in separate tasks.
+///
+/// Onboarding starts incomplete on purpose (see [createDebugDemoApp]):
+/// this is the vehicle for demonstrating that Welcome -> Exam Date ->
+/// Experience Level -> Home is genuinely clickable end to end (PREP-647),
+/// not a shortcut around it. No experience level is pre-seeded either,
+/// so Experience Level's choice cards must actually be tapped, the same
+/// as a real accountless user would.
 void main() {
   runApp(createDebugDemoApp());
 }
@@ -22,9 +29,8 @@ DanbRhsPrepApp createDebugDemoApp() {
     throw UnsupportedError('The demo entrypoint requires debug mode.');
   }
   final localStore = InMemoryBootstrapLocalStore(
-    onboardingComplete: true,
+    onboardingComplete: false,
     readinessSnapshot: DebugDemoEnvironment.demoReadinessSnapshot,
-    experienceLevel: DebugDemoEnvironment.demoProfile.experienceLevel,
   );
   final bootstrapService = AppBootstrapService(
     contentRepository: DebugDemoEnvironment.buildContentRepository(),
