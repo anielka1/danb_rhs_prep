@@ -38,9 +38,12 @@ class ExamOverviewScreen extends StatefulWidget {
   /// with zero real questions.
   final ContentPackage? contentPackage;
 
-  /// Null in production (no real adapter exists yet) — the session still
-  /// starts and is fully interactive, just not persisted/resumable. See
-  /// `PracticeSessionController`'s doc comment.
+  /// A real `DriftProgressRepository` in production, forwarded here by
+  /// whichever tab pushed this screen (see [PracticeSessionController]'s
+  /// doc comment for how it's used). Null only when reached without real
+  /// content threaded through either (e.g. the static named-route
+  /// fallback in `main.dart`) — the session then still starts and is
+  /// fully interactive, just not persisted/resumable.
   final ProgressRepository? progressRepository;
 
   // Topic names and per-topic question counts mirror the real DANB RHS exam

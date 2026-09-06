@@ -112,22 +112,20 @@ List<MockAttempt> completedMockHistory(List<MockAttempt> attempts) {
 /// [ProgressRepository] queries (optional — see [progressRepository]'s doc
 /// comment), never a widget-local literal. See docs/PROTOTYPE_CONTENT_AUDIT.md
 /// for the fabricated weekly-activity/streak/mastery numbers this replaced.
-/// This is PASS in production only in the sense that it never fabricates
-/// anything there (production has no repository at all, so it always shows
-/// the honest empty state below); the trend/breakdown/history it renders
-/// when data *is* present are only ever exercised with synthetic data from
-/// the isolated, debug/test-only `DebugDemoEnvironment`, since no real
-/// `ProgressRepository` adapter exists yet.
+/// Production wires a real `DriftProgressRepository`, so the trend/
+/// breakdown/history below reflect genuine on-device history there too —
+/// a fresh install simply has none yet, so it honestly shows the empty
+/// state below until the user has actually answered questions.
 class ProgressScreen extends StatefulWidget {
   static const String route = '/progress';
   const ProgressScreen(
       {super.key, this.progressRepository, this.contentPackage});
 
-  /// Null in production today (no real adapter exists yet) — this screen
-  /// then always shows its honest "no progress yet" empty state. When
-  /// present (only ever `DebugDemoEnvironment.buildProgressRepository()`,
-  /// wired from `lib/main_demo.dart`), the trend/breakdown/history below
-  /// reflect exactly what the repository reports.
+  /// A real `DriftProgressRepository` in production (`main.dart`'s
+  /// default); the trend/breakdown/history below reflect exactly what the
+  /// repository reports, empty or not. Null only when a caller has
+  /// nothing to query at all (e.g. `lib/main_demo.dart`, which supplies
+  /// its own `DebugDemoEnvironment.buildProgressRepository()` instead).
   final ProgressRepository? progressRepository;
 
   /// Needed alongside [progressRepository] for the exam id to query by and
