@@ -125,7 +125,10 @@ class _MainShellState extends State<MainShell> with RestorationMixin {
           MockExamScreen(
               contentPackage: contentPackage,
               progressRepository: progressRepository),
-          ProgressScreen(progressRepository: progressRepository),
+          ProgressScreen(
+            contentPackage: contentPackage,
+            progressRepository: progressRepository,
+          ),
         ],
       ),
       bottomNavigationBar:

@@ -310,6 +310,29 @@ class DebugDemoEnvironment {
         )
       : _unavailable();
 
+  /// An earlier, distinct, worse-scoring attempt — separate from
+  /// [demoMockAttempt] — so a consumer reading mock-attempt *history*
+  /// (`ProgressRepository.mockAttemptsForExam`) has a genuine, deterministic
+  /// multi-attempt list to show, not just a single result that would look
+  /// hardcoded either way.
+  static MockAttempt get demoMockAttemptEarlier => _enabled
+      ? MockAttempt(
+          id: 'demo-mock-attempt-0',
+          examId: demoExamId,
+          questionIds: const [_demoQuestionId1, _demoQuestionId2],
+          answers: const {
+            _demoQuestionId1: _demoAnswerIncorrect,
+            _demoQuestionId2: _demoAnswerCorrect,
+          },
+          flaggedQuestionIds: const {},
+          status: MockAttemptStatus.completed,
+          startedAt: DateTime.utc(2025, 12, 20, 9),
+          durationMinutes: 10,
+          completedAt: DateTime.utc(2025, 12, 20, 9, 9),
+          correctCount: 1,
+        )
+      : _unavailable();
+
   static List<AnswerAttempt> get demoAnswerAttempts => _enabled
       ? [
           AnswerAttempt(
@@ -383,6 +406,30 @@ class DebugDemoEnvironment {
         )
       : _unavailable();
 
+  /// An earlier, lower-scoring snapshot — separate from
+  /// [demoReadinessSnapshot] (the current/latest one) — so a consumer
+  /// reading readiness *history* (`ProgressRepository
+  /// .readinessSnapshotsForExam`) has a genuine, deterministic multi-point
+  /// trend to show, not just a single value that would look hardcoded
+  /// either way. Still resolves to the same latest snapshot via
+  /// `latestReadinessSnapshot`, since [calculatedAt] is earlier.
+  static ReadinessSnapshot get demoReadinessSnapshotEarlier => _enabled
+      ? ReadinessSnapshot(
+          id: 'demo-readiness-0',
+          examId: demoExamId,
+          calculatedAt: DateTime.utc(2025, 12, 20, 9),
+          overallScore: 55,
+          band: ReadinessBand.starting,
+          recentAccuracyComponent: 0.5,
+          domainMasteryComponent: 0.5,
+          mockPerformanceComponent: 0.5,
+          repeatedMasteryComponent: 0.4,
+          coverageComponent: 0.3,
+          evidenceConfidence: 0.4,
+          uniqueQuestionsAnswered: 1,
+        )
+      : _unavailable();
+
   /// Fresh repositories isolate mutations and reset deterministically on restart.
   /// Consumers depend on the existing repository contracts, never these fixtures.
   static UserSettingsRepository buildUserSettingsRepository() {
@@ -399,8 +446,11 @@ class DebugDemoEnvironment {
         demoPracticeSession,
         demoInProgressPracticeSession,
       ],
-      seedMockAttempts: [demoMockAttempt],
-      seedReadinessSnapshots: [demoReadinessSnapshot],
+      seedMockAttempts: [demoMockAttemptEarlier, demoMockAttempt],
+      seedReadinessSnapshots: [
+        demoReadinessSnapshotEarlier,
+        demoReadinessSnapshot,
+      ],
     );
   }
 

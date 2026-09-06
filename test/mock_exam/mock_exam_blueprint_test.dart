@@ -115,6 +115,72 @@ void main() {
     expect(() => controller.blueprint.resultFor(forged), throwsFormatException);
   });
 
+  group('MockExamResult.outcomeFor', () {
+    test('boundary: exactly at the threshold is Above (inclusive)', () {
+      expect(
+        MockExamResult.outcomeFor(
+            correctCount: 7, totalQuestions: 10, thresholdPercent: 70),
+        'Above practice threshold',
+      );
+    });
+
+    test('boundary: one correct answer under the threshold is Below', () {
+      expect(
+        MockExamResult.outcomeFor(
+            correctCount: 6, totalQuestions: 10, thresholdPercent: 70),
+        'Below practice threshold',
+      );
+    });
+
+    test('zero correct is always Below (never a positive default)', () {
+      expect(
+        MockExamResult.outcomeFor(
+            correctCount: 0, totalQuestions: 5, thresholdPercent: 70),
+        'Below practice threshold',
+      );
+    });
+
+    test('a perfect score is always Above', () {
+      expect(
+        MockExamResult.outcomeFor(
+            correctCount: 5, totalQuestions: 5, thresholdPercent: 70),
+        'Above practice threshold',
+      );
+    });
+
+    test(
+        'does not change the previous MockExamResult.outcome semantics '
+        '(cross-checked against a real completed attempt)', () async {
+      final aboveController = await startedMock();
+      for (var i = 0; i < 5; i++) {
+        if (i != 0) await aboveController.moveTo(i);
+        await aboveController.answer(i < 4 ? 'a' : 'b');
+      }
+      await aboveController.finish();
+      expect(aboveController.result.outcome, 'Above practice threshold');
+      expect(
+        MockExamResult.outcomeFor(
+          correctCount: aboveController.result.attempt.correctCount!,
+          totalQuestions: aboveController.result.attempt.questionIds.length,
+          thresholdPercent: aboveController.result.threshold,
+        ),
+        aboveController.result.outcome,
+      );
+
+      final belowController = await startedMock();
+      await belowController.finish();
+      expect(belowController.result.outcome, 'Below practice threshold');
+      expect(
+        MockExamResult.outcomeFor(
+          correctCount: belowController.result.attempt.correctCount!,
+          totalQuestions: belowController.result.attempt.questionIds.length,
+          thresholdPercent: belowController.result.threshold,
+        ),
+        belowController.result.outcome,
+      );
+    });
+  });
+
   test(
       'attempt model rejects invalid identities, duplicate sets, cursor and score',
       () {
