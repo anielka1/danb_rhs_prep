@@ -284,6 +284,17 @@ class _WeekStrip extends StatelessWidget {
           child: AnimatedContainer(
             duration: context
                 .reducedMotionDuration(const Duration(milliseconds: 150)),
+            // The tap target (this whole AnimatedContainer, since
+            // GestureDetector sizes to its child) must never shrink below
+            // 44x44 regardless of how narrow a given day's name/number
+            // text naturally is — at ordinary text scale, several days
+            // (e.g. "Sat 5") were previously as narrow as ~31pt wide with
+            // only the symmetric padding below to fall back on.
+            constraints: const BoxConstraints(
+              minWidth: AppTapTarget.minInteractive,
+              minHeight: AppTapTarget.minInteractive,
+            ),
+            alignment: Alignment.center,
             padding: const EdgeInsets.symmetric(
                 vertical: 10, horizontal: AppSpacing.sm),
             decoration: BoxDecoration(

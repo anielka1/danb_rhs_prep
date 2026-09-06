@@ -190,6 +190,45 @@ void main() {
       }
     });
 
+    testWidgets(
+        'HomeScreen week-strip day buttons meet the 44x44 minimum at '
+        'default scale', (tester) async {
+      final SemanticsHandle handle = tester.ensureSemantics();
+      await tester.pumpWidget(appWith(const HomeScreen()));
+      await tester.pumpAndSettle();
+
+      for (final dayName in [
+        'Mon',
+        'Tue',
+        'Wed',
+        'Thu',
+        'Fri',
+        'Sat',
+        'Sun',
+      ]) {
+        // The day number varies with the real current date (see
+        // reduce_motion_test.dart's own reasoning for the same pattern);
+        // only the day name is fixed.
+        final Finder label = find.bySemanticsLabel(RegExp('^$dayName \\d+\$'));
+        expect(label, findsOneWidget, reason: '$dayName should appear once');
+
+        final Finder tapTarget = find.descendant(
+          of: label,
+          matching: find.byType(GestureDetector),
+        );
+        expect(tapTarget, findsOneWidget);
+        final Size size = tester.getSize(tapTarget);
+        expect(size.width, greaterThanOrEqualTo(AppTapTarget.minInteractive),
+            reason: '$dayName tap target width was ${size.width}, below '
+                'the ${AppTapTarget.minInteractive}pt minimum');
+        expect(size.height, greaterThanOrEqualTo(AppTapTarget.minInteractive),
+            reason: '$dayName tap target height was ${size.height}, below '
+                'the ${AppTapTarget.minInteractive}pt minimum');
+      }
+
+      handle.dispose();
+    });
+
     testWidgets('PrimaryButton stays at least the minimum height at 3.0x',
         (tester) async {
       await pumpAtScale(
