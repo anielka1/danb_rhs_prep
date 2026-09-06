@@ -13,7 +13,8 @@ import 'profile_settings_screen.dart';
 class HomeScreen extends StatefulWidget {
   static const String route = '/home';
 
-  const HomeScreen({super.key, this.progressRepository});
+  const HomeScreen(
+      {super.key, this.progressRepository, this.now = DateTime.now});
 
   /// Null in production — no real [ProgressRepository] adapter exists
   /// yet (progress/readiness wiring is explicitly deferred, see
@@ -25,6 +26,13 @@ class HomeScreen extends StatefulWidget {
   /// starting a new one, exactly reflecting what the repository reports —
   /// never a fabricated or hardcoded state.
   final ProgressRepository? progressRepository;
+
+  /// Real `DateTime.now` in production. Injectable so a test (a golden
+  /// test in particular — the calendar chrome would otherwise render a
+  /// different date every day it runs) can pin the "today" this screen
+  /// renders, the same pattern already used by `ExamDateScreen`,
+  /// `PracticeSessionController` and `MockExamController`.
+  final DateTime Function() now;
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
@@ -58,7 +66,7 @@ class _HomeScreenState extends State<HomeScreen> {
   // The real current date/week, not a fixed placeholder — there is no
   // daily study schedule to show yet (see EmptyState below), but the
   // calendar chrome itself should never claim a date that isn't today.
-  final DateTime _today = DateTime.now();
+  late final DateTime _today = widget.now();
   late final DateTime _weekStart =
       _today.subtract(Duration(days: _today.weekday - 1));
   late final List<DateTime> _weekDates =

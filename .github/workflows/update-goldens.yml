@@ -1,0 +1,48 @@
+name: update-goldens
+
+# Manual only: regenerates the PREP-658 golden screenshot matrix
+# (test/golden/goldens/*.png) on the same platform the `quality` job in
+# ci.yml actually enforces them on (ubuntu-latest, this exact pinned
+# Flutter version) — see test/golden/README.md for why goldens should be
+# regenerated here rather than locally on a different OS, and for the
+# rest of this procedure. This workflow only uploads an artifact; it
+# never pushes a commit, so a golden change always goes through a
+# reviewed PR rather than a silent, unreviewed baseline update.
+on:
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+jobs:
+  update-goldens:
+    name: update-goldens
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          # Pinned to the exact same version as ci.yml's `quality` job —
+          # deliberately kept in sync with that pin, not floated
+          # independently, since the whole point of this workflow is
+          # producing goldens that job will actually accept.
+          flutter-version: "3.41.2"
+          channel: "stable"
+          cache: true
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Regenerate golden images
+        run: flutter test --update-goldens test/golden/
+
+      - name: Upload regenerated goldens
+        uses: actions/upload-artifact@v4
+        with:
+          name: golden-images
+          path: test/golden/goldens/*.png
+          retention-days: 14
