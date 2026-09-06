@@ -39,6 +39,11 @@ void main() {
       'flutter', // the SDK itself, not a third-party dependency
       'cupertino_icons', // an icon font, not a UI/component library
       'shared_preferences', // local key-value storage, unrelated to UI
+      'drift', // typed SQLite persistence (PREP-661), unrelated to UI
+      'sqlite3', // drift's underlying SQLite bindings, unrelated to UI
+      'sqlite3_flutter_libs', // bundles the native SQLite library, unrelated to UI
+      'path_provider', // locates the app's local database file, unrelated to UI
+      'path', // builds the database file path, unrelated to UI
     };
 
     expect(

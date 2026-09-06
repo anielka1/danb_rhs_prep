@@ -1,8 +1,11 @@
 import 'dart:io';
 
+import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:danb_rhs_prep/bootstrap/app_bootstrap_service.dart';
+import 'package:danb_rhs_prep/data/local/app_database.dart';
+import 'package:danb_rhs_prep/data/repositories/drift_user_settings_repository.dart';
 import 'package:danb_rhs_prep/domain/models/entitlement.dart';
 import 'package:danb_rhs_prep/domain/repositories/content_repository.dart';
 import 'package:danb_rhs_prep/domain/repositories/fakes/in_memory_bootstrap_local_store.dart';
@@ -36,9 +39,32 @@ void main() {
     final service = AppBootstrapService(
       contentRepository: const _FileContentRepository(),
       localStore: InMemoryBootstrapLocalStore(),
-      // userSettingsRepository intentionally omitted: null, matching
-      // production, where no adapter exists yet — proves this path
-      // doesn't secretly require one either.
+      // userSettingsRepository intentionally omitted: null — proves this
+      // path doesn't secretly require one, distinct from the test below
+      // which wires a real, local-file-backed one.
+    );
+
+    final result = await service.initialize();
+
+    expect(result, isA<BootstrapReady>());
+  });
+
+  test(
+      'bootstrap succeeds with a real, database-backed userSettingsRepository '
+      '— opening/querying SQLite is pure local file I/O, so this must '
+      'succeed identically in airplane mode as it does with connectivity',
+      () async {
+    // An in-memory database exercises the exact same code path production
+    // uses (DriftUserSettingsRepository over AppDatabase) without touching
+    // the filesystem — drift/sqlite3 never make a network call regardless
+    // of backing store, so this stands in for "airplane mode" here.
+    final database = AppDatabase.forTesting(NativeDatabase.memory());
+    addTearDown(database.close);
+
+    final service = AppBootstrapService(
+      contentRepository: const _FileContentRepository(),
+      localStore: InMemoryBootstrapLocalStore(),
+      userSettingsRepository: DriftUserSettingsRepository(database),
     );
 
     final result = await service.initialize();

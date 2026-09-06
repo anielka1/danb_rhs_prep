@@ -4,6 +4,7 @@ import 'dart:typed_data';
 
 import 'package:flutter/services.dart' show FontLoader;
 import 'package:flutter_test/flutter_test.dart';
+import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
 import 'package:shared_preferences_platform_interface/in_memory_shared_preferences_async.dart';
 import 'package:shared_preferences_platform_interface/shared_preferences_async_platform_interface.dart';
 
@@ -43,6 +44,15 @@ Future<void> testExecutable(FutureOr<void> Function() testMain) async {
   SharedPreferencesAsyncPlatform.instance =
       InMemorySharedPreferencesAsync.empty();
 
+  // path_provider's platform channel has no real implementation in
+  // `flutter test` either — `getApplicationDocumentsDirectory()` (used by
+  // `AppDatabase` to locate its SQLite file) throws unless a platform
+  // instance is registered first. A directory inside the test process's
+  // own system temp dir stands in for the device's real documents
+  // directory; same per-file-not-per-test-case sharing caveat as the
+  // shared_preferences fake above applies here.
+  PathProviderPlatform.instance = _FakePathProviderPlatform();
+
   await testMain();
 }
 
@@ -51,4 +61,13 @@ Future<void> _loadFont(String family, String path) async {
   final ByteData data = bytes.buffer.asByteData();
   final FontLoader loader = FontLoader(family)..addFont(Future.value(data));
   await loader.load();
+}
+
+class _FakePathProviderPlatform extends PathProviderPlatform {
+  final Directory _documentsDirectory =
+      Directory.systemTemp.createTempSync('danb_rhs_prep_test_documents_');
+
+  @override
+  Future<String?> getApplicationDocumentsPath() async =>
+      _documentsDirectory.path;
 }

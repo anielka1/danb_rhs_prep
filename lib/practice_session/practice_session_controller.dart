@@ -1,3 +1,4 @@
+import '../data/local/id_generator.dart';
 import '../domain/models/answer_attempt.dart';
 import '../domain/models/practice_session.dart';
 import '../domain/models/question_state.dart';
@@ -28,9 +29,11 @@ class PracticeSessionController {
     required List<Question> questions,
     this.progressRepository,
     DateTime Function() now = DateTime.now,
+    IdGenerator idGenerator = const IdGenerator(),
   })  : _session = session,
         questions = List.unmodifiable(questions),
-        _now = now {
+        _now = now,
+        _idGenerator = idGenerator {
     assert(
       questions.length == session.questionIds.length &&
           _sameOrder(questions, session.questionIds),
@@ -48,6 +51,7 @@ class PracticeSessionController {
   final ProgressRepository? progressRepository;
   final List<Question> questions;
   final DateTime Function() _now;
+  final IdGenerator _idGenerator;
 
   PracticeSession _session;
   PracticeSession get session => _session;
@@ -106,7 +110,13 @@ class PracticeSessionController {
       try {
         await repo.recordAnswerAttempt(
           AnswerAttempt(
-            id: '${session.id}-${question.id}',
+            // A fresh, unique id per attempt — not a value derived from
+            // session+question, which would collide (and, against a real
+            // database's primary key, fail or silently overwrite) the
+            // moment the same question is answered more than once in the
+            // same session, e.g. after `moveTo`-ing back to change an
+            // earlier answer.
+            id: _idGenerator.generate(),
             examId: session.examId,
             questionId: question.id,
             domainId: question.domainId,
