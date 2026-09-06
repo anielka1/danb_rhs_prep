@@ -12,7 +12,6 @@ import 'package:danb_rhs_prep/practice_session/practice_session_scope.dart';
 import 'package:danb_rhs_prep/screens/answer_explanation_screen.dart';
 import 'package:danb_rhs_prep/screens/exam_overview_screen.dart';
 import 'package:danb_rhs_prep/screens/home_screen.dart';
-import 'package:danb_rhs_prep/screens/login_screen.dart';
 import 'package:danb_rhs_prep/screens/main_shell.dart';
 import 'package:danb_rhs_prep/screens/mock_exam_results_screen.dart';
 import 'package:danb_rhs_prep/screens/mock_exam_screen.dart';
@@ -53,7 +52,6 @@ void main() {
 
   group('every screen at 2.0x on a small iPhone', () {
     final screens = <String, Widget>{
-      'LoginScreen': const LoginScreen(),
       'HomeScreen': const HomeScreen(),
       'ExamOverviewScreen': const ExamOverviewScreen(),
       'MockExamScreen': const MockExamScreen(),
@@ -223,7 +221,6 @@ void main() {
     // clamping is applied anywhere in the app — every screen genuinely
     // renders at this scale.
     final screens = <String, Widget>{
-      'LoginScreen': const LoginScreen(),
       'HomeScreen': const HomeScreen(),
       'ExamOverviewScreen': const ExamOverviewScreen(),
       'MockExamScreen': const MockExamScreen(),

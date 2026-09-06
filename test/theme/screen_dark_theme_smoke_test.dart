@@ -3,7 +3,6 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:danb_rhs_prep/practice_session/practice_session_scope.dart';
 import 'package:danb_rhs_prep/screens/answer_explanation_screen.dart';
-import 'package:danb_rhs_prep/screens/login_screen.dart';
 import 'package:danb_rhs_prep/screens/mock_exam_results_screen.dart';
 import 'package:danb_rhs_prep/screens/practice_question_screen.dart';
 import 'package:danb_rhs_prep/screens/practice_summary_screen.dart';
@@ -12,9 +11,9 @@ import 'package:danb_rhs_prep/theme/app_theme.dart';
 import '../support/practice_session_test_support.dart';
 
 /// The full-theme task ("Pelny motyw jasny i ciemny") calls for manually
-/// checking every screen under both themes. These five are the app's
+/// checking every screen under both themes. These four are the app's
 /// heaviest users of the success/error/warning semantic-color roles
-/// (correct/incorrect answer states, score bands, disabled auth rows) —
+/// (correct/incorrect answer states, score bands) —
 /// exactly where a missing `AppSemanticColors` lookup or an unreadable
 /// color pairing would surface — yet none of them was ever pumped under
 /// [AppTheme.darkTheme] anywhere in the suite before this file: every
@@ -33,14 +32,6 @@ void main() {
 
   for (final theme in [AppTheme.lightTheme, AppTheme.darkTheme]) {
     final String label = theme.brightness == Brightness.dark ? 'dark' : 'light';
-
-    testWidgets('LoginScreen renders without error in $label theme',
-        (tester) async {
-      await tester.pumpWidget(wrap(const LoginScreen(), theme));
-      await tester.pumpAndSettle();
-      expect(tester.takeException(), isNull);
-      expect(find.text('Forgot Password?'), findsOneWidget);
-    });
 
     testWidgets('AnswerExplanationScreen renders without error in $label theme',
         (tester) async {

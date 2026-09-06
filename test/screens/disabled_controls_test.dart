@@ -5,7 +5,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:danb_rhs_prep/practice_session/practice_session_scope.dart';
 import 'package:danb_rhs_prep/screens/answer_explanation_screen.dart';
 import 'package:danb_rhs_prep/screens/home_screen.dart';
-import 'package:danb_rhs_prep/screens/login_screen.dart';
 import 'package:danb_rhs_prep/screens/mock_exam_results_screen.dart';
 import 'package:danb_rhs_prep/screens/practice_summary_screen.dart';
 import 'package:danb_rhs_prep/screens/profile_settings_screen.dart';
@@ -25,21 +24,6 @@ bool _hasTapAction(SemanticsNode node) =>
 void main() {
   Widget wrap(Widget child) =>
       MaterialApp(theme: AppTheme.lightTheme, home: child);
-
-  group('LoginScreen', () {
-    testWidgets('Forgot Password and social sign-in have no tap action',
-        (tester) async {
-      final SemanticsHandle handle = tester.ensureSemantics();
-      await tester.pumpWidget(wrap(const LoginScreen()));
-
-      expect(_hasTapAction(tester.getSemantics(find.text('Forgot Password?'))),
-          isFalse);
-      expect(_hasTapAction(tester.getSemantics(find.text('Google'))), isFalse);
-      expect(_hasTapAction(tester.getSemantics(find.text('Apple'))), isFalse);
-
-      handle.dispose();
-    });
-  });
 
   group('ProfileSettingsScreen', () {
     testWidgets(
