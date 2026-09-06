@@ -443,9 +443,10 @@ Returning users should go directly from app bootstrap to the main app.
   through the real `BundledContentRepository`/`BundledExamContentLoader`/
   `rootBundle`, not a fixture; and `test/bootstrap/production_wiring_test.dart`,
   which additionally proves the *exact* production wiring — the real
-  `BundledContentRepository` plus `SharedPreferencesBootstrapLocalStore`,
-  no profile repository, no network — succeeds against the real bundled
-  asset end to end, not just algorithm-level test doubles.)
+  `BundledContentRepository` plus `SharedPreferencesBootstrapLocalStore`
+  plus `DriftUserSettingsRepository` (PREP-661/662), no network —
+  succeeds against the real bundled asset end to end, not just
+  algorithm-level test doubles.)
 - [ ] Load local profile, settings, progress, and entitlement cache.
   **Not fully implemented — left unchecked.** What is genuinely, durably
   loaded today: selected exam ID, theme preference, the onboarding-complete
@@ -457,17 +458,21 @@ Returning users should go directly from app bootstrap to the main app.
   `test/bootstrap/shared_preferences_bootstrap_local_store_test.dart` for
   round-trip and corrupt-entry-handling evidence, and
   `test/bootstrap/production_wiring_test.dart` for the same store wired
-  exactly as `main.dart` wires it). What is **not** implemented: no
-  production `UserSettingsRepository` adapter is injected anywhere in
-  `main.dart` (`AppBootstrapService.userSettingsRepository` stays `null`
-  in production — no such adapter exists yet), so a real stored user
-  profile is never loaded, only ever honestly absent; and only a
-  lightweight readiness *snapshot* is cached, not a complete progress-
-  history persistence layer (full practice history belongs in a real
-  database per this store's own scope, not `SharedPreferences`). Both
-  gaps are real, deferred work, not rounding error — this checkbox stays
-  unchecked until a production profile adapter exists and full progress
-  persistence is built.
+  exactly as `main.dart` wires it). What remains **not** implemented: a
+  production `DriftUserSettingsRepository` adapter is injected into
+  `AppBootstrapService` in `main.dart` (PREP-661/662 — see Section 5.2),
+  but nothing yet calls its `saveProfile`, so `loadProfile` still always
+  returns `null` in practice — a real stored user profile is still never
+  loaded, only ever honestly absent, until onboarding is wired to save
+  one; and bootstrap itself (`AppBootstrapService.initialize`) still only
+  eagerly loads the lightweight readiness *snapshot*, not full practice
+  history — that history now does persist in a real database
+  (`DriftProgressRepository` over the new `AppDatabase`, PREP-661), just
+  queried on demand by `HomeScreen`/`ProgressScreen` rather than eagerly
+  during bootstrap. Both gaps are real, deferred work, not rounding
+  error — this checkbox stays unchecked until onboarding actually saves
+  a profile through the repository and bootstrap itself loads more than
+  the snapshot.
 
   The cached entitlement snapshot is a **last-known local cache, not
   authoritative purchase verification**: it is user-editable
@@ -599,8 +604,9 @@ documented in code as temporary, pending Section 3.3's real next step.
   `version` is rejected the same way. Loaded during bootstrap into
   `BootstrapReady.examDateSelection` so the screen can prefill a
   returning user's choice. No fake `UserProfile` is created to hold
-  this — no production `UserSettingsRepository` adapter exists, exactly
-  as Section 3.1 already documented. Evidence:
+  this — the production `DriftUserSettingsRepository` adapter exists
+  (PREP-661/662), but nothing here saves through it yet, exactly as
+  Section 3.1 already documented. Evidence:
   `test/domain/models/exam_date_selection_test.dart`,
   `test/bootstrap/shared_preferences_bootstrap_local_store_test.dart`'s
   "exam date selection" group (including its "impossible calendar date"
@@ -689,8 +695,9 @@ replacement.
   round-trip through the exact expected stored string; an unknown value,
   malformed JSON, or unsupported/missing version all return null safely,
   and a corrupt entry never affects exam date, onboarding, entitlement,
-  or theme. No production `UserSettingsRepository` adapter exists, so
-  this is never routed through a fake `UserProfile`. Evidence:
+  or theme. The production `DriftUserSettingsRepository` adapter exists
+  (PREP-661/662), but nothing here saves through it yet, so this is still
+  never routed through a `UserProfile`. Evidence:
   `test/domain/models/experience_level_dependency_test.dart`,
   `test/domain/models/experience_level_codec_test.dart` (exact stored
   strings, unknown-value handling, and source guards proving neither the
@@ -873,10 +880,11 @@ approved inventory is insufficient — currently the case, honestly.
 
 ## 5.2 Repositories
 
-- [ ] Implement `ContentRepository`.
-- [ ] Implement `ProgressRepository`.
-- [ ] Implement `UserSettingsRepository`.
-- [ ] Add in-memory fakes for tests.
+- [x] Implement `ContentRepository`. (`BundledContentRepository`.)
+- [x] Implement `ProgressRepository`. (`DriftProgressRepository`, PREP-661/662.)
+- [x] Implement `UserSettingsRepository`. (`DriftUserSettingsRepository`, PREP-661/662.)
+- [x] Add in-memory fakes for tests. (`InMemoryContentRepository`,
+  `InMemoryProgressRepository`, `InMemoryUserSettingsRepository`.)
 - [ ] Keep SQL out of widgets and engines.
 
 ## 5.3 Reliability
