@@ -4,6 +4,9 @@ import 'package:flutter/material.dart';
 import 'theme/app_theme.dart';
 import 'bootstrap/app_bootstrap_service.dart';
 import 'bootstrap/shared_preferences_bootstrap_local_store.dart';
+import 'data/local/app_database.dart';
+import 'data/repositories/drift_progress_repository.dart';
+import 'data/repositories/drift_user_settings_repository.dart';
 import 'domain/models/user_profile.dart';
 import 'domain/repositories/bootstrap_local_store.dart';
 import 'domain/repositories/progress_repository.dart';
@@ -35,10 +38,12 @@ class DanbRhsPrepApp extends StatefulWidget {
     ThemeModeController? themeModeController,
     BootstrapLocalStore? localStore,
     AppBootstrapService? bootstrapService,
+    AppDatabase? database,
     this.progressRepository,
   })  : _injectedThemeModeController = themeModeController,
         _injectedLocalStore = localStore,
-        _injectedBootstrapService = bootstrapService;
+        _injectedBootstrapService = bootstrapService,
+        _injectedDatabase = database;
 
   final AnalyticsService analytics;
 
@@ -56,15 +61,25 @@ class DanbRhsPrepApp extends StatefulWidget {
   final BootstrapLocalStore? _injectedLocalStore;
   final AppBootstrapService? _injectedBootstrapService;
 
-  /// Threaded straight to [MainShell]/[HomeScreen] — never constructed
-  /// here, unlike the fields above. Always null in production: no real
-  /// [ProgressRepository] adapter exists yet (progress/readiness wiring
-  /// is explicitly deferred, see `BootstrapLocalStore`'s own doc
-  /// comment), so `HomeScreen` has nothing to query and shows its default
-  /// honest empty state. `lib/main_demo.dart` supplies
-  /// `DebugDemoEnvironment.buildProgressRepository()` here so the
-  /// "continue an in-progress session" path is genuinely demonstrable in
-  /// debug/test without fabricating anything in release.
+  /// A test-only escape hatch: a widget test that constructs
+  /// `DanbRhsPrepApp` directly (rather than going through `main()`) has no
+  /// real on-device documents directory to open a database in — injecting
+  /// an in-memory `AppDatabase.forTesting(NativeDatabase.memory())` avoids
+  /// that entirely. Null in production and in `lib/main_demo.dart` (the
+  /// demo entrypoint deliberately uses the same in-memory
+  /// `InMemoryProgressRepository` it always has, via [progressRepository]
+  /// below, not this database — see that file's own doc comment for why
+  /// its state is intentionally reset on every run).
+  final AppDatabase? _injectedDatabase;
+
+  /// Threaded straight to [MainShell]/[HomeScreen]. Null in production
+  /// (where the State builds a real [DriftProgressRepository] over its own
+  /// database instead — see [_DanbRhsPrepAppState._progressRepository]);
+  /// only ever non-null when a caller explicitly wants to override that,
+  /// which today is just `lib/main_demo.dart` supplying
+  /// `DebugDemoEnvironment.buildProgressRepository()` so the "continue an
+  /// in-progress session" path stays demonstrable with fixed, synthetic
+  /// data rather than this device's real (and initially empty) history.
   final ProgressRepository? progressRepository;
 
   @override
@@ -78,11 +93,30 @@ class _DanbRhsPrepAppState extends State<DanbRhsPrepApp> {
   late final BootstrapLocalStore _localStore =
       widget._injectedLocalStore ?? SharedPreferencesBootstrapLocalStore();
 
+  /// Null whenever a real database wasn't created by this State itself
+  /// (i.e. [widget._injectedDatabase] was supplied), so [dispose] never
+  /// closes a database a caller still owns.
+  AppDatabase? _ownedDatabase;
+
+  AppDatabase get _database =>
+      widget._injectedDatabase ?? (_ownedDatabase ??= AppDatabase());
+
+  late final DriftUserSettingsRepository _userSettingsRepository =
+      DriftUserSettingsRepository(_database);
+
+  /// The repository actually threaded to [MainShell]/[HomeScreen]/
+  /// [SplashScreen]: [widget.progressRepository] when a caller explicitly
+  /// injected one (see its own doc comment), otherwise a real
+  /// [DriftProgressRepository] over this State's database.
+  late final ProgressRepository _effectiveProgressRepository =
+      widget.progressRepository ?? DriftProgressRepository(_database);
+
   late final AppBootstrapService _bootstrapService =
       widget._injectedBootstrapService ??
           AppBootstrapService(
             contentRepository: BundledContentRepository(),
             localStore: _localStore,
+            userSettingsRepository: _userSettingsRepository,
           );
 
   @override
@@ -121,6 +155,10 @@ class _DanbRhsPrepAppState extends State<DanbRhsPrepApp> {
     if (widget._injectedThemeModeController == null) {
       _themeModeController.dispose();
     }
+    // Same reasoning: only close a database this State opened itself —
+    // `widget._injectedDatabase` (a test's in-memory database) remains
+    // that test's to close.
+    _ownedDatabase?.close();
     super.dispose();
   }
 
@@ -144,11 +182,11 @@ class _DanbRhsPrepAppState extends State<DanbRhsPrepApp> {
                   localStore: _localStore,
                   analytics: widget.analytics,
                   onReady: _applyBootstrapTheme,
-                  progressRepository: widget.progressRepository,
+                  progressRepository: _effectiveProgressRepository,
                 ),
             MainShell.route: (_) => MainShell(
                   analytics: widget.analytics,
-                  progressRepository: widget.progressRepository,
+                  progressRepository: _effectiveProgressRepository,
                 ),
             WelcomeScreen.route: (_) => WelcomeScreen(
                   localStore: _localStore,
