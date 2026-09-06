@@ -29,35 +29,56 @@ class EmptyState extends StatelessWidget {
   Widget build(BuildContext context) {
     final textStyles = context.textStyles;
 
+    // liveRegion + a merged label, matching ErrorState/LoadingState (the
+    // other two members of the shared loading/empty/error trio): without
+    // it, a screen transitioning into "nothing here yet" — e.g. Progress
+    // once loading finishes, Mock Exam when unavailable — never gets
+    // proactively announced to VoiceOver/TalkBack the way the loading and
+    // error transitions already are. The icon and text are excluded from
+    // the semantics tree so they aren't announced a second time as their
+    // own nodes; the actions stay outside that exclusion so they remain
+    // independently focusable and actionable.
     final Widget content = ConstrainedBox(
       constraints: const BoxConstraints(maxWidth: 320),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          if (icon != null) ...[
-            Icon(icon, size: 56, color: context.semanticColors.mutedForeground),
-            const SizedBox(height: AppSpacing.lg),
-          ],
-          Text(title, style: textStyles.h3, textAlign: TextAlign.center),
-          if (message != null) ...[
-            const SizedBox(height: AppSpacing.sm),
-            Text(
-              message!,
-              style: textStyles.body,
-              textAlign: TextAlign.center,
+      child: Semantics(
+        liveRegion: true,
+        label: message != null ? '$title. $message' : title,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (icon != null) ...[
+              ExcludeSemantics(
+                child: Icon(icon,
+                    size: 56, color: context.semanticColors.mutedForeground),
+              ),
+              const SizedBox(height: AppSpacing.lg),
+            ],
+            ExcludeSemantics(
+              child: Text(title,
+                  style: textStyles.h3, textAlign: TextAlign.center),
             ),
+            if (message != null) ...[
+              const SizedBox(height: AppSpacing.sm),
+              ExcludeSemantics(
+                child: Text(
+                  message!,
+                  style: textStyles.body,
+                  textAlign: TextAlign.center,
+                ),
+              ),
+            ],
+            if (primaryActionLabel != null) ...[
+              const SizedBox(height: AppSpacing.xl),
+              PrimaryButton(
+                  label: primaryActionLabel!, onPressed: onPrimaryAction),
+            ],
+            if (secondaryActionLabel != null) ...[
+              const SizedBox(height: AppSpacing.sm),
+              SecondaryButton(
+                  label: secondaryActionLabel!, onPressed: onSecondaryAction),
+            ],
           ],
-          if (primaryActionLabel != null) ...[
-            const SizedBox(height: AppSpacing.xl),
-            PrimaryButton(
-                label: primaryActionLabel!, onPressed: onPrimaryAction),
-          ],
-          if (secondaryActionLabel != null) ...[
-            const SizedBox(height: AppSpacing.sm),
-            SecondaryButton(
-                label: secondaryActionLabel!, onPressed: onSecondaryAction),
-          ],
-        ],
+        ),
       ),
     );
 

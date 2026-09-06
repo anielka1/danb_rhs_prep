@@ -59,4 +59,21 @@ void main() {
     expect(find.byType(ElevatedButton), findsNothing);
     expect(find.byType(OutlinedButton), findsNothing);
   });
+
+  testWidgets('announces the empty state as an accessible live region',
+      (tester) async {
+    final SemanticsHandle handle = tester.ensureSemantics();
+    await tester.pumpWidget(
+      wrap(const EmptyState(
+          title: 'No bookmarks yet',
+          message: 'Bookmark a question to see it here.')),
+    );
+    expect(
+      tester.getSemantics(find.text('No bookmarks yet')),
+      matchesSemantics(
+          label: 'No bookmarks yet. Bookmark a question to see it here.',
+          isLiveRegion: true),
+    );
+    handle.dispose();
+  });
 }
