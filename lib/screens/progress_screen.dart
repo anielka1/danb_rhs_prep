@@ -34,17 +34,90 @@ class _ProgressData {
       mockAttempts.isNotEmpty;
 }
 
-class _DomainStats {
-  const _DomainStats(this.domainId, this.correct, this.seen);
+/// Per-domain answer accuracy, aggregated from [QuestionState]s already
+/// seen. Exposed (not file-private) and `@visibleForTesting` so
+/// [aggregateDomainBreakdown]'s edge cases — zero-evidence domains,
+/// question ids no longer present in content — can be unit-tested directly,
+/// without going through a full widget pump.
+@visibleForTesting
+class DomainStats {
+  const DomainStats(this.domainId, this.correct, this.seen);
   final String domainId;
   final int correct;
   final int seen;
+
+  /// 0 when [seen] is zero — never NaN or a division-by-zero artifact.
+  /// [aggregateDomainBreakdown] only ever adds a domain here from a
+  /// [QuestionState] with `hasBeenAnswered == true` (which itself implies
+  /// `timesSeen > 0`), so `seen == 0` shouldn't currently occur in
+  /// practice — this guard exists so that stays true by construction
+  /// rather than by accident if that aggregation logic ever changes.
+  double get accuracy => seen == 0 ? 0 : correct / seen;
+}
+
+/// Groups [states] by the domain of the question each answers (looked up
+/// in [questions] by id), summing times-correct/times-seen per domain.
+/// States for a question id no longer present in [questions] (e.g.
+/// retired/removed content) are skipped rather than throwing — a
+/// [QuestionState] can outlive the specific content version it was
+/// recorded against.
+@visibleForTesting
+List<DomainStats> aggregateDomainBreakdown(
+  List<QuestionState> states,
+  List<Question> questions,
+) {
+  final Map<String, Question> byId = {for (final q in questions) q.id: q};
+  final Map<String, DomainStats> byDomain = {};
+  for (final state in states) {
+    if (!state.hasBeenAnswered) continue;
+    final Question? question = byId[state.questionId];
+    if (question == null) continue;
+    final DomainStats prior =
+        byDomain[question.domainId] ?? DomainStats(question.domainId, 0, 0);
+    byDomain[question.domainId] = DomainStats(
+      question.domainId,
+      prior.correct + state.timesCorrect,
+      prior.seen + state.timesSeen,
+    );
+  }
+  return byDomain.values.toList(growable: false);
+}
+
+/// A defensive copy of [snapshots], sorted oldest-first — a real
+/// repository has no ordering guarantee, so this screen (not the caller)
+/// is responsible for turning readiness history into a genuine
+/// chronological trend rather than whatever order it happened to arrive
+/// in.
+@visibleForTesting
+List<ReadinessSnapshot> chronologicalReadinessHistory(
+  List<ReadinessSnapshot> snapshots,
+) {
+  final List<ReadinessSnapshot> sorted = [...snapshots];
+  sorted.sort((a, b) => a.calculatedAt.compareTo(b.calculatedAt));
+  return sorted;
+}
+
+/// Only [MockAttemptStatus.completed] attempts, most recent first — an
+/// in-progress attempt has no [MockAttempt.correctCount]/outcome yet and
+/// must never appear in a "history of results" list.
+@visibleForTesting
+List<MockAttempt> completedMockHistory(List<MockAttempt> attempts) {
+  final List<MockAttempt> completed =
+      attempts.where((a) => a.status == MockAttemptStatus.completed).toList();
+  completed.sort((a, b) => b.startedAt.compareTo(a.startedAt));
+  return completed;
 }
 
 /// No fabricated activity/trend/breakdown: every value below comes from
 /// [ProgressRepository] queries (optional — see [progressRepository]'s doc
 /// comment), never a widget-local literal. See docs/PROTOTYPE_CONTENT_AUDIT.md
 /// for the fabricated weekly-activity/streak/mastery numbers this replaced.
+/// This is PASS in production only in the sense that it never fabricates
+/// anything there (production has no repository at all, so it always shows
+/// the honest empty state below); the trend/breakdown/history it renders
+/// when data *is* present are only ever exercised with synthetic data from
+/// the isolated, debug/test-only `DebugDemoEnvironment`, since no real
+/// `ProgressRepository` adapter exists yet.
 class ProgressScreen extends StatefulWidget {
   static const String route = '/progress';
   const ProgressScreen(
@@ -73,6 +146,15 @@ class ProgressScreen extends StatefulWidget {
 class _ProgressScreenState extends State<ProgressScreen> {
   Future<_ProgressData>? _future;
 
+  /// Guards against a second, concurrent load — e.g. the error state's
+  /// retry action tapped (or otherwise invoked) more than once before the
+  /// first attempt has settled and this widget has had a chance to
+  /// rebuild. Deliberately not surfaced via `setState`: this only ever
+  /// needs to suppress a *duplicate* request, not drive any visible UI —
+  /// the in-flight request's own `LoadingState` (via `FutureBuilder`)
+  /// already covers that.
+  bool _loading = false;
+
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
@@ -81,25 +163,26 @@ class _ProgressScreenState extends State<ProgressScreen> {
   }
 
   void _startLoad() {
+    if (_loading) return;
     final ProgressRepository? repository = widget.progressRepository;
     final ContentPackage? package = widget.contentPackage;
     if (repository == null || package == null) return;
+    _loading = true;
     final Future<_ProgressData> future = _load(repository, package.exam.id);
-    // Attaches a listener immediately, before this Future is ever handed to
-    // FutureBuilder: a rejection with no listener attached synchronously
-    // enough (e.g. this method called from a gesture callback, well after
-    // the widget's initial build) is reported by the zone as an unhandled
-    // error the moment it rejects, even though FutureBuilder itself will
-    // attach its own listener and render `snapshot.hasError` correctly one
-    // frame later — that gap is enough to trip it. This listener only
-    // silences that spurious report; the real, user-visible handling still
-    // happens via FutureBuilder below.
-    // `Future.ignore()` exists exactly for this: it attaches a listener
-    // immediately so a rejection is never reported as "unhandled", without
-    // consuming or transforming the Future — FutureBuilder below still
-    // reports the real error to the user via `snapshot.hasError`, reading
-    // this same, unmodified `future`.
-    future.ignore();
+    // Attaches a listener immediately, before this Future is ever handed
+    // to FutureBuilder: a rejection with no listener attached
+    // synchronously enough (e.g. this method called from a gesture
+    // callback, well after the widget's initial build) is reported by the
+    // zone as an unhandled error the moment it rejects, even though
+    // FutureBuilder itself will attach its own listener and render
+    // `snapshot.hasError` correctly one frame later — that gap is enough
+    // to trip it. Resetting `_loading` here (rather than via a second,
+    // separate listener) keeps this the single place that "this load has
+    // finished, one way or another" is recorded.
+    future.then(
+      (_) => _loading = false,
+      onError: (Object _, StackTrace __) => _loading = false,
+    );
     setState(() {
       _future = future;
     });
@@ -118,28 +201,6 @@ class _ProgressScreenState extends State<ProgressScreen> {
       questionStates: questionStates,
       mockAttempts: mockAttempts,
     );
-  }
-
-  List<_DomainStats> _domainBreakdown(List<QuestionState> states) {
-    final ContentPackage? package = widget.contentPackage;
-    if (package == null) return const [];
-    final Map<String, Question> byId = {
-      for (final q in package.questions) q.id: q,
-    };
-    final Map<String, _DomainStats> byDomain = {};
-    for (final state in states) {
-      if (!state.hasBeenAnswered) continue;
-      final Question? question = byId[state.questionId];
-      if (question == null) continue;
-      final _DomainStats prior =
-          byDomain[question.domainId] ?? _DomainStats(question.domainId, 0, 0);
-      byDomain[question.domainId] = _DomainStats(
-        question.domainId,
-        prior.correct + state.timesCorrect,
-        prior.seen + state.timesSeen,
-      );
-    }
-    return byDomain.values.toList(growable: false);
   }
 
   String _domainName(String domainId) {
@@ -186,7 +247,10 @@ class _ProgressScreenState extends State<ProgressScreen> {
           if (!data.hasAnyData) return _emptyState();
           return _ProgressContent(
             data: data,
-            domainBreakdown: _domainBreakdown(data.questionStates),
+            domainBreakdown: aggregateDomainBreakdown(
+              data.questionStates,
+              widget.contentPackage!.questions,
+            ),
             domainName: _domainName,
             bandLabel: _bandLabel,
             threshold:
@@ -259,7 +323,7 @@ class _ProgressContent extends StatelessWidget {
   });
 
   final _ProgressData data;
-  final List<_DomainStats> domainBreakdown;
+  final List<DomainStats> domainBreakdown;
   final String Function(String domainId) domainName;
   final String Function(ReadinessSnapshot snapshot) bandLabel;
   final double threshold;
@@ -268,10 +332,9 @@ class _ProgressContent extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final textStyles = context.textStyles;
-    final List<ReadinessSnapshot> trend = [...data.readinessHistory]
-      ..sort((a, b) => a.calculatedAt.compareTo(b.calculatedAt));
-    final List<MockAttempt> history = [...data.mockAttempts]
-      ..sort((a, b) => b.startedAt.compareTo(a.startedAt));
+    final List<ReadinessSnapshot> trend =
+        chronologicalReadinessHistory(data.readinessHistory);
+    final List<MockAttempt> history = completedMockHistory(data.mockAttempts);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -312,7 +375,7 @@ class _ProgressContent extends StatelessWidget {
               padding: const EdgeInsets.only(bottom: AppSpacing.lg),
               child: DomainProgressRow(
                 domainName: domainName(stats.domainId),
-                progress: stats.seen == 0 ? 0 : stats.correct / stats.seen,
+                progress: stats.accuracy,
                 supportingText: '${stats.correct}/${stats.seen} correct',
               ),
             ),
@@ -321,7 +384,7 @@ class _ProgressContent extends StatelessWidget {
         if (history.isNotEmpty) ...[
           Text('MOCK EXAM HISTORY', style: textStyles.label),
           const SizedBox(height: AppSpacing.sm),
-          for (final attempt in history.where((a) => a.correctCount != null))
+          for (final attempt in history)
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 6),
               child: Semantics(
