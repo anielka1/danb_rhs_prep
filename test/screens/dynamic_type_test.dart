@@ -7,6 +7,7 @@ import 'package:danb_rhs_prep/bootstrap/app_bootstrap_service.dart';
 import 'package:danb_rhs_prep/debug/debug_demo_environment.dart';
 import 'package:danb_rhs_prep/domain/repositories/content_repository.dart';
 import 'package:danb_rhs_prep/domain/repositories/fakes/in_memory_bootstrap_local_store.dart';
+import 'package:danb_rhs_prep/domain/repositories/fakes/in_memory_progress_repository.dart';
 import 'package:danb_rhs_prep/features/content/domain/content_package.dart';
 import 'package:danb_rhs_prep/practice_session/practice_session_scope.dart';
 import 'package:danb_rhs_prep/screens/answer_explanation_screen.dart';
@@ -278,6 +279,32 @@ void main() {
             viewport: ProbeViewport.smallPhone, textScale: 4.0);
       });
     }
+
+    testWidgets(
+        'ProgressScreen with real readiness/mock history has no overflow '
+        'at 4.0x', (tester) async {
+      // The bare `const ProgressScreen()` above (no repository) only ever
+      // renders the empty state — it can never reach the readiness-trend
+      // or mock-history rows below, which each lay out a date next to a
+      // score/outcome string in a plain Row. That path needs its own
+      // real-content probe to be exercised at all.
+      await pumpAtScale(
+        tester,
+        appWith(ProgressScreen(
+          contentPackage: DebugDemoEnvironment.demoContentPackage,
+          progressRepository: InMemoryProgressRepository(
+            seedQuestionStates: DebugDemoEnvironment.demoQuestionStates,
+            seedMockAttempts: [DebugDemoEnvironment.demoMockAttempt],
+            seedReadinessSnapshots: [
+              DebugDemoEnvironment.demoReadinessSnapshot
+            ],
+          ),
+        )),
+        viewport: ProbeViewport.smallPhone,
+        textScale: 4.0,
+      );
+      expect(find.text('DOMAIN BREAKDOWN'), findsOneWidget);
+    });
 
     testWidgets(
         'MainShell (week strip + bottom nav) has no overflow at 4.0x '

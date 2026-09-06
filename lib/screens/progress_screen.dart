@@ -350,15 +350,27 @@ class _ProgressContent extends StatelessWidget {
                     '${snapshot.overallScore.round()} percent, '
                     '${bandLabel(snapshot)}',
                 child: ExcludeSemantics(
+                  // Flexible, not a bare Text, on both sides: at large
+                  // Dynamic Type sizes (or a long, exam-config-supplied
+                  // band label) the two together can exceed the row's
+                  // width — each wraps within its own fair share instead
+                  // of overflowing off the right edge.
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(_formatDate(snapshot.calculatedAt),
-                          style: textStyles.body),
-                      Text(
-                        '${snapshot.overallScore.round()}% · ${bandLabel(snapshot)}',
-                        style: textStyles.body
-                            .copyWith(fontWeight: FontWeight.w700),
+                      Flexible(
+                        child: Text(_formatDate(snapshot.calculatedAt),
+                            style: textStyles.body),
+                      ),
+                      const SizedBox(width: AppSpacing.sm),
+                      Flexible(
+                        child: Text(
+                          '${snapshot.overallScore.round()}% · ${bandLabel(snapshot)}',
+                          style: textStyles.body
+                              .copyWith(fontWeight: FontWeight.w700),
+                          textAlign: TextAlign.right,
+                        ),
                       ),
                     ],
                   ),
@@ -396,15 +408,24 @@ class _ProgressContent extends StatelessWidget {
                   thresholdPercent: threshold,
                 )}',
                 child: ExcludeSemantics(
+                  // See the Readiness Trend row above for why each side
+                  // is Flexible rather than a bare Text.
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(_formatDate(attempt.startedAt),
-                          style: textStyles.body),
-                      Text(
-                        '${attempt.correctCount}/${attempt.questionIds.length}',
-                        style: textStyles.body
-                            .copyWith(fontWeight: FontWeight.w700),
+                      Flexible(
+                        child: Text(_formatDate(attempt.startedAt),
+                            style: textStyles.body),
+                      ),
+                      const SizedBox(width: AppSpacing.sm),
+                      Flexible(
+                        child: Text(
+                          '${attempt.correctCount}/${attempt.questionIds.length}',
+                          style: textStyles.body
+                              .copyWith(fontWeight: FontWeight.w700),
+                          textAlign: TextAlign.right,
+                        ),
                       ),
                     ],
                   ),
