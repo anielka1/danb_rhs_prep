@@ -90,12 +90,13 @@ void main() {
     });
 
     test(
-        'a genuinely corrupt file is quarantined (not deleted) and a '
-        'fresh, working database is opened in its place', () async {
-      // Not a valid SQLite file at all (SQLITE_NOTADB) — the simplest,
-      // most deterministic way to reproduce "this file's contents are
-      // not a database" without needing to hand-craft a page that trips
-      // SQLITE_CORRUPT specifically.
+        'a file that is not a database at all (bad header, SQLITE_NOTADB) '
+        'is quarantined (not deleted) and a fresh, working database is '
+        'opened in its place — recovery happens synchronously, in this '
+        'same call, never via a later retry', () async {
+      // The simplest, most deterministic way to reproduce "this file's
+      // contents are not a database": sqlite3.open itself rejects the
+      // header before quick_check is ever reached.
       dbFile.writeAsBytesSync(List.filled(4096, 0xFF));
 
       final Database recovered = openSqliteWithCorruptionRecovery(dbFile);
@@ -116,11 +117,99 @@ void main() {
           reason: 'the original corrupt bytes must be preserved under a '
               '.corrupt.<timestamp> name, never silently discarded');
 
-      // A fresh, empty database file exists at the original path — this
-      // is what lets AppDatabase's LazyDatabase (and therefore a user's
-      // "Try Again" tap after a bootstrap failure) succeed on retry
-      // instead of hitting the exact same corruption again.
+      // A fresh, empty database file exists at the original path —
+      // openSqliteWithCorruptionRecovery already returned a working
+      // database above, in this same call; this just confirms the file
+      // backing it is the fresh one, not the quarantined original.
       expect(dbFile.existsSync(), isTrue);
+    });
+
+    test(
+        'a file that opens fine but whose body is corrupt (PRAGMA '
+        'quick_check reports it, without sqlite3.open ever throwing) is '
+        'also detected and recovered — not just header-level '
+        'SQLITE_NOTADB', () async {
+      // A valid header, but real page content damaged well past it: the
+      // header alone is enough for sqlite3.open to succeed, so only
+      // quick_check's page-structure walk catches this. quick_check
+      // reports this kind of damage as a result row, not a thrown
+      // exception — the specific gap the old, exception-only detection
+      // logic missed.
+      final Database seed = sqlite3.open(dbFile.path);
+      seed.execute('CREATE TABLE t (id INTEGER PRIMARY KEY, value TEXT)');
+      for (var i = 0; i < 200; i++) {
+        seed.execute('INSERT INTO t (value) VALUES (?)', ['x' * 200]);
+      }
+      seed.dispose();
+
+      final List<int> bytes = dbFile.readAsBytesSync();
+      // Well past the header/first page (sqlite's default page size is
+      // 4096 bytes) — deep in real row data written above.
+      final int start = bytes.length ~/ 2;
+      for (int i = start; i < start + 300 && i < bytes.length; i++) {
+        bytes[i] = 0xAA;
+      }
+      dbFile.writeAsBytesSync(bytes);
+
+      final Database recovered = openSqliteWithCorruptionRecovery(dbFile);
+      addTearDown(recovered.dispose);
+
+      expect(
+        () => recovered.execute('CREATE TABLE probe (id INTEGER PRIMARY KEY)'),
+        returnsNormally,
+      );
+      final bool quarantineFileExists =
+          tempDir.listSync().any((entity) => entity.path.contains('.corrupt.'));
+      expect(quarantineFileExists, isTrue,
+          reason: 'body-only corruption must be quarantined too, exactly '
+              'like a bad header');
+    });
+
+    test(
+        'quarantining also moves aside -wal/-shm/-journal sidecar files, '
+        'not just the main database file, so a fresh database is never '
+        'contaminated by a stale write-ahead log', () async {
+      dbFile.writeAsBytesSync(List.filled(4096, 0xFF));
+      final File walFile = File('${dbFile.path}-wal')
+        ..writeAsStringSync('stale wal content');
+      final File shmFile = File('${dbFile.path}-shm')
+        ..writeAsStringSync('stale shm content');
+
+      openSqliteWithCorruptionRecovery(dbFile).dispose();
+
+      expect(walFile.existsSync(), isFalse,
+          reason: 'the stale -wal must be moved aside, not left in place '
+              'where the fresh database could pick it up');
+      expect(shmFile.existsSync(), isFalse);
+      final List<String> quarantined = tempDir
+          .listSync()
+          .map((e) => e.path)
+          .where((path) => path.contains('.corrupt.'))
+          .toList();
+      expect(quarantined.any((path) => path.contains('-wal')), isTrue);
+      expect(quarantined.any((path) => path.contains('-shm')), isTrue);
+    });
+
+    test(
+        'the failed Database handle is closed before its file is renamed '
+        '— renaming a file out from under a still-open handle is not '
+        'something every platform this app targets supports reliably',
+        () async {
+      dbFile.writeAsBytesSync(List.filled(4096, 0xFF));
+
+      // If the corrupt handle were still open when _quarantine renames
+      // the file, opening a *fresh* database at the same original path
+      // immediately after would be the operation most likely to expose
+      // it (e.g. a locked/in-use file on a platform that enforces
+      // exclusive access) — this succeeding end-to-end is the behavioral
+      // proof, since the underlying handle isn't inspectable directly.
+      final Database recovered = openSqliteWithCorruptionRecovery(dbFile);
+      addTearDown(recovered.dispose);
+
+      expect(
+        () => recovered.execute('CREATE TABLE probe (id INTEGER PRIMARY KEY)'),
+        returnsNormally,
+      );
     });
 
     test('a healthy, valid database is opened as-is, not quarantined', () {
@@ -139,6 +228,40 @@ void main() {
           tempDir.listSync().any((entity) => entity.path.contains('.corrupt.'));
       expect(quarantineFileExists, isFalse,
           reason: 'a healthy database must never be quarantined');
+    });
+  });
+
+  group('corruption recovery is fully automatic end-to-end', () {
+    test(
+        'opening the real AppDatabase() over a corrupt on-device file '
+        'recovers silently inside the very first query — no exception '
+        'ever propagates for a caller (e.g. AppBootstrapService) to '
+        'catch, so no "Try Again" UI is ever shown for this failure', () async {
+      final File dbFile = await resolveDatabaseFile();
+      dbFile.parent.createSync(recursive: true);
+      addTearDown(() {
+        for (final File f in [
+          dbFile,
+          File('${dbFile.path}-wal'),
+          File('${dbFile.path}-shm'),
+          File('${dbFile.path}-journal'),
+        ]) {
+          if (f.existsSync()) f.deleteSync();
+        }
+        for (final FileSystemEntity sibling in dbFile.parent.listSync()) {
+          if (sibling.path.contains('.corrupt.')) sibling.deleteSync();
+        }
+      });
+      dbFile.writeAsBytesSync(List.filled(4096, 0xFF));
+
+      final AppDatabase db = AppDatabase();
+      addTearDown(db.close);
+
+      // This is where LazyDatabase actually opens the connection for the
+      // first time — exactly the call site AppBootstrapService's real
+      // userSettingsRepository.loadProfile(examId) exercises during
+      // bootstrap. It must complete normally, not throw.
+      await expectLater(db.select(db.userProfiles).get(), completion(isEmpty));
     });
   });
 

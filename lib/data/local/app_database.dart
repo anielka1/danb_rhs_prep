@@ -173,10 +173,13 @@ class UserProfiles extends Table {
 ///
 /// **Controlled recovery path**: [_openConnection] never lets a fresh
 /// install, a normal reopen, or a genuinely corrupt database file crash
-/// the app before it can show a recoverable error. See
-/// [openSqliteWithCorruptionRecovery]'s own doc comment for exactly what
-/// "controlled" means for corruption specifically, and this class's
-/// [migration] for schema upgrades.
+/// the app. Corruption specifically is recovered from *automatically and
+/// silently* — see [openSqliteWithCorruptionRecovery]'s own doc comment —
+/// so it never reaches `AppBootstrapService`'s error path or
+/// `SplashScreen`'s "Try Again" UI at all; that UI only ever appears for a
+/// genuinely different failure (an undefined [migration] step, a disk
+/// that's actually full or unwritable, or corruption recovery itself
+/// failing to complete).
 @DriftDatabase(tables: [
   AnswerAttempts,
   QuestionStates,
@@ -256,49 +259,116 @@ const Set<int> _corruptionResultCodes = {
   26, // SQLITE_NOTADB
 };
 
-/// Opens the SQLite file at [path], with a controlled recovery path for
-/// genuine file-level corruption specifically (a damaged file from a
-/// prior crash/full disk/OS-level issue — not a code bug, and not
-/// something a "Try Again" retry could ever fix on its own, since the
-/// same corrupt bytes would just fail identically every time).
+/// Opens the SQLite file at [file], with a fully automatic, silent
+/// recovery path for genuine file-level corruption specifically (a
+/// damaged file from a prior crash/full disk/OS-level issue — not a code
+/// bug, and not something re-opening the same bytes could ever fix on its
+/// own). Recovery happens synchronously inside this call: a caller that
+/// starts from a corrupt file gets back a fresh, working, empty database
+/// from this very call, never an exception — there is deliberately no
+/// user-visible "Try Again" step for this specific failure, since one
+/// isn't needed and retrying would just repeat the same recovery.
+/// [AppBootstrapService]'s existing error UI remains reachable, but only
+/// for a genuinely different failure: an undefined [AppDatabase.migration]
+/// step, a disk that's actually full/unwritable, or (see below) this
+/// recovery itself failing to complete.
 ///
-/// On a corruption result code, the corrupt file is quarantined —
-/// renamed aside with a timestamp suffix, never deleted outright, so the
-/// bytes remain available for support/debugging — and a fresh database is
-/// opened in its place. This does lose that specific file's progress
-/// (a truly corrupt file has already lost it at the storage level; there
-/// is no data left to preserve), but it is the only way "Try Again"
-/// (`SplashScreen`'s existing retry, since any exception from opening
-/// this database while `AppBootstrapService` bootstraps surfaces through
-/// its existing `BootstrapUnexpectedFailure` path) can ever actually
-/// succeed after corruption, rather than failing identically forever.
+/// Detection is two-layered: `sqlite3.open` only validates the file
+/// header (catching e.g. a file that's simply not a database at all —
+/// `SQLITE_NOTADB`), so `PRAGMA quick_check` is also run to force the
+/// page structure to actually be read. Critically, `quick_check` reports
+/// most structural problems as *result rows* saying so (anything other
+/// than the single row `ok`), not as a thrown exception — code that only
+/// watches for a `SqliteException` (as an earlier version of this
+/// function did) would silently let that corruption through unnoticed.
+///
+/// On detecting corruption either way, the failed [Database] handle is
+/// disposed first (a corrupt file cannot be renamed out from under a
+/// still-open handle on every platform this app targets), then the main
+/// file *and* its `-wal`/`-shm`/`-journal` sidecar files (whichever
+/// exist) are quarantined together — renamed aside with a shared
+/// timestamp suffix, never deleted outright, so the bytes remain
+/// available for support/debugging — before a fresh database is opened in
+/// their place. This does lose that specific file's progress (a truly
+/// corrupt file has already lost it at the storage level; there is no
+/// data left to preserve), and it is attempted exactly once: if the fresh
+/// open+validate immediately after quarantining *also* detects
+/// corruption, that is a genuinely different, unrecoverable problem (e.g.
+/// the directory itself is unwritable) and is allowed to propagate rather
+/// than looping forever — this is what would, in that rare case, actually
+/// reach `AppBootstrapService`'s error path and `SplashScreen`'s "Try
+/// Again".
 ///
 /// Any other failure (disk full, permissions, ...) is deliberately
 /// rethrown rather than "recovered" from by deleting a possibly-healthy
 /// file — the opposite of `Nie kasuj postepu przy bledzie`.
 Database openSqliteWithCorruptionRecovery(File file) {
-  Database openFresh() {
-    final Database database = sqlite3.open(file.path);
-    // `sqlite3.open` only validates the file header; a quick_check forces
-    // the page structure to actually be read, so a corrupt body (not just
-    // a corrupt header) is caught here too, before this app ever writes
-    // to (and potentially further damages) the file.
-    database.select('PRAGMA quick_check');
-    return database;
-  }
-
   try {
-    return openFresh();
-  } on SqliteException catch (error) {
-    if (!_corruptionResultCodes.contains(error.resultCode)) rethrow;
+    return _openAndValidate(file);
+  } on _CorruptDatabaseException {
     _quarantine(file);
-    return openFresh();
+    // Deliberately not wrapped in another try/catch: a second failure
+    // right after quarantining means recovery itself didn't work, which
+    // must propagate as a real, unrecoverable error rather than retrying
+    // forever against a directory that's apparently unwritable.
+    return _openAndValidate(file);
   }
 }
 
+class _CorruptDatabaseException implements Exception {
+  _CorruptDatabaseException(this.message);
+  final String message;
+
+  @override
+  String toString() => 'Corrupt database file: $message';
+}
+
+/// Opens [file] and validates it, throwing [_CorruptDatabaseException] —
+/// never leaving a dangling open [Database] handle behind — for both ways
+/// corruption can surface (see [openSqliteWithCorruptionRecovery]'s doc
+/// comment). Any other exception is rethrown as-is.
+Database _openAndValidate(File file) {
+  Database? database;
+  try {
+    database = sqlite3.open(file.path);
+    final ResultSet result = database.select('PRAGMA quick_check');
+    final String status =
+        result.isEmpty ? 'ok' : result.first.values.first as String;
+    if (status != 'ok') {
+      throw _CorruptDatabaseException('PRAGMA quick_check reported: $status');
+    }
+    return database;
+  } on SqliteException catch (error) {
+    database?.dispose();
+    if (_corruptionResultCodes.contains(error.resultCode)) {
+      throw _CorruptDatabaseException(error.toString());
+    }
+    rethrow;
+  } on _CorruptDatabaseException {
+    database?.dispose();
+    rethrow;
+  }
+}
+
+/// Every file that makes up [file]'s on-disk state: the main database
+/// file plus its write-ahead-log, shared-memory, and rollback-journal
+/// sidecar files. A quarantine that only renamed the main file would
+/// leave a stale `-wal`/`-shm` behind at the original path — SQLite would
+/// then try to replay that stale WAL against the *new*, freshly-created
+/// database the moment it's opened, which is exactly the kind of
+/// silent-data-mixing a corruption recovery path must never risk.
+Iterable<File> _databaseFileAndSidecars(File file) sync* {
+  yield file;
+  yield File('${file.path}-wal');
+  yield File('${file.path}-shm');
+  yield File('${file.path}-journal');
+}
+
 void _quarantine(File file) {
-  if (!file.existsSync()) return;
   final String timestamp =
       DateTime.now().toUtc().millisecondsSinceEpoch.toString();
-  file.renameSync('${file.path}.corrupt.$timestamp');
+  for (final File entry in _databaseFileAndSidecars(file)) {
+    if (!entry.existsSync()) continue;
+    entry.renameSync('${entry.path}.corrupt.$timestamp');
+  }
 }
