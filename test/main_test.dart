@@ -11,7 +11,6 @@ import 'package:danb_rhs_prep/domain/repositories/fakes/in_memory_bootstrap_loca
 import 'package:danb_rhs_prep/features/content/data/exam_content_codec.dart';
 import 'package:danb_rhs_prep/features/content/domain/content_package.dart';
 import 'package:danb_rhs_prep/main.dart';
-import 'package:danb_rhs_prep/screens/login_screen.dart';
 import 'package:danb_rhs_prep/screens/main_shell.dart';
 import 'package:danb_rhs_prep/screens/welcome_screen.dart';
 import 'package:danb_rhs_prep/screens/splash_screen.dart';
@@ -111,7 +110,6 @@ void main() {
 
       expect(find.byType(SplashScreen), findsOneWidget);
       expect(find.text('DANB RHS Prep'), findsOneWidget);
-      expect(find.byType(LoginScreen), findsNothing);
       expect(find.byType(MainShell), findsNothing);
 
       // Still true after further time passes without bootstrap resolving
@@ -135,7 +133,6 @@ void main() {
 
       expect(find.byType(WelcomeScreen), findsOneWidget);
       expect(find.byType(MainShell), findsNothing);
-      expect(find.byType(LoginScreen), findsNothing);
     });
 
     testWidgets('onboarding complete routes directly to MainShell, Home',
@@ -148,7 +145,6 @@ void main() {
 
       expect(find.byType(MainShell), findsOneWidget);
       expect(find.text('Today'), findsOneWidget);
-      expect(find.byType(LoginScreen), findsNothing);
       expect(find.byType(WelcomeScreen), findsNothing);
     });
 

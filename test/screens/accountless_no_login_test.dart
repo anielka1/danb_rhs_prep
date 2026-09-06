@@ -8,19 +8,18 @@ import 'package:danb_rhs_prep/services/theme_mode_controller.dart';
 import 'package:danb_rhs_prep/theme/app_theme.dart';
 
 /// Reproduces and guards the "[REWORK] Usun Login i Sign Out z accountless
-/// flow" defect: this app has no working authentication (no account
-/// backend exists — LoginScreen's own "Get Started" button just enters
-/// MainShell regardless of what was typed), yet ProfileSettingsScreen
-/// showed both "Guest" / "Not signed in" *and* a live, enabled "Sign Out"
-/// button that pushed the user into that non-functional LoginScreen via
-/// `Navigator.pushNamedAndRemoveUntil`. There was never a session to sign
-/// out of, and the screen it led to couldn't sign the guest back in
-/// either — a real, reachable dead end for every accountless-flow user.
-///
-/// This differs from `test/main_test.dart`'s "Login never appears" group,
-/// which only covers the splash/bootstrap routing path (splash ->
-/// welcome/MainShell) — it never pumps ProfileSettingsScreen, so it did
-/// not catch this.
+/// flow" defect (PREP-645) and its PREP-652 follow-up: this app has no
+/// working authentication, so PREP-645 removed LoginScreen's production
+/// route and ProfileSettingsScreen's "Sign Out" button, but left
+/// `lib/screens/login_screen.dart` itself in the tree, reachable by
+/// nothing in the running app yet still carrying three of its own
+/// no-op-shaped disabled controls (Forgot Password, Google and Apple
+/// sign-in). PREP-652's interaction-control audit
+/// (docs/INTERACTION_CONTROL_AUDIT.md) found these as the only remaining
+/// no-op-shaped controls anywhere in the codebase, precisely because the
+/// screen containing them could never be reached at all — so this test
+/// now verifies the file itself, and every reference to it, are gone,
+/// not merely that production doesn't route to it.
 void main() {
   testWidgets(
       'ProfileSettingsScreen does not show a Sign Out control for the '
@@ -36,25 +35,32 @@ void main() {
     expect(find.text('Sign Out'), findsNothing);
   });
 
-  test('LoginScreen is not registered as a navigable production route', () {
-    final String main = File('lib/main.dart').readAsStringSync();
+  test('LoginScreen no longer exists anywhere in the codebase', () {
+    expect(
+      File('lib/screens/login_screen.dart').existsSync(),
+      isFalse,
+      reason: 'LoginScreen was permanently unreachable (see PREP-645): no '
+          'production route registered it, and nothing else constructed '
+          'it directly. PREP-652 removed the file itself, along with the '
+          'three no-op-shaped disabled controls it still carried (Forgot '
+          'Password, Google sign-in, Apple sign-in) — the last remaining '
+          'no-op-shaped controls found anywhere in the app by the '
+          'PREP-652 interaction-control audit.',
+    );
 
-    expect(
-      main,
-      isNot(contains('LoginScreen.route:')),
-      reason: 'LoginScreen must not be reachable from production '
-          'navigation in the accountless flow. The widget itself may stay '
-          'in the codebase for future real auth work, but registering it '
-          'as a named route is exactly the production entry point this '
-          'task removes — nothing else in the app currently constructs a '
-          'LoginScreen instance directly.',
-    );
-    expect(
-      main,
-      isNot(contains("import 'screens/login_screen.dart';")),
-      reason: 'main.dart should not import LoginScreen once it no longer '
-          'registers or otherwise references it — an unused import would '
-          'also fail flutter analyze.',
-    );
+    for (final entity in Directory('lib').listSync(recursive: true)) {
+      if (entity is! File || !entity.path.endsWith('.dart')) continue;
+      final String source = entity.readAsStringSync();
+      expect(
+        source.contains('login_screen.dart'),
+        isFalse,
+        reason: '${entity.path} still imports/exports login_screen.dart.',
+      );
+      expect(
+        source.contains('LoginScreen'),
+        isFalse,
+        reason: '${entity.path} still references the LoginScreen class.',
+      );
+    }
   });
 }

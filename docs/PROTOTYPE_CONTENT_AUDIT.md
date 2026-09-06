@@ -1,5 +1,16 @@
 # Prototype Content Audit
 
+## PREP-652 update (2026-09-06)
+
+`LoginScreen` (referenced throughout the rows below) no longer exists —
+it was fully unreachable from any real navigation path since PREP-645
+(no registered route, nothing else constructed it), and PREP-652 deleted
+the file itself along with its remaining disabled no-op controls (Forgot
+Password, Google, Apple sign-in) rather than leaving dead code with
+inert buttons in the tree. See
+[docs/INTERACTION_CONTROL_AUDIT.md](INTERACTION_CONTROL_AUDIT.md)'s own
+"PREP-652 changes" section for the full reasoning.
+
 ## PREP-650 update (2026-09-05)
 
 The Mock Exam rows and unreachable-results conclusion below are historical.

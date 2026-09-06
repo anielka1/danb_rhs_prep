@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:danb_rhs_prep/screens/home_screen.dart';
-import 'package:danb_rhs_prep/screens/login_screen.dart';
 import 'package:danb_rhs_prep/theme/app_theme.dart';
 
 // HomeScreen's Scaffold has a FloatingActionButton, and Scaffold uses its
@@ -57,47 +56,6 @@ void main() {
 
       expect(
         tester.getSemantics(find.bySemanticsLabel(RegExp('Wed'))),
-        matchesSemantics(
-            isButton: true,
-            isSelected: true,
-            hasSelectedState: true,
-            hasTapAction: true),
-      );
-      handle.dispose();
-    });
-  });
-
-  group('Login segmented toggle', () {
-    testWidgets('animation duration is zero when Reduce Motion is on',
-        (tester) async {
-      await tester
-          .pumpWidget(wrap(const LoginScreen(), disableAnimations: true));
-      final AnimatedContainer container = tester
-          .widget<AnimatedContainer>(find.byType(AnimatedContainer).first);
-      expect(container.duration, Duration.zero);
-    });
-
-    testWidgets(
-        'animation duration is the normal length when Reduce Motion is off',
-        (tester) async {
-      await tester.pumpWidget(wrap(const LoginScreen()));
-      final AnimatedContainer container = tester
-          .widget<AnimatedContainer>(find.byType(AnimatedContainer).first);
-      expect(container.duration, isNot(Duration.zero));
-    });
-
-    testWidgets(
-        'tapping Sign Up still updates the selected segment with Reduce Motion on',
-        (tester) async {
-      await tester
-          .pumpWidget(wrap(const LoginScreen(), disableAnimations: true));
-
-      final SemanticsHandle handle = tester.ensureSemantics();
-      await tester.tap(find.text('Sign Up'));
-      await tester.pump();
-
-      expect(
-        tester.getSemantics(find.bySemanticsLabel('Sign Up')),
         matchesSemantics(
             isButton: true,
             isSelected: true,
