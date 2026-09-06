@@ -359,14 +359,24 @@ class AppTheme {
       ),
       switchTheme: SwitchThemeData(
         // The thumb stays a constant contrasting surface color in both
-        // on/off states, matching the prototype; only the track switches
-        // between the primary and primary-container roles.
+        // on/off states, matching the prototype; the track switches
+        // between the primary and primary-container roles when enabled.
+        // A disabled switch (no backing feature yet — see
+        // ProfileSettingsScreen's Push Notifications/Sound Effects rows)
+        // falls back to the same `mutedForeground` role already used to
+        // dim disabled *text* elsewhere on that screen: without this, the
+        // track kept its full-vividness "on" color even when disabled,
+        // so a permanently-off preference was visually indistinguishable
+        // from a real, tappable, currently-enabled control.
         thumbColor: WidgetStateProperty.all(colorScheme.surfaceContainer),
-        trackColor: WidgetStateProperty.resolveWith(
-          (states) => states.contains(WidgetState.selected)
+        trackColor: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.disabled)) {
+            return semantic.mutedForeground.withValues(alpha: 0.35);
+          }
+          return states.contains(WidgetState.selected)
               ? colorScheme.primary
-              : colorScheme.primaryContainer,
-        ),
+              : colorScheme.primaryContainer;
+        }),
       ),
       iconButtonTheme: IconButtonThemeData(
         style: IconButton.styleFrom(
