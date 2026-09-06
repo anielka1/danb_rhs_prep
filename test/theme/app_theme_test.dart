@@ -303,4 +303,30 @@ void main() {
       expect(AppTapTarget.minInteractive, 44);
     });
   });
+
+  group('switchTheme', () {
+    test(
+        'a disabled switch track never matches either enabled (on/off) '
+        'color, in both themes', () {
+      for (final theme in [AppTheme.lightTheme, AppTheme.darkTheme]) {
+        final WidgetStateProperty<Color?> resolver =
+            theme.switchTheme.trackColor!;
+        final Color? disabled = resolver.resolve({WidgetState.disabled});
+        final Color? enabledOn = resolver.resolve({WidgetState.selected});
+        final Color? enabledOff = resolver.resolve(const {});
+
+        // ProfileSettingsScreen's Push Notifications/Sound Effects rows
+        // render a permanently-disabled Switch (no backing feature yet)
+        // right next to its own already-dimmed disabled *text* — if the
+        // track kept an enabled color, the switch alone would look like
+        // a real, currently-on, tappable control.
+        expect(disabled, isNot(enabledOn),
+            reason: 'a disabled switch must not look identical to an '
+                'enabled, currently-on switch (${theme.brightness})');
+        expect(disabled, isNot(enabledOff),
+            reason: 'a disabled switch must not look identical to an '
+                'enabled, currently-off switch (${theme.brightness})');
+      }
+    });
+  });
 }
