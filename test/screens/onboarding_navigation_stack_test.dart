@@ -235,7 +235,16 @@ void main() {
     expect(find.byType(ExamDateScreen), findsNothing);
     expect(find.byType(ExperienceLevelScreen), findsNothing);
 
-    final NavigatorState navigator = tester.state(find.byType(Navigator));
+    // Not `tester.state(find.byType(Navigator))`: MainShell now gives
+    // each tab its own nested Navigator (PREP-654), so more than one
+    // Navigator legitimately exists in the tree once it's mounted — this
+    // test cares specifically about the app's root Navigator (the one
+    // WelcomeScreen/ExamDateScreen/ExperienceLevelScreen/MainShell were
+    // all pushed on), reached explicitly via `rootNavigator: true`.
+    final NavigatorState navigator = Navigator.of(
+      tester.element(find.byType(MainShell)),
+      rootNavigator: true,
+    );
     expect(navigator.canPop(), isFalse,
         reason: 'MainShell must be the sole, root route after onboarding '
             'completes');
@@ -250,7 +259,12 @@ void main() {
     await chooseJustStartingAndContinue(tester);
     expect(find.byType(MainShell), findsOneWidget);
 
-    final NavigatorState navigator = tester.state(find.byType(Navigator));
+    // See the previous test's comment: explicitly the root Navigator, now
+    // that MainShell's own per-tab Navigators also exist in the tree.
+    final NavigatorState navigator = Navigator.of(
+      tester.element(find.byType(MainShell)),
+      rootNavigator: true,
+    );
     final bool popped = await navigator.maybePop();
     await tester.pumpAndSettle();
 
@@ -280,7 +294,12 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byType(MainShell), findsOneWidget);
-    final NavigatorState navigator = tester.state(find.byType(Navigator));
+    // See the first test's comment: explicitly the root Navigator, now
+    // that MainShell's own per-tab Navigators also exist in the tree.
+    final NavigatorState navigator = Navigator.of(
+      tester.element(find.byType(MainShell)),
+      rootNavigator: true,
+    );
     expect(navigator.canPop(), isFalse);
 
     // Session-only completion changes only the in-memory shared
@@ -657,7 +676,13 @@ void main() {
       // 7. Back from Main cannot reveal Welcome, Exam Date, or
       // Experience Level, and a no-op pop attempt does not itself
       // report a duplicate screen view.
-      final NavigatorState navigator = tester.state(find.byType(Navigator));
+      // See the earlier tests' comment on this same lookup: explicitly
+      // the root Navigator, now that MainShell's own per-tab Navigators
+      // also exist in the tree.
+      final NavigatorState navigator = Navigator.of(
+        tester.element(find.byType(MainShell)),
+        rootNavigator: true,
+      );
       final bool popped = await navigator.maybePop();
       await tester.pumpAndSettle();
       expect(popped, isFalse);

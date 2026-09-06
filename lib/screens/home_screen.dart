@@ -129,8 +129,15 @@ class _HomeScreenState extends State<HomeScreen> {
           child: CircleIconButton(
             icon: Icons.settings_rounded,
             semanticLabel: 'Settings',
-            onPressed: () =>
-                Navigator.of(context).pushNamed(ProfileSettingsScreen.route),
+            // The root navigator, not this tab's own nested one (see
+            // MainShell's doc comment on its per-tab Navigators): Settings
+            // is a cross-cutting concern, not part of Home's own stack,
+            // and pushing it on the root is what keeps it resolving
+            // through main.dart's named-route table (and therefore still
+            // visible to the app-level AnalyticsNavigatorObserver, which
+            // only observes the root navigator).
+            onPressed: () => Navigator.of(context, rootNavigator: true)
+                .pushNamed(ProfileSettingsScreen.route),
           ),
         ),
       ],

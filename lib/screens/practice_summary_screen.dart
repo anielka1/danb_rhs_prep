@@ -3,6 +3,7 @@ import '../features/questions/domain/question.dart';
 import '../practice_session/practice_session_controller.dart';
 import '../practice_session/practice_session_scope.dart';
 import '../theme/app_theme.dart';
+import '../widgets/app_bottom_navigation.dart';
 import '../widgets/app_scaffold.dart';
 import '../widgets/empty_state.dart';
 import '../widgets/primary_button.dart';
@@ -20,17 +21,28 @@ class PracticeSummaryScreen extends StatelessWidget {
   static const String route = '/practice-summary';
   const PracticeSummaryScreen({super.key});
 
-  /// Not `Navigator.pushNamedAndRemoveUntil(MainShell.route, ...)`: that
-  /// re-enters through `main.dart`'s static route table, which has no
-  /// `BootstrapSessionScope` ancestor at all (only `SplashScreen`'s and
-  /// `ExperienceLevelScreen`'s own `MaterialPageRoute` add one, and
-  /// removing every route would discard it) — `HomeScreen` reading
-  /// `BootstrapSessionScope.snapshotOf(context)` would then crash. Popping
-  /// back to the existing `MainShell` route already in the stack keeps
-  /// its original ancestor scope intact.
+  /// Not `Navigator.of(context).popUntil(...)`: this screen lives deep
+  /// inside whichever tab's own navigation stack it was actually reached
+  /// through (see `MainShell`'s doc comment on its per-tab `Navigator`s)
+  /// — normally Practice's, but a cross-tab shortcut (Home's "Start
+  /// Practicing") pushes the whole flow onto *that* caller's own stack
+  /// instead, since it never switches the active tab to do so. A plain
+  /// pop can only ever move within that same stack — it can never make
+  /// Home the visible tab. `MainShellScope` reaches the shell directly:
+  /// switch to Home, and reset `currentTab` (the tab actually being left,
+  /// not a hardcoded guess) back to its own root, so a later visit to it
+  /// starts fresh rather than resuming on this finished summary. Falls
+  /// back to a plain pop-to-root within this tab when no `MainShellScope`
+  /// is present (e.g. a test that pumps this screen without a real
+  /// `MainShell` ancestor) — still leaves the finished session behind,
+  /// just without also switching tabs.
   void _backToHome(BuildContext context) {
-    Navigator.of(context)
-        .popUntil((route) => route.settings.name == MainShell.route);
+    final MainShellController? shell = MainShellScope.maybeOf(context);
+    if (shell != null) {
+      shell.goToTab(AppTab.home, resetTab: shell.currentTab);
+    } else {
+      Navigator.of(context).popUntil((route) => route.isFirst);
+    }
   }
 
   List<_TopicScore> _breakdown(PracticeSessionController controller) {
@@ -187,8 +199,14 @@ class _NoActiveSessionView extends StatelessWidget {
         title: 'No active practice session',
         message: 'Start a session from Exam Info to begin practicing.',
         primaryActionLabel: 'Back to Home',
-        onPrimaryAction: () => Navigator.of(context)
-            .popUntil((route) => route.settings.name == MainShell.route),
+        onPrimaryAction: () {
+          final MainShellController? shell = MainShellScope.maybeOf(context);
+          if (shell != null) {
+            shell.goToTab(AppTab.home, resetTab: shell.currentTab);
+          } else {
+            Navigator.of(context).popUntil((route) => route.isFirst);
+          }
+        },
       ),
     );
   }
