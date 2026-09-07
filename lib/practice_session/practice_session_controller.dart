@@ -113,32 +113,39 @@ class PracticeSessionController {
         if (attempt.sessionId != session.id) continue;
         latestBySession[attempt.questionId] = attempt;
       }
-      final Map<String, Question> questionsById = {
-        for (final question in questions) question.id: question,
-      };
       for (final attempt in latestBySession.values) {
-        final Question? question = questionsById[attempt.questionId];
-        // A question no longer present in the currently-loaded content
-        // (e.g. retired) can't be reconstructed into a feedback snapshot
-        // — skip it rather than crash; this method is best-effort (see
-        // its own doc comment), and `firstUnanswered` below only ever
-        // looks up ids that are still in `questions` anyway.
-        if (question == null) continue;
-        // Reconstructed from *today's* question content, not whatever it
-        // was when originally answered — this app has no per-attempt
-        // content snapshot to reconstruct from exactly, so this is the
-        // same approximation the pre-PREP-668 code already made (reading
-        // `currentQuestion` directly); `correctAnswerId`/`isCorrect`
-        // still come from the persisted attempt, never recomputed, so a
-        // stale explanation is the only possible drift here, not a
-        // re-graded verdict.
+        // Rebuilt entirely from what this *attempt* itself persisted —
+        // never from `questions`/`currentQuestion` — so a resumed
+        // session's feedback is the exact same snapshot the original
+        // submitAnswer call evaluated, even if the question's content
+        // has since changed (e.g. a content update corrected its
+        // explanation or correct answer). See AnswerFeedback's and
+        // AnswerAttempt.questionVersion's own doc comments.
+        //
+        // An attempt recorded before schema 3 (PREP-668) has none of
+        // these three columns — there is no historical snapshot to
+        // recover for it, so it's skipped here rather than falling back
+        // to today's `Question` (which is exactly the bug this method
+        // used to have: silently mixing a historical isCorrect verdict
+        // with a possibly-different current explanation/correctAnswerId).
+        // This is a real, accepted gap for installs upgrading from
+        // schema < 3 only — every attempt recorded from schema 3 onward
+        // always has this data.
+        final int? questionVersion = attempt.questionVersion;
+        final String? correctAnswerId = attempt.correctAnswerId;
+        final String? explanation = attempt.explanation;
+        if (questionVersion == null ||
+            correctAnswerId == null ||
+            explanation == null) {
+          continue;
+        }
         controller._feedback[attempt.questionId] = AnswerFeedback(
-          questionId: question.id,
-          questionVersion: question.version,
+          questionId: attempt.questionId,
+          questionVersion: questionVersion,
           selectedAnswerId: attempt.selectedAnswerId,
-          correctAnswerId: question.correctAnswerId,
+          correctAnswerId: correctAnswerId,
           isCorrect: attempt.isCorrect,
-          explanation: question.explanation,
+          explanation: explanation,
           answeredAt: attempt.answeredAt,
           contentVersion: attempt.contentVersion,
         );
@@ -281,6 +288,13 @@ class PracticeSessionController {
             isCorrect: correct,
             answeredAt: answeredAt,
             contentVersion: session.contentVersion,
+            // Persisted redundantly alongside the attempt (PREP-668) so a
+            // later resume() can rebuild this exact AnswerFeedback from
+            // the attempt itself — see AnswerAttempt.questionVersion's
+            // own doc comment for why.
+            questionVersion: question.version,
+            correctAnswerId: question.correctAnswerId,
+            explanation: question.explanation,
           ),
         );
       } catch (_) {

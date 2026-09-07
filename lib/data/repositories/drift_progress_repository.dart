@@ -78,6 +78,9 @@ class DriftProgressRepository implements ProgressRepository {
               isCorrect: canonical.isCorrect,
               answeredAt: canonical.answeredAt,
               contentVersion: Value(canonical.contentVersion),
+              questionVersion: Value(canonical.questionVersion),
+              correctAnswerId: Value(canonical.correctAnswerId),
+              explanation: Value(canonical.explanation),
             ),
           );
       // Reuses questionState/saveQuestionState below rather than
@@ -151,6 +154,9 @@ class DriftProgressRepository implements ProgressRepository {
       isCorrect: row.isCorrect,
       answeredAt: row.answeredAt.toUtc(),
       contentVersion: row.contentVersion,
+      questionVersion: row.questionVersion,
+      correctAnswerId: row.correctAnswerId,
+      explanation: row.explanation,
     );
   }
 

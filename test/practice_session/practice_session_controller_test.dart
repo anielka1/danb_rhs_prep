@@ -286,9 +286,10 @@ void main() {
     });
 
     test(
-        'skips reconstructing feedback for an attempt whose question is '
-        'no longer in the resumed questions list, rather than crashing',
-        () async {
+        'still reconstructs feedback for an attempt whose question is no '
+        'longer in the resumed questions list — the snapshot lives on '
+        'the persisted attempt itself now, not on a live Question lookup '
+        '(PREP-668)', () async {
       final repo = InMemoryProgressRepository();
       final firstController = buildController(repo);
       final Question q0 = firstController.questions[0];
@@ -296,9 +297,7 @@ void main() {
 
       // Same session id (so the persisted attempt, recorded against it,
       // is still picked up) but a shorter questionIds/questions list, as
-      // if q0 had since been retired from the active content package —
-      // the persisted attempt for it still exists in history, but
-      // there's nothing left to rebuild its feedback snapshot from.
+      // if q0 had since been retired from the active content package.
       final shorterSession = PracticeSession(
         id: firstController.session.id,
         examId: firstController.session.examId,
@@ -314,7 +313,108 @@ void main() {
         progressRepository: repo,
       );
 
-      expect(resumed.feedbackFor(q0.id), isNull);
+      final AnswerFeedback? feedback = resumed.feedbackFor(q0.id);
+      expect(feedback, isNotNull,
+          reason: 'q0 is retired from `questions`, but its historical '
+              'feedback is entirely self-contained on the persisted '
+              'AnswerAttempt — there is nothing left to look up on a '
+              'live Question for it anymore');
+      expect(feedback!.correctAnswerId, q0.correctAnswerId);
+      expect(feedback.explanation, q0.explanation);
+      expect(feedback.isCorrect, isTrue);
+    });
+
+    test(
+        'skips reconstructing feedback for a legacy attempt recorded '
+        'before schema 3 (no persisted questionVersion/correctAnswerId/'
+        'explanation), rather than fabricating one from today\'s '
+        'Question (PREP-668)', () async {
+      final repo = InMemoryProgressRepository();
+      final firstController = buildController(repo);
+      final Question q0 = firstController.questions[0];
+      // Simulates a pre-PREP-668 row: recorded directly, bypassing
+      // submitAnswer, with none of the three new columns set.
+      await repo.recordAnswerAttempt(AnswerAttempt(
+        id: 'legacy-attempt',
+        examId: firstController.session.examId,
+        questionId: q0.id,
+        domainId: q0.domainId,
+        topicId: q0.topicId,
+        difficulty: q0.difficulty,
+        sessionId: firstController.session.id,
+        sessionType: AttemptSessionType.practice,
+        selectedAnswerId: q0.correctAnswerId,
+        isCorrect: true,
+        answeredAt: DateTime.utc(2025, 1, 1),
+      ));
+
+      final resumed = await PracticeSessionController.resume(
+        session: firstController.session,
+        questions: firstController.questions,
+        progressRepository: repo,
+      );
+
+      expect(resumed.feedbackFor(q0.id), isNull,
+          reason: 'no genuine snapshot exists for this legacy row — it '
+              'must not be silently filled in from the current Question');
+    });
+
+    test(
+        'resuming with a changed Question (different correctAnswerId, '
+        'explanation, and version, same id) still restores the exact '
+        'feedback the original answer was evaluated against, not the '
+        'new content — the immutable-snapshot guarantee holds across a '
+        'restart, not just within one live session (PREP-668 regression)',
+        () async {
+      final repo = InMemoryProgressRepository();
+      final firstController = buildController(repo);
+      final Question v1 = firstController.questions[0];
+
+      await firstController.submitAnswer(v1.correctAnswerId);
+
+      final Question v2 = Question(
+        id: v1.id,
+        examId: v1.examId,
+        domainId: v1.domainId,
+        topicId: v1.topicId,
+        questionText: v1.questionText,
+        answers: v1.answers,
+        // A different correct answer than v1 had.
+        correctAnswerId:
+            v1.answers.firstWhere((a) => a.id != v1.correctAnswerId).id,
+        explanation: 'A revised explanation, written after v1 was answered.',
+        references: v1.references,
+        difficulty: v1.difficulty,
+        status: v1.status,
+        version: v1.version + 1,
+        updatedAt: DateTime.utc(2026, 6, 1),
+        sourceVersion: v1.sourceVersion,
+        tags: v1.tags,
+      );
+      final List<Question> questionsWithV2 = [
+        v2,
+        ...firstController.questions.skip(1),
+      ];
+
+      final resumed = await PracticeSessionController.resume(
+        session: firstController.session,
+        questions: questionsWithV2,
+        progressRepository: repo,
+      );
+
+      final AnswerFeedback? feedback = resumed.feedbackFor(v1.id);
+      expect(feedback, isNotNull);
+      expect(feedback!.questionVersion, v1.version,
+          reason: 'must reflect the version actually evaluated, not v2\'s');
+      expect(feedback.correctAnswerId, v1.correctAnswerId,
+          reason: 'must reflect what was actually correct when answered, '
+              'not the (different) answer v2 now considers correct');
+      expect(feedback.explanation, v1.explanation,
+          reason: 'must reflect the explanation actually shown, not the '
+              'revised one v2 now carries');
+      expect(feedback.isCorrect, isTrue,
+          reason: 'the original verdict — answered v1\'s real correct '
+              'answer — must not be re-judged against v2');
     });
 
     test(

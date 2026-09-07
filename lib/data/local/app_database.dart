@@ -37,6 +37,22 @@ class AnswerAttempts extends Table {
   /// after the upgrade, with no value to backfill it from.
   TextColumn get contentVersion => text().nullable()();
 
+  /// Added in schema 3 (PREP-668) — see [AnswerAttempt.questionVersion]'s
+  /// doc comment. Nullable so every row from schema < 3 remains valid
+  /// after the upgrade, with no value to backfill it from;
+  /// `PracticeSessionController.resume` treats a row missing any of
+  /// these three new columns as having no reconstructable feedback
+  /// snapshot, rather than fabricating one from today's content.
+  IntColumn get questionVersion => integer().nullable()();
+
+  /// Added in schema 3 (PREP-668) — see
+  /// [AnswerAttempt.correctAnswerId]'s doc comment.
+  TextColumn get correctAnswerId => text().nullable()();
+
+  /// Added in schema 3 (PREP-668) — see [AnswerAttempt.explanation]'s
+  /// doc comment.
+  TextColumn get explanation => text().nullable()();
+
   @override
   Set<Column> get primaryKey => {id};
 }
@@ -209,35 +225,39 @@ class AppDatabase extends _$AppDatabase {
   // ignore: use_super_parameters
   AppDatabase.forTesting(QueryExecutor executor) : super(executor);
 
-  /// Schema version 2 (PREP-664): added `AnswerAttempts.contentVersion`
-  /// and `PracticeSessions.contentVersion`. Bumping this further requires
+  /// Schema version 3 (PREP-668): added
+  /// `AnswerAttempts.questionVersion`/`correctAnswerId`/`explanation`
+  /// (schema 2, PREP-664, added `AnswerAttempts.contentVersion` and
+  /// `PracticeSessions.contentVersion`). Bumping this further requires
   /// adding a matching branch to [migration]'s `onUpgrade` (see its doc
   /// comment) and a test proving the upgrade preserves existing rows;
-  /// see `test/data/local/app_database_migration_v2_test.dart` (the real
-  /// migration, seeded from a frozen schema-1 snapshot) and
-  /// `test/data/local/app_database_migration_test.dart` (the same
-  /// `addColumn`-preserves-rows mechanism, proven generically against a
-  /// disposable fixture schema before it was ever used for real).
+  /// see `test/data/local/app_database_migration_v2_test.dart` and
+  /// `test/data/local/app_database_migration_v3_test.dart` (the real
+  /// migrations, each seeded from a frozen snapshot of the schema it
+  /// starts from) and `test/data/local/app_database_migration_test.dart`
+  /// (the same `addColumn`-preserves-rows mechanism, proven generically
+  /// against a disposable fixture schema before it was ever used for
+  /// real).
   ///
   /// **Rollback plan for a defect discovered after release (PREP-665):**
   /// forward-fix only, always keeping (or raising) this schema version —
   /// never revert to an app build declaring a lower `schemaVersion` than
   /// what may already be on a user's device. Once any device has opened
-  /// a schema-2 database, its on-disk `PRAGMA user_version` is 2; an
-  /// older app build that only declares `schemaVersion == 1` has no
+  /// a schema-N database, its on-disk `PRAGMA user_version` is N; an
+  /// older app build that only declares a lower `schemaVersion` has no
   /// defined behavior for opening a file whose stored version is already
   /// higher than that (drift's migration system is one-directional, by
   /// design — [onUpgrade] only ever runs for `from < to`), so "just
-  /// revert the PR" is not a safe rollback here. Concretely: both columns
-  /// [migration] added for schema 2 are nullable and purely additive, so
-  /// a corrective change never needs to remove them — it can always ship
-  /// as a normal forward fix at the *same* schema version (if the defect
-  /// is in application code, not the schema itself) or a new
-  /// `onUpgrade` branch to a higher version (if the schema itself needs
-  /// correcting), per this class's own "never erase progress on
-  /// error/migration" rule below.
+  /// revert the PR" is not a safe rollback here. Concretely: every column
+  /// [migration] has ever added is nullable and purely additive, so a
+  /// corrective change never needs to remove one — it can always ship as
+  /// a normal forward fix at the *same* schema version (if the defect is
+  /// in application code, not the schema itself) or a new `onUpgrade`
+  /// branch to a higher version (if the schema itself needs correcting),
+  /// per this class's own "never erase progress on error/migration" rule
+  /// below.
   @override
-  int get schemaVersion => 2;
+  int get schemaVersion => 3;
 
   @override
   MigrationStrategy get migration {
@@ -249,6 +269,29 @@ class AppDatabase extends _$AppDatabase {
           // columns' own doc comments.
           await m.addColumn(answerAttempts, answerAttempts.contentVersion);
           await m.addColumn(practiceSessions, practiceSessions.contentVersion);
+          return;
+        }
+        if (from == 1 && to == 3) {
+          // A device that skipped straight from 1 to 3 (e.g. was offline
+          // across a release) needs both upgrades applied, not just the
+          // second.
+          await m.addColumn(answerAttempts, answerAttempts.contentVersion);
+          await m.addColumn(practiceSessions, practiceSessions.contentVersion);
+          await m.addColumn(answerAttempts, answerAttempts.questionVersion);
+          await m.addColumn(answerAttempts, answerAttempts.correctAnswerId);
+          await m.addColumn(answerAttempts, answerAttempts.explanation);
+          return;
+        }
+        if (from == 2 && to == 3) {
+          // Nullable, no backfill possible — see all three new columns'
+          // own doc comments: a pre-existing row has no recorded
+          // question snapshot to backfill this from, and
+          // `PracticeSessionController.resume` is written to treat that
+          // absence as "no reconstructable feedback" rather than
+          // fabricating one from today's content.
+          await m.addColumn(answerAttempts, answerAttempts.questionVersion);
+          await m.addColumn(answerAttempts, answerAttempts.correctAnswerId);
+          await m.addColumn(answerAttempts, answerAttempts.explanation);
           return;
         }
         // Every schema jump this database has ever needed to handle is

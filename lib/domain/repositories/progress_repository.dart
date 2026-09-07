@@ -54,6 +54,9 @@ AnswerAttempt canonicalizeAnswerAttempt(AnswerAttempt attempt) {
     isCorrect: attempt.isCorrect,
     answeredAt: canonicalAnsweredAt(attempt.answeredAt),
     contentVersion: attempt.contentVersion,
+    questionVersion: attempt.questionVersion,
+    correctAnswerId: attempt.correctAnswerId,
+    explanation: attempt.explanation,
   );
 }
 

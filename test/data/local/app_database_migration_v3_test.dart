@@ -6,13 +6,17 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:danb_rhs_prep/data/local/app_database.dart';
 
-import 'schema_v1_snapshot.dart';
+import 'schema_v2_snapshot.dart';
 
-/// Proves the *real* schema 1 -> 2 migration (PREP-664: added
-/// `contentVersion` to `AnswerAttempts`/`PracticeSessions`) against a
-/// realistic schema-1 database file, seeded via `schema_v1_snapshot.dart`
-/// — not a parallel fixture's own migration logic, the actual
-/// `AppDatabase.migration` code every real user's upgrade runs through.
+/// Proves the *real* schema 2 -> 3 migration (PREP-668: added
+/// `questionVersion`/`correctAnswerId`/`explanation` to `AnswerAttempts`,
+/// so `PracticeSessionController.resume` can rebuild the exact
+/// `AnswerFeedback` an attempt was originally evaluated against, instead
+/// of reconstructing it from whatever `Question` content happens to be
+/// loaded when the app is reopened) against a realistic schema-2
+/// database file, seeded via `schema_v2_snapshot.dart` — not a parallel
+/// fixture's own migration logic, the actual `AppDatabase.migration`
+/// code every real user's upgrade runs through.
 ///
 /// Complements (does not replace) `app_database_test.dart`'s "migration
 /// safety net" group, which proves an *undefined* jump still throws.
@@ -21,7 +25,7 @@ void main() {
   late File dbFile;
 
   setUp(() {
-    tempDir = Directory.systemTemp.createTempSync('app_database_migration_v2');
+    tempDir = Directory.systemTemp.createTempSync('app_database_migration_v3');
     dbFile = File('${tempDir.path}/app.sqlite');
   });
 
@@ -30,12 +34,12 @@ void main() {
   });
 
   test(
-      'upgrading a real schema-1 database to schema 2 preserves every '
-      'existing row across every table, with the two new columns '
+      'upgrading a real schema-2 database to schema 3 preserves every '
+      'existing row across every table, with the three new columns '
       'defaulting to null', () async {
-    final SchemaV1Snapshot v1 = SchemaV1Snapshot(NativeDatabase(dbFile));
-    await v1.into(v1.answerAttemptsV1).insert(
-          AnswerAttemptsV1Companion.insert(
+    final SchemaV2Snapshot v2 = SchemaV2Snapshot(NativeDatabase(dbFile));
+    await v2.into(v2.answerAttemptsV2).insert(
+          AnswerAttemptsV2Companion.insert(
             id: 'attempt-1',
             examId: 'danb-rhs',
             questionId: 'q1',
@@ -47,10 +51,11 @@ void main() {
             selectedAnswerId: 'a1',
             isCorrect: true,
             answeredAt: DateTime.utc(2026, 1, 1),
+            contentVersion: const Value('2026.1'),
           ),
         );
-    await v1.into(v1.practiceSessionsV1).insert(
-          PracticeSessionsV1Companion.insert(
+    await v2.into(v2.practiceSessionsV2).insert(
+          PracticeSessionsV2Companion.insert(
             id: 'session-1',
             examId: 'danb-rhs',
             mode: 'quickPractice',
@@ -59,8 +64,8 @@ void main() {
             startedAt: DateTime.utc(2026, 1, 1),
           ),
         );
-    await v1.into(v1.userProfilesV1).insert(
-          UserProfilesV1Companion.insert(
+    await v2.into(v2.userProfilesV2).insert(
+          UserProfilesV2Companion.insert(
             examId: 'danb-rhs',
             experienceLevel: 'justStarting',
             examDatePrecision: 'notScheduled',
@@ -72,33 +77,38 @@ void main() {
             updatedAt: DateTime.utc(2026, 1, 1),
           ),
         );
-    await v1.close();
+    await v2.close();
 
-    final AppDatabase v2 = AppDatabase.forTesting(NativeDatabase(dbFile));
-    addTearDown(v2.close);
+    final AppDatabase v3 = AppDatabase.forTesting(NativeDatabase(dbFile));
+    addTearDown(v3.close);
 
-    final attemptRows = await v2.select(v2.answerAttempts).get();
+    final attemptRows = await v3.select(v3.answerAttempts).get();
     expect(attemptRows, hasLength(1));
     expect(attemptRows.single.id, 'attempt-1');
     expect(attemptRows.single.isCorrect, isTrue);
-    expect(attemptRows.single.contentVersion, isNull,
-        reason: 'a schema-1 row has no content version to backfill — it '
-            'must default to null, never a fabricated value');
+    expect(attemptRows.single.contentVersion, '2026.1',
+        reason: 'a pre-existing schema-2 column must survive untouched');
+    expect(attemptRows.single.questionVersion, isNull,
+        reason: 'a schema-2 row has no question-version snapshot to '
+            'backfill — it must default to null, never a fabricated '
+            'value that could be mistaken for a genuine historical '
+            'snapshot');
+    expect(attemptRows.single.correctAnswerId, isNull);
+    expect(attemptRows.single.explanation, isNull);
 
-    final sessionRows = await v2.select(v2.practiceSessions).get();
+    final sessionRows = await v3.select(v3.practiceSessions).get();
     expect(sessionRows, hasLength(1));
     expect(sessionRows.single.id, 'session-1');
-    expect(sessionRows.single.contentVersion, isNull);
 
-    final profileRows = await v2.select(v2.userProfiles).get();
+    final profileRows = await v3.select(v3.userProfiles).get();
     expect(profileRows, hasLength(1),
         reason: 'a table untouched by this migration must still survive '
             'the upgrade intact');
     expect(profileRows.single.examId, 'danb-rhs');
 
-    // The new column is genuinely writable post-migration, not just
-    // present-but-inert.
-    await v2.into(v2.answerAttempts).insert(
+    // The three new columns are genuinely writable post-migration, not
+    // just present-but-inert.
+    await v3.into(v3.answerAttempts).insert(
           AnswerAttemptsCompanion.insert(
             id: 'attempt-2',
             examId: 'danb-rhs',
@@ -111,13 +121,17 @@ void main() {
             selectedAnswerId: 'a2',
             isCorrect: false,
             answeredAt: DateTime.utc(2026, 1, 2),
-            contentVersion: const Value('2026.1'),
+            questionVersion: const Value(3),
+            correctAnswerId: const Value('a1'),
+            explanation: const Value('Because reasons.'),
           ),
         );
-    final reloaded = await (v2.select(v2.answerAttempts)
+    final reloaded = await (v3.select(v3.answerAttempts)
           ..where((t) => t.id.equals('attempt-2')))
         .getSingle();
-    expect(reloaded.contentVersion, '2026.1');
+    expect(reloaded.questionVersion, 3);
+    expect(reloaded.correctAnswerId, 'a1');
+    expect(reloaded.explanation, 'Because reasons.');
   });
 
   test(
@@ -126,11 +140,6 @@ void main() {
     final AppDatabase db = AppDatabase.forTesting(NativeDatabase(dbFile));
     addTearDown(db.close);
 
-    // Updated from 2 to 3 by PREP-668 — this test only ever meant "a
-    // fresh install skips onUpgrade entirely"; the literal here tracks
-    // whatever `AppDatabase.schemaVersion` currently is, the same way
-    // `app_database_test.dart`'s own "fresh install schema version is
-    // N" test does, and needs the same one-line update on a future bump.
     expect(db.schemaVersion, 3);
     final rows = await db.select(db.answerAttempts).get();
     expect(rows, isEmpty);
