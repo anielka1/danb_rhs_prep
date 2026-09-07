@@ -3,8 +3,11 @@ import 'package:flutter/material.dart';
 import '../bootstrap/app_bootstrap_service.dart';
 import '../bootstrap/bootstrap_session_controller.dart';
 import '../bootstrap/bootstrap_session_scope.dart';
+import '../domain/models/exam_date_selection.dart';
 import '../domain/models/experience_level.dart';
+import '../domain/models/user_profile.dart';
 import '../domain/repositories/bootstrap_local_store.dart';
+import '../domain/repositories/user_settings_repository.dart';
 import '../services/analytics_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/app_scaffold.dart';
@@ -20,6 +23,10 @@ import 'main_shell.dart';
 /// [_ExperienceLevelScreenState._continue] and documented there as
 /// temporary, exactly like the one `ExamDateScreen` used to own before
 /// this screen existed.
+///
+/// Also where a real, durable [UserProfile] gets saved (PREP-663), once
+/// `onboardingComplete` itself has — see
+/// [_ExperienceLevelScreenState._saveProfileBestEffort].
 class ExperienceLevelScreen extends StatefulWidget {
   static const String route = '/onboarding/experience-level';
 
@@ -27,16 +34,35 @@ class ExperienceLevelScreen extends StatefulWidget {
     super.key,
     required this.localStore,
     this.analytics = const NoOpAnalyticsService(),
+    this.userSettingsRepository,
+    this.now,
   });
 
   final BootstrapLocalStore localStore;
   final AnalyticsService analytics;
+
+  /// A real `DriftUserSettingsRepository` in production (`main.dart`'s
+  /// default), forwarded here from `WelcomeScreen`/`ExamDateScreen`. When
+  /// non-null, a successful onboarding completion (PREP-663) also saves a
+  /// real [UserProfile] through it — see [_ExperienceLevelScreenState._continue].
+  /// Null skips that save entirely (never fabricates a profile): tests
+  /// that don't care about it, and any future caller with nothing to
+  /// persist through.
+  final UserSettingsRepository? userSettingsRepository;
+
+  /// Test-only injection point for a deterministic "now", used as both
+  /// [UserProfile.createdAt] (for a brand new profile) and
+  /// [UserProfile.updatedAt]. Null in production, where the [State]
+  /// defaults to [DateTime.now].
+  final DateTime Function()? now;
 
   @override
   State<ExperienceLevelScreen> createState() => _ExperienceLevelScreenState();
 }
 
 class _ExperienceLevelScreenState extends State<ExperienceLevelScreen> {
+  late final DateTime Function() _now = widget.now ?? DateTime.now;
+
   ExperienceLevel? _selection;
 
   /// Set once, from `BootstrapSessionScope`'s restored
@@ -127,6 +153,13 @@ class _ExperienceLevelScreenState extends State<ExperienceLevelScreen> {
     if (!mounted) return;
     if (completed) {
       controller.update(controller.snapshot.copyWith(onboardingComplete: true));
+      await _saveProfileBestEffort(
+        examId: controller.snapshot.selectedExamId,
+        experienceLevel: selection,
+        examDateSelection: controller.snapshot.examDateSelection,
+        themePreference: controller.snapshot.themePreference,
+      );
+      if (!mounted) return;
       _navigateToMainShell(controller);
     } else {
       // The experience-level selection is already durably saved (and
@@ -137,6 +170,41 @@ class _ExperienceLevelScreenState extends State<ExperienceLevelScreen> {
         _busy = false;
         _completionSaveFailed = true;
       });
+    }
+  }
+
+  /// Persists a real [UserProfile] (PREP-663) reflecting the answers
+  /// onboarding just collected, through [widget.userSettingsRepository] —
+  /// completely best-effort, mirroring `PracticeSessionController`'s
+  /// established pattern elsewhere in this codebase: a missing repository
+  /// or a failed write must never block or roll back the
+  /// `onboardingComplete` flag already durably saved above, since that
+  /// flag — not this profile — is what actually gates entering the app.
+  /// [examDateSelection] is only ever null here if this screen was
+  /// somehow reached without going through `ExamDateScreen` first (never
+  /// true in the real app, but guarded rather than assumed); the save is
+  /// silently skipped in that case too, exactly like a null repository.
+  Future<void> _saveProfileBestEffort({
+    required String examId,
+    required ExperienceLevel experienceLevel,
+    required ExamDateSelection? examDateSelection,
+    required ThemePreference themePreference,
+  }) async {
+    final UserSettingsRepository? repository = widget.userSettingsRepository;
+    if (repository == null || examDateSelection == null) return;
+    try {
+      final UserProfile? existing = await repository.loadProfile(examId);
+      final UserProfile profile = UserProfile.fromOnboarding(
+        examId: examId,
+        experienceLevel: experienceLevel,
+        examDateSelection: examDateSelection,
+        themePreference: themePreference,
+        now: _now(),
+        existing: existing,
+      );
+      await repository.saveProfile(profile);
+    } on Object {
+      // Best-effort: see this method's own doc comment.
     }
   }
 

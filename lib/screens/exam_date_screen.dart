@@ -6,6 +6,7 @@ import '../bootstrap/bootstrap_session_scope.dart';
 import '../domain/models/exam_date_precision.dart';
 import '../domain/models/exam_date_selection.dart';
 import '../domain/repositories/bootstrap_local_store.dart';
+import '../domain/repositories/user_settings_repository.dart';
 import '../services/analytics_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/app_scaffold.dart';
@@ -29,11 +30,17 @@ class ExamDateScreen extends StatefulWidget {
     super.key,
     required this.localStore,
     this.analytics = const NoOpAnalyticsService(),
+    this.userSettingsRepository,
     this.now,
   });
 
   final BootstrapLocalStore localStore;
   final AnalyticsService analytics;
+
+  /// Forwarded straight to [ExperienceLevelScreen] — this screen itself
+  /// never reads or writes through it. See that screen's own doc comment
+  /// for what it enables.
+  final UserSettingsRepository? userSettingsRepository;
 
   /// Test-only injection point for a deterministic "today". Null in
   /// production, where the [State] defaults to [DateTime.now] — nothing
@@ -205,6 +212,7 @@ class _ExamDateScreenState extends State<ExamDateScreen> {
           child: ExperienceLevelScreen(
             localStore: widget.localStore,
             analytics: widget.analytics,
+            userSettingsRepository: widget.userSettingsRepository,
           ),
         ),
       ),

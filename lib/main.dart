@@ -191,14 +191,17 @@ class _DanbRhsPrepAppState extends State<DanbRhsPrepApp> {
             WelcomeScreen.route: (_) => WelcomeScreen(
                   localStore: _localStore,
                   analytics: widget.analytics,
+                  userSettingsRepository: _userSettingsRepository,
                 ),
             ExamDateScreen.route: (_) => ExamDateScreen(
                   localStore: _localStore,
                   analytics: widget.analytics,
+                  userSettingsRepository: _userSettingsRepository,
                 ),
             ExperienceLevelScreen.route: (_) => ExperienceLevelScreen(
                   localStore: _localStore,
                   analytics: widget.analytics,
+                  userSettingsRepository: _userSettingsRepository,
                 ),
             ExamOverviewScreen.route: (_) => const ExamOverviewScreen(),
             PracticeQuestionScreen.route: (_) => const PracticeQuestionScreen(),

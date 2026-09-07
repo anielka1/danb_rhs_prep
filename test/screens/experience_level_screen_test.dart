@@ -1,18 +1,24 @@
 import 'dart:async';
 
+import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:danb_rhs_prep/bootstrap/app_bootstrap_service.dart';
 import 'package:danb_rhs_prep/bootstrap/bootstrap_session_controller.dart';
 import 'package:danb_rhs_prep/bootstrap/bootstrap_session_scope.dart';
+import 'package:danb_rhs_prep/data/local/app_database.dart';
+import 'package:danb_rhs_prep/data/repositories/drift_user_settings_repository.dart';
 import 'package:danb_rhs_prep/domain/models/entitlement.dart';
+import 'package:danb_rhs_prep/domain/models/exam_date_precision.dart';
 import 'package:danb_rhs_prep/domain/models/exam_date_selection.dart';
 import 'package:danb_rhs_prep/domain/models/experience_level.dart';
 import 'package:danb_rhs_prep/domain/models/readiness_snapshot.dart';
 import 'package:danb_rhs_prep/domain/models/user_profile.dart';
 import 'package:danb_rhs_prep/domain/repositories/bootstrap_local_store.dart';
 import 'package:danb_rhs_prep/domain/repositories/fakes/in_memory_bootstrap_local_store.dart';
+import 'package:danb_rhs_prep/domain/repositories/fakes/in_memory_user_settings_repository.dart';
+import 'package:danb_rhs_prep/domain/repositories/user_settings_repository.dart';
 import 'package:danb_rhs_prep/features/content/domain/content_package.dart';
 import 'package:danb_rhs_prep/features/exams/domain/exam_config.dart';
 import 'package:danb_rhs_prep/screens/experience_level_screen.dart';
@@ -72,7 +78,11 @@ ExamConfig _fakeExamConfig() {
   );
 }
 
-BootstrapReady _readySnapshot({ExperienceLevel? experienceLevel}) {
+BootstrapReady _readySnapshot({
+  ExperienceLevel? experienceLevel,
+  ExamDateSelection? examDateSelection,
+  ThemePreference themePreference = ThemePreference.system,
+}) {
   return BootstrapReady(
     selectedExamId: 'danb_rhs',
     contentPackage: ContentPackage(
@@ -83,11 +93,11 @@ BootstrapReady _readySnapshot({ExperienceLevel? experienceLevel}) {
       questions: const [],
     ),
     profile: null,
-    themePreference: ThemePreference.system,
+    themePreference: themePreference,
     readinessSnapshot: null,
     entitlement: Entitlement.free(lastVerifiedAt: DateTime.utc(2026, 1, 1)),
     onboardingComplete: false,
-    examDateSelection: null,
+    examDateSelection: examDateSelection,
     experienceLevel: experienceLevel,
   );
 }
@@ -184,13 +194,24 @@ void main() {
     required BootstrapLocalStore localStore,
     ExperienceLevel? restoredSelection,
     ThemeData? theme,
+    UserSettingsRepository? userSettingsRepository,
+    ExamDateSelection? examDateSelection,
+    ThemePreference themePreference = ThemePreference.system,
+    DateTime Function()? now,
   }) {
     return MaterialApp(
       theme: theme ?? AppTheme.lightTheme,
       home: BootstrapSessionScope(
-        controller: BootstrapSessionController(
-            _readySnapshot(experienceLevel: restoredSelection)),
-        child: ExperienceLevelScreen(localStore: localStore),
+        controller: BootstrapSessionController(_readySnapshot(
+          experienceLevel: restoredSelection,
+          examDateSelection: examDateSelection,
+          themePreference: themePreference,
+        )),
+        child: ExperienceLevelScreen(
+          localStore: localStore,
+          userSettingsRepository: userSettingsRepository,
+          now: now,
+        ),
       ),
     );
   }
@@ -450,4 +471,185 @@ void main() {
       expect(lastChoiceY, lessThan(continueY));
     });
   });
+
+  group('durable UserProfile (PREP-663)', () {
+    testWidgets(
+        'fresh install: completing onboarding saves a real UserProfile '
+        'reflecting the exam date, experience level, and theme already '
+        'known this session', (tester) async {
+      final userSettingsRepository = InMemoryUserSettingsRepository();
+      final examDateSelection = ExamDateSelection(
+        precision: ExamDatePrecision.exact,
+        date: DateTime(2026, 6, 1),
+      );
+
+      await tester.pumpWidget(wrap(
+        localStore: InMemoryBootstrapLocalStore(),
+        userSettingsRepository: userSettingsRepository,
+        examDateSelection: examDateSelection,
+        themePreference: ThemePreference.dark,
+        now: () => DateTime.utc(2026, 3, 1),
+      ));
+      await tester.tap(find.text('Just starting'));
+      await tester.pump();
+      await tester.tap(find.text('Continue'));
+      await tester.pumpAndSettle();
+
+      final UserProfile? saved =
+          await userSettingsRepository.loadProfile('danb_rhs');
+      expect(saved, isNotNull);
+      expect(saved!.experienceLevel, ExperienceLevel.justStarting);
+      expect(saved.examDatePrecision, ExamDatePrecision.exact);
+      expect(saved.examDate, DateTime.utc(2026, 6, 1));
+      expect(saved.themePreference, ThemePreference.dark);
+      expect(saved.onboardingComplete, isTrue);
+      expect(saved.dailyGoalQuestions, kDefaultDailyGoalQuestions);
+      expect(saved.notificationsEnabled, isFalse);
+      expect(saved.createdAt, DateTime.utc(2026, 3, 1));
+      expect(saved.updatedAt, DateTime.utc(2026, 3, 1));
+      expect(find.byType(MainShell), findsOneWidget);
+    });
+
+    testWidgets(
+        'a null userSettingsRepository (default, matching every other '
+        'test in this file) skips the save entirely — no crash, no '
+        'behavior change from before PREP-663', (tester) async {
+      await tester.pumpWidget(wrap(
+        localStore: InMemoryBootstrapLocalStore(),
+        examDateSelection: ExamDateSelection(
+          precision: ExamDatePrecision.notScheduled,
+        ),
+      ));
+      await tester.tap(find.text('Just starting'));
+      await tester.pump();
+      await tester.tap(find.text('Continue'));
+      await tester.pumpAndSettle();
+
+      expect(tester.takeException(), isNull);
+      expect(find.byType(MainShell), findsOneWidget);
+    });
+
+    testWidgets(
+        'a saveProfile failure is best-effort: onboarding still completes '
+        'and reaches MainShell normally, exactly like a null repository',
+        (tester) async {
+      final userSettingsRepository = _ThrowingSaveUserSettingsRepository();
+
+      await tester.pumpWidget(wrap(
+        localStore: InMemoryBootstrapLocalStore(),
+        userSettingsRepository: userSettingsRepository,
+        examDateSelection: ExamDateSelection(
+          precision: ExamDatePrecision.notScheduled,
+        ),
+      ));
+      await tester.tap(find.text('Just starting'));
+      await tester.pump();
+      await tester.tap(find.text('Continue'));
+      await tester.pumpAndSettle();
+
+      expect(tester.takeException(), isNull);
+      expect(find.byType(MainShell), findsOneWidget);
+      expect(userSettingsRepository.saveAttempts, 1);
+    });
+
+    testWidgets(
+        're-running onboarding (e.g. local storage was reset without the '
+        'database also being cleared) keeps the existing profile\'s '
+        'createdAt and daily goal, updating the answers onboarding does '
+        'collect', (tester) async {
+      final existing = UserProfile(
+        examId: 'danb_rhs',
+        experienceLevel: ExperienceLevel.justStarting,
+        examDatePrecision: ExamDatePrecision.notScheduled,
+        dailyGoalQuestions: 30,
+        notificationsEnabled: true,
+        themePreference: ThemePreference.light,
+        onboardingComplete: true,
+        createdAt: DateTime.utc(2026, 1, 1),
+        updatedAt: DateTime.utc(2026, 1, 1),
+      );
+      final userSettingsRepository =
+          InMemoryUserSettingsRepository(seedProfile: existing);
+
+      await tester.pumpWidget(wrap(
+        localStore: InMemoryBootstrapLocalStore(),
+        userSettingsRepository: userSettingsRepository,
+        examDateSelection: ExamDateSelection(
+          precision: ExamDatePrecision.exact,
+          date: DateTime(2026, 7, 1),
+        ),
+        themePreference: ThemePreference.dark,
+        now: () => DateTime.utc(2026, 4, 1),
+      ));
+      await tester.tap(find.text('Taking the exam again'));
+      await tester.pump();
+      await tester.tap(find.text('Continue'));
+      await tester.pumpAndSettle();
+
+      final UserProfile? saved =
+          await userSettingsRepository.loadProfile('danb_rhs');
+      expect(saved!.createdAt, DateTime.utc(2026, 1, 1),
+          reason: 'the original creation time must survive re-onboarding');
+      expect(saved.dailyGoalQuestions, 30,
+          reason: 'onboarding does not collect a daily goal — the prior '
+              'answer must survive re-onboarding, not reset to the default');
+      expect(saved.experienceLevel, ExperienceLevel.retakingExam);
+      expect(saved.examDate, DateTime.utc(2026, 7, 1));
+      expect(saved.themePreference, ThemePreference.dark);
+      expect(saved.updatedAt, DateTime.utc(2026, 4, 1));
+    });
+
+    testWidgets(
+        'restart durability: a profile saved through a real, database-backed '
+        'DriftUserSettingsRepository is readable back by a brand new '
+        'repository instance over the same database — not merely held in '
+        'the widget\'s own in-memory object', (tester) async {
+      final database = AppDatabase.forTesting(NativeDatabase.memory());
+      addTearDown(database.close);
+      final userSettingsRepository = DriftUserSettingsRepository(database);
+
+      await tester.pumpWidget(wrap(
+        localStore: InMemoryBootstrapLocalStore(),
+        userSettingsRepository: userSettingsRepository,
+        examDateSelection: ExamDateSelection(
+          precision: ExamDatePrecision.approximate,
+          date: DateTime(2026, 8, 1),
+        ),
+        now: () => DateTime.utc(2026, 3, 15),
+      ));
+      await tester.tap(find.text('Studying already'));
+      await tester.pump();
+      await tester.tap(find.text('Continue'));
+      await tester.pumpAndSettle();
+
+      // A fresh repository instance over the *same* database — the way
+      // the next app launch's AppBootstrapService would construct one —
+      // proves this is durable, not an artifact of reusing one Dart
+      // object across the save and the read.
+      final reloaded = DriftUserSettingsRepository(database);
+      final UserProfile? saved = await reloaded.loadProfile('danb_rhs');
+
+      expect(saved, isNotNull);
+      expect(saved!.experienceLevel, ExperienceLevel.studyingAlready);
+      expect(saved.examDatePrecision, ExamDatePrecision.approximate);
+      expect(saved.examDate, DateTime.utc(2026, 8, 1));
+      expect(saved.onboardingComplete, isTrue);
+    });
+  });
+}
+
+/// [saveProfile] always fails; [loadProfile] always returns null (no
+/// existing profile) — proves a persistence failure never blocks
+/// onboarding completion.
+class _ThrowingSaveUserSettingsRepository implements UserSettingsRepository {
+  int saveAttempts = 0;
+
+  @override
+  Future<UserProfile?> loadProfile(String examId) async => null;
+
+  @override
+  Future<void> saveProfile(UserProfile profile) async {
+    saveAttempts++;
+    throw StateError('disk full');
+  }
 }

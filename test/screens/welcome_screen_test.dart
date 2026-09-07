@@ -7,12 +7,17 @@ import 'package:danb_rhs_prep/bootstrap/app_bootstrap_service.dart';
 import 'package:danb_rhs_prep/bootstrap/bootstrap_session_controller.dart';
 import 'package:danb_rhs_prep/bootstrap/bootstrap_session_scope.dart';
 import 'package:danb_rhs_prep/domain/models/entitlement.dart';
+import 'package:danb_rhs_prep/domain/models/experience_level.dart';
+import 'package:danb_rhs_prep/domain/repositories/bootstrap_local_store.dart';
 import 'package:danb_rhs_prep/domain/repositories/fakes/in_memory_bootstrap_local_store.dart';
+import 'package:danb_rhs_prep/domain/repositories/fakes/in_memory_user_settings_repository.dart';
+import 'package:danb_rhs_prep/domain/repositories/user_settings_repository.dart';
 import 'package:danb_rhs_prep/features/content/data/exam_content_codec.dart';
 import 'package:danb_rhs_prep/features/content/domain/content_package.dart';
 import 'package:danb_rhs_prep/domain/models/user_profile.dart';
 import 'package:danb_rhs_prep/features/exams/domain/exam_config.dart';
 import 'package:danb_rhs_prep/screens/exam_date_screen.dart';
+import 'package:danb_rhs_prep/screens/experience_level_screen.dart';
 import 'package:danb_rhs_prep/screens/main_shell.dart';
 import 'package:danb_rhs_prep/screens/welcome_screen.dart';
 import 'package:danb_rhs_prep/services/analytics_service.dart';
@@ -90,6 +95,8 @@ void main() {
     AnalyticsService? analytics,
     String? examName,
     ThemeData? theme,
+    BootstrapLocalStore? localStore,
+    UserSettingsRepository? userSettingsRepository,
   }) {
     return MaterialApp(
       theme: theme ?? AppTheme.lightTheme,
@@ -97,8 +104,9 @@ void main() {
         controller:
             BootstrapSessionController(_readySnapshot(examName: examName)),
         child: WelcomeScreen(
-          localStore: InMemoryBootstrapLocalStore(),
+          localStore: localStore ?? InMemoryBootstrapLocalStore(),
           analytics: analytics ?? const NoOpAnalyticsService(),
+          userSettingsRepository: userSettingsRepository,
         ),
       ),
     );
@@ -281,6 +289,40 @@ void main() {
       expect(analytics.events.length, 1,
           reason: 'onboarding_started must not fire a second time for the '
               'same onboarding attempt');
+    });
+  });
+
+  group('userSettingsRepository forwarding (PREP-663)', () {
+    testWidgets(
+        'is forwarded all the way from WelcomeScreen through ExamDateScreen '
+        'to ExperienceLevelScreen, which saves a real UserProfile when '
+        'onboarding actually completes — proving the production wiring, '
+        'not just ExperienceLevelScreen in isolation', (tester) async {
+      final userSettingsRepository = InMemoryUserSettingsRepository();
+
+      await tester
+          .pumpWidget(wrap(userSettingsRepository: userSettingsRepository));
+      await tester.tap(find.text('Start Preparing'));
+      await tester.pumpAndSettle();
+      expect(find.byType(ExamDateScreen), findsOneWidget);
+
+      await tester.tap(find.text("I haven't scheduled it yet"));
+      await tester.pump();
+      await tester.tap(find.text('Continue'));
+      await tester.pumpAndSettle();
+      expect(find.byType(ExperienceLevelScreen), findsOneWidget);
+
+      await tester.tap(find.text('Just starting'));
+      await tester.pump();
+      await tester.tap(find.text('Continue'));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(MainShell), findsOneWidget);
+      final UserProfile? saved =
+          await userSettingsRepository.loadProfile(kDefaultExamId);
+      expect(saved, isNotNull);
+      expect(saved!.experienceLevel, ExperienceLevel.justStarting);
+      expect(saved.onboardingComplete, isTrue);
     });
   });
 }
