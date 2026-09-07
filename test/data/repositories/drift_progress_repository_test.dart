@@ -51,6 +51,51 @@ void main() {
     });
 
     test(
+        'answerAttemptsForExam returns attempts in insertion (rowid) '
+        'order, not by comparing answeredAt — proven directly with two '
+        'attempts that tie on answeredAt (PREP-665)', () async {
+      final DateTime tiedAnsweredAt = DateTime.utc(2026, 1, 1, 0, 5, 30);
+      final first = AnswerAttempt(
+        id: 'attempt-1',
+        examId: 'danb-rhs',
+        questionId: 'q1',
+        domainId: 'radiation-protection',
+        topicId: 'shielding',
+        difficulty: 2,
+        sessionId: 'session-1',
+        sessionType: AttemptSessionType.practice,
+        selectedAnswerId: 'wrong',
+        isCorrect: false,
+        answeredAt: tiedAnsweredAt,
+      );
+      final second = AnswerAttempt(
+        id: 'attempt-2',
+        examId: 'danb-rhs',
+        questionId: 'q1',
+        domainId: 'radiation-protection',
+        topicId: 'shielding',
+        difficulty: 2,
+        sessionId: 'session-1',
+        sessionType: AttemptSessionType.practice,
+        selectedAnswerId: 'correct',
+        isCorrect: true,
+        answeredAt: tiedAnsweredAt,
+      );
+
+      await repository.recordAnswerAttempt(first);
+      await repository.recordAnswerAttempt(second);
+
+      final attempts = await repository.answerAttemptsForExam('danb-rhs');
+      expect(attempts.map((a) => a.answeredAt).toSet(), {tiedAnsweredAt},
+          reason: 'both attempts must genuinely tie on answeredAt for '
+              'this test to actually exercise the rowid ordering, not '
+              'merely assume it');
+      expect(attempts, [first, second],
+          reason: 'insertion order, not answeredAt, must determine the '
+              'returned order when answeredAt ties');
+    });
+
+    test(
         'is genuinely append-only: answering the same question twice in '
         'the same session records two distinct attempts, never an '
         'overwrite — this is exactly what a real primary-key id must '

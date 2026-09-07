@@ -92,7 +92,11 @@ abstract interface class ProgressRepository {
   /// to find each question's *latest* attempt within one session by
   /// taking the last matching entry in this list, since two attempts can
   /// carry the identical [AnswerAttempt.answeredAt] (see that field's own
-  /// doc comment) with nothing else able to break the tie.
+  /// doc comment) with nothing else able to break the tie. See
+  /// `DriftProgressRepository.answerAttemptsForExam`'s own doc comment
+  /// for exactly how the real implementation guarantees this (SQLite
+  /// `rowid` order, not `answeredAt` order) and the two conditions that
+  /// keep it true.
   Future<List<AnswerAttempt>> answerAttemptsForExam(String examId);
 
   Future<QuestionState> questionState(String examId, String questionId);

@@ -97,18 +97,41 @@ class DriftProgressRepository implements ProgressRepository {
 
   @override
   Future<List<AnswerAttempt>> answerAttemptsForExam(String examId) async {
-    // Ordered explicitly (PREP-665) to satisfy this interface method's
-    // own "recorded order" contract — never left to an unordered scan's
-    // incidental behavior. Two attempts can still tie on answeredAt
-    // itself (whole-second precision — see canonicalizeAnswerAttempt);
-    // SQLite falls back to physical row order for a tied sort key, which
-    // for this table (an ordinary rowid table, insert-only, never
-    // reordered) matches insertion order in practice.
-    final rows = await (_db.select(_db.answerAttempts)
-          ..where((t) => t.examId.equals(examId))
-          ..orderBy([(t) => OrderingTerm.asc(t.answeredAt)]))
-        .get();
-    return rows.map(_attemptToDomain).toList(growable: false);
+    // Ordered explicitly by SQLite's own `rowid` (PREP-665) to satisfy
+    // this interface method's own "recorded order" contract — NOT by
+    // `answeredAt`: two attempts can carry the identical `answeredAt`
+    // (storage truncates it to whole seconds — see
+    // canonicalizeAnswerAttempt), so ordering by that column alone
+    // cannot break the tie, and would leave the actual order
+    // implementation-defined for tied rows. `rowid` is the one value an
+    // ordinary (not `WITHOUT ROWID`) SQLite table genuinely assigns in
+    // insertion order, which is why this reaches for raw SQL: drift's
+    // typed query builder has no way to reference that implicit column.
+    //
+    // This is only a true insertion-order guarantee as long as two
+    // things hold — both true today, and load-bearing for it:
+    // * this table is genuinely append-only (see [AnswerAttempts]'s own
+    //   doc comment) — nothing ever updates or re-inserts a row, which
+    //   would assign it a new rowid unrelated to when it was first
+    //   recorded;
+    // * this database is never `VACUUM`ed — a `VACUUM` rebuilds the
+    //   table and reassigns every rowid in whatever order the vacuum
+    //   visits rows, severing rowid from insertion order entirely.
+    //   Nothing in this codebase runs `VACUUM` today. If that ever
+    //   changes, this guarantee — and `PracticeSessionController.resume`'s
+    //   reliance on it to find each question's *latest* attempt in a
+    //   session — would need a real, persisted sequence column instead,
+    //   added via its own migration.
+    final String table = _db.answerAttempts.actualTableName;
+    final String examIdColumn = _db.answerAttempts.examId.name;
+    final List<QueryRow> rows = await _db.customSelect(
+      'SELECT * FROM $table WHERE $examIdColumn = ? ORDER BY rowid ASC',
+      variables: [Variable<String>(examId)],
+      readsFrom: {_db.answerAttempts},
+    ).get();
+    return rows
+        .map((row) => _attemptToDomain(_db.answerAttempts.map(row.data)))
+        .toList(growable: false);
   }
 
   AnswerAttempt _attemptToDomain(AnswerAttemptRow row) {
