@@ -135,6 +135,48 @@ void main() {
               'idempotent no-op resubmission');
     });
 
+    test(
+        'a resubmitted attempt whose answeredAt carries milliseconds and '
+        'microseconds is still recognized as identical and stays a safe '
+        'no-op (PREP-664) — Drift\'s DateTimeColumn storage silently '
+        'truncates sub-second precision on write, so comparing against '
+        'an un-truncated value would otherwise misjudge this exact '
+        'resubmission as a conflicting different attempt', () async {
+      final DateTime preciseAnsweredAt =
+          DateTime.utc(2026, 1, 1, 12, 30, 45, 123, 456);
+      final attempt = AnswerAttempt(
+        id: 'precise-attempt',
+        examId: 'danb-rhs',
+        questionId: 'q1',
+        domainId: 'radiation-protection',
+        topicId: 'shielding',
+        difficulty: 2,
+        sessionId: 'session-1',
+        sessionType: AttemptSessionType.practice,
+        selectedAnswerId: 'a1',
+        isCorrect: true,
+        answeredAt: preciseAnsweredAt,
+      );
+
+      await repository.recordAnswerAttempt(attempt);
+      final QuestionState afterFirst =
+          await repository.questionState('danb-rhs', 'q1');
+      expect(afterFirst.timesSeen, 1);
+
+      // The exact same attempt object — same milliseconds/microseconds
+      // included — resubmitted.
+      await repository.recordAnswerAttempt(attempt);
+
+      final attempts = await repository.answerAttemptsForExam('danb-rhs');
+      expect(attempts, hasLength(1),
+          reason: 'the resubmission must not add a second row');
+      final QuestionState afterResubmit =
+          await repository.questionState('danb-rhs', 'q1');
+      expect(afterResubmit, afterFirst,
+          reason: 'the resubmission must not double-count the question '
+              'state');
+    });
+
     test('answeredAt is read back as UTC', () async {
       await repository.recordAnswerAttempt(buildAttempt());
       final attempts = await repository.answerAttemptsForExam('danb-rhs');

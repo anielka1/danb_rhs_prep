@@ -4,6 +4,59 @@ import '../models/practice_session.dart';
 import '../models/question_state.dart';
 import '../models/readiness_snapshot.dart';
 
+/// The precision [AnswerAttempt.answeredAt] is actually compared, and
+/// persisted, at by every [ProgressRepository.recordAnswerAttempt]
+/// implementation: whole seconds. This isn't an arbitrary domain rule —
+/// it's dictated by the real Drift/SQLite-backed implementation, whose
+/// `DateTimeColumn` storage silently truncates milliseconds/microseconds
+/// on write (confirmed by direct reproduction, not assumed). Applying the
+/// same truncation up front, before the very first save, is what lets
+/// [canonicalizeAnswerAttempt]'s result be compared with plain `==`
+/// safely everywhere — including the in-memory fake, which has no
+/// storage-format reason of its own to lose that precision, but must
+/// match the real implementation's behavior for
+/// [ProgressRepository.recordAnswerAttempt]'s idempotency contract to
+/// mean the same thing regardless of which implementation a caller (or a
+/// test) is actually using. Without this, resubmitting the exact same
+/// attempt — the safe-no-op case that contract promises — could be
+/// misjudged as a conflicting different attempt merely because
+/// `DateTime.now()` (or any other caller clock) carries sub-second
+/// precision the database would have discarded anyway.
+DateTime canonicalAnsweredAt(DateTime answeredAt) {
+  final DateTime utc = answeredAt.toUtc();
+  return DateTime.utc(
+    utc.year,
+    utc.month,
+    utc.day,
+    utc.hour,
+    utc.minute,
+    utc.second,
+  );
+}
+
+/// [attempt] with [AnswerAttempt.answeredAt] replaced by
+/// [canonicalAnsweredAt]'s result — see that function's doc comment.
+/// Every [ProgressRepository.recordAnswerAttempt] implementation calls
+/// this on its input before comparing against, or persisting alongside,
+/// any existing attempt with the same id, so both the comparison and
+/// what's actually stored/held agree at the same precision.
+AnswerAttempt canonicalizeAnswerAttempt(AnswerAttempt attempt) {
+  return AnswerAttempt(
+    id: attempt.id,
+    examId: attempt.examId,
+    questionId: attempt.questionId,
+    domainId: attempt.domainId,
+    topicId: attempt.topicId,
+    difficulty: attempt.difficulty,
+    sessionId: attempt.sessionId,
+    sessionType: attempt.sessionType,
+    selectedAnswerId: attempt.selectedAnswerId,
+    isCorrect: attempt.isCorrect,
+    answeredAt: canonicalAnsweredAt(attempt.answeredAt),
+    contentVersion: attempt.contentVersion,
+  );
+}
+
 /// Persists and retrieves everything the practice, mock exam, progress, and
 /// readiness engines need, independent of the underlying storage.
 abstract interface class ProgressRepository {
@@ -22,12 +75,15 @@ abstract interface class ProgressRepository {
   /// with an id that's already recorded is
   /// * a safe no-op — including skipping the question-state update
   ///   entirely, since it already applied the first time — when every
-  ///   other field is identical to what's already stored (a caller, or a
-  ///   future retry/sync path, unsure whether an earlier call actually
-  ///   completed can always call this again with the same attempt); or
-  /// * a loud failure when any field differs, since that is silent
-  ///   corruption of a different attempt's history, never a legitimate
-  ///   retry.
+  ///   other field is identical to what's already stored, *after*
+  ///   [canonicalizeAnswerAttempt] is applied to both sides (a caller, or
+  ///   a future retry/sync path, unsure whether an earlier call actually
+  ///   completed can always call this again with the same attempt,
+  ///   regardless of the sub-second precision its clock happened to
+  ///   carry); or
+  /// * a loud failure when any field still differs after canonicalizing,
+  ///   since that is silent corruption of a different attempt's history,
+  ///   never a legitimate retry.
   Future<void> recordAnswerAttempt(AnswerAttempt attempt);
   Future<List<AnswerAttempt>> answerAttemptsForExam(String examId);
 

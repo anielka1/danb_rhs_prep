@@ -92,6 +92,43 @@ void main() {
     );
   });
 
+  test(
+      'recordAnswerAttempt canonicalizes answeredAt the same way the '
+      'real, Drift-backed repository does (PREP-664): a resubmission '
+      'whose answeredAt carries milliseconds and microseconds is still '
+      'a safe no-op, matching what the real database would decide '
+      'despite silently truncating that precision on write', () async {
+    final DateTime preciseAnsweredAt =
+        DateTime.utc(2026, 1, 1, 12, 30, 45, 123, 456);
+    final attempt = AnswerAttempt(
+      id: 'precise-attempt',
+      examId: 'danb-rhs',
+      questionId: 'q1',
+      domainId: 'radiation-protection',
+      topicId: 'shielding',
+      difficulty: 2,
+      sessionId: 'session-1',
+      sessionType: AttemptSessionType.practice,
+      selectedAnswerId: 'a1',
+      isCorrect: true,
+      answeredAt: preciseAnsweredAt,
+    );
+
+    await repository.recordAnswerAttempt(attempt);
+    final QuestionState afterFirst =
+        await repository.questionState('danb-rhs', 'q1');
+    expect(afterFirst.timesSeen, 1);
+
+    await repository.recordAnswerAttempt(attempt);
+
+    final attempts = await repository.answerAttemptsForExam('danb-rhs');
+    expect(attempts, hasLength(1),
+        reason: 'the resubmission must not add a second row');
+    expect(await repository.questionState('danb-rhs', 'q1'), afterFirst,
+        reason: 'the resubmission must not double-count the question '
+            'state');
+  });
+
   test('an unrecorded question state defaults to unseen', () async {
     final state = await repository.questionState('danb-rhs', 'q1');
     expect(state.hasBeenAnswered, isFalse);
