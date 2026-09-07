@@ -249,11 +249,33 @@ int? maxFreePracticeQuestionsToday({
 /// exam attempt exercises a question too, but neither is the thing this
 /// specific daily cap governs.
 ///
-/// "Today" is a UTC calendar-day comparison ([DateTime.toUtc]'s
-/// year/month/day against [now]'s) — a deliberate simplification, not a
-/// local-timezone day boundary, consistent with this app storing every
-/// timestamp in UTC ([AnswerAttempt.answeredAt] itself is documented as
-/// always UTC).
+/// **Product decision (PREP-667): the daily reset is a UTC calendar day,
+/// not the user's local calendar day.** The ticket did not specify
+/// either explicitly, so this was decided deliberately rather than
+/// defaulted into, for two concrete reasons:
+///
+/// 1. Every persisted timestamp in this app — including
+///    [AnswerAttempt.answeredAt] itself — is documented and stored as
+///    UTC; a local-day reset would need to convert back to a *device's
+///    current* timezone every time this runs, silently changing meaning
+///    if the user travels or the device's timezone setting changes
+///    between attempts, which a UTC boundary is immune to.
+/// 2. It keeps this pure function, and its tests, fully deterministic:
+///    a local-day boundary would make the very same `attempts`/`now`
+///    inputs count differently depending on the *test runner's* system
+///    timezone, not just the simulated user's — a real source of CI
+///    flakiness this design avoids entirely.
+///
+/// The tradeoff, accepted knowingly: a free user near a local midnight
+/// far from UTC (e.g. UTC-8 or UTC+8) sees their daily allowance reset
+/// several hours before or after their own local midnight. If product
+/// feedback later shows this is confusing, switching to a local-day
+/// boundary is a contained, single-function change — but it should be
+/// re-evaluated deliberately, not slipped in as a side effect of an
+/// unrelated change, given the CI-determinism cost above.
+///
+/// "Today" is computed as a UTC calendar-day comparison ([DateTime.toUtc]'s
+/// year/month/day against [now]'s).
 int practiceAttemptsAnsweredToday({
   required List<AnswerAttempt> attempts,
   required DateTime now,

@@ -9,6 +9,7 @@ import '../practice_session/practice_session_controller.dart';
 import '../practice_session/practice_session_scope.dart';
 import '../theme/app_theme.dart';
 import '../widgets/app_scaffold.dart';
+import '../widgets/error_state.dart';
 import '../widgets/primary_button.dart';
 import 'practice_question_screen.dart';
 
@@ -55,13 +56,21 @@ class ExamOverviewScreen extends StatefulWidget {
   /// pushed this screen). Used to enforce the free-tier daily practice
   /// limit (`exam.freeTier.dailyPracticeQuestions`) via
   /// [maxFreePracticeQuestionsToday] before starting a fresh session — a
-  /// premium (active) entitlement means no cap. Null only alongside a null
-  /// [progressRepository] (the static named-route fallback in
-  /// `main.dart`), in which case no cap is enforced: there's no persisted
-  /// attempt history to check against there either, so failing open here
-  /// matches the same "session still starts and is fully interactive,
-  /// just not persisted" behavior already documented on
-  /// [progressRepository].
+  /// premium (active) entitlement means no cap, checked first and without
+  /// ever reading attempt history (see [_startOrResumePractice]).
+  ///
+  /// Null only alongside a null [progressRepository] (the static
+  /// named-route fallback in `main.dart`), in which case no cap is
+  /// enforced: there's no persisted attempt history to check against
+  /// there either, so failing open here matches the same "session still
+  /// starts and is fully interactive, just not persisted" behavior
+  /// already documented on [progressRepository]. This is distinct from —
+  /// and must not be confused with — a free user whose attempt history
+  /// fails to *load*: that case is a real repository present but
+  /// unreadable, and fails **closed** (see [_limitCheckFailed]), not
+  /// open, because unlike this genuinely-absent-entitlement case, there
+  /// a free-tier limit demonstrably applies and simply couldn't be
+  /// checked.
   final Entitlement? entitlement;
 
   /// Injected for tests that need a fixed "today" to make free-tier
@@ -110,6 +119,19 @@ class _ExamOverviewScreenState extends State<ExamOverviewScreen> {
   /// "no approved questions (PREP-667)" test against the real asset file.
   String? _unavailableReason;
 
+  /// Set when a free user's daily practice limit could not be checked
+  /// because reading their attempt history from [ExamOverviewScreen
+  /// .progressRepository] threw — shown as a real [ErrorState] with a
+  /// working retry (which simply calls [_startOrResumePractice] again),
+  /// not folded into [_unavailableReason]'s plain caption, and never
+  /// papered over by starting an unlimited session: a free user whose
+  /// history is unreadable is a real "can't verify, don't know" state,
+  /// not evidence they have no limit. A premium (active-entitlement)
+  /// user never reaches this: their cap is `null` without ever reading
+  /// history in the first place (see [entitlement]'s own doc comment).
+  /// Cleared on every new attempt.
+  bool _limitCheckFailed = false;
+
   /// The question-set size for the single "Quick Practice" button.
   ///
   /// This is a current, deliberate product decision for this screen's one
@@ -131,6 +153,7 @@ class _ExamOverviewScreenState extends State<ExamOverviewScreen> {
     setState(() {
       _starting = true;
       _unavailableReason = null;
+      _limitCheckFailed = false;
     });
 
     final ContentPackage package = widget.contentPackage!;
@@ -156,25 +179,42 @@ class _ExamOverviewScreenState extends State<ExamOverviewScreen> {
       // QuestionState history before calling this.
       int? maxCount;
       if (widget.entitlement != null && repository != null) {
-        try {
-          final DateTime nowValue = (widget.now ?? DateTime.now)();
-          final answeredToday = practiceAttemptsAnsweredToday(
-            attempts: await repository.answerAttemptsForExam(examId),
-            now: nowValue,
-          );
-          maxCount = maxFreePracticeQuestionsToday(
-            entitlement: widget.entitlement!,
-            now: nowValue,
-            answeredToday: answeredToday,
-            dailyLimit: package.exam.freeTier.dailyPracticeQuestions,
-          );
-        } catch (_) {
-          // Best-effort, fail-open: recording history must never block
-          // practice (same philosophy as PracticeSessionController's own
-          // persistence try/catches) — an unreadable attempt history
-          // means no cap is enforced for this attempt, not that practice
-          // is blocked outright.
+        final DateTime nowValue = (widget.now ?? DateTime.now)();
+        if (widget.entitlement!.isActiveAt(nowValue)) {
+          // Premium: no cap, and deliberately no attempt-history read at
+          // all — an active entitlement never needs to know "how many
+          // today", so it can never be blocked by a history read failure
+          // either.
           maxCount = null;
+        } else {
+          try {
+            final answeredToday = practiceAttemptsAnsweredToday(
+              attempts: await repository.answerAttemptsForExam(examId),
+              now: nowValue,
+            );
+            maxCount = maxFreePracticeQuestionsToday(
+              entitlement: widget.entitlement!,
+              now: nowValue,
+              answeredToday: answeredToday,
+              dailyLimit: package.exam.freeTier.dailyPracticeQuestions,
+            );
+          } catch (_) {
+            // Fail CLOSED, not open: a free user's limit demonstrably
+            // applies here, it simply couldn't be checked — unlike
+            // history-read failures elsewhere in this method (resuming,
+            // saving), which are allowed to be best-effort because
+            // nothing they guard is a hard business rule. Silently
+            // treating "couldn't read" as "no limit" would let a free
+            // user bypass their daily cap merely by having a temporarily
+            // broken local database. See [_limitCheckFailed]'s own doc
+            // comment.
+            if (!mounted) return;
+            setState(() {
+              _starting = false;
+              _limitCheckFailed = true;
+            });
+            return;
+          }
         }
       }
 
@@ -334,6 +374,15 @@ class _ExamOverviewScreenState extends State<ExamOverviewScreen> {
                   _unavailableReason!,
                   style: textStyles.bodySmall,
                 ),
+              ),
+            ],
+            if (_limitCheckFailed) ...[
+              const SizedBox(height: AppSpacing.lg),
+              ErrorState(
+                title: "Can't check your practice limit",
+                message: "We couldn't verify today's free practice "
+                    'allowance. Please try again.',
+                onRetry: _startOrResumePractice,
               ),
             ],
           ],
