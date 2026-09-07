@@ -46,9 +46,10 @@ class MainShell extends StatefulWidget {
 
   final AnalyticsService analytics;
 
-  /// Forwarded straight to [HomeScreen]. Null in production (no real
-  /// adapter exists yet); see [HomeScreen.progressRepository]'s own doc
-  /// comment for what it enables.
+  /// Forwarded straight to [HomeScreen]. A real `DriftProgressRepository`
+  /// in production (wired as `main.dart`'s default); see
+  /// [HomeScreen.progressRepository]'s own doc comment for what it
+  /// enables.
   final ProgressRepository? progressRepository;
 
   @override

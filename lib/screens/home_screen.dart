@@ -16,15 +16,17 @@ class HomeScreen extends StatefulWidget {
   const HomeScreen(
       {super.key, this.progressRepository, this.now = DateTime.now});
 
-  /// Null in production — no real [ProgressRepository] adapter exists
-  /// yet (progress/readiness wiring is explicitly deferred, see
-  /// `BootstrapLocalStore`'s own doc comment), so this screen always
-  /// falls back to its default "no study tasks yet" empty state there.
-  /// When present (only ever `DebugDemoEnvironment.buildProgressRepository()`,
-  /// wired from `lib/main_demo.dart`), this screen queries it for a
-  /// resumable session and offers a real "Continue" action instead of
-  /// starting a new one, exactly reflecting what the repository reports —
-  /// never a fabricated or hardcoded state.
+  /// A real `DriftProgressRepository` in production (`main.dart`'s
+  /// default, over the on-device `AppDatabase`); a fresh install has no
+  /// saved session yet, so this screen still falls back to its default
+  /// "no study tasks yet" empty state honestly, not because nothing is
+  /// wired. This screen queries it for a resumable session and offers a
+  /// real "Continue" action instead of starting a new one, exactly
+  /// reflecting what the repository reports — never a fabricated or
+  /// hardcoded state. Null only when a caller has nothing to query at all
+  /// (e.g. `lib/main_demo.dart`, which supplies its own
+  /// `DebugDemoEnvironment.buildProgressRepository()` instead — see that
+  /// file's doc comment for why).
   final ProgressRepository? progressRepository;
 
   /// Real `DateTime.now` in production. Injectable so a test (a golden

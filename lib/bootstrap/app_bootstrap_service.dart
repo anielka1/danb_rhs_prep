@@ -179,11 +179,12 @@ class AppBootstrapService {
   final ContentRepository _contentRepository;
   final BootstrapLocalStore _localStore;
 
-  /// Null in production today — no adapter exists yet (see
-  /// `BootstrapLocalStore`'s doc comment); [BootstrapReady.profile] is
-  /// simply always null until one is wired up. Tests may inject
-  /// `InMemoryUserSettingsRepository` to exercise the "profile present"
-  /// path.
+  /// A real `DriftUserSettingsRepository` in production (wired by
+  /// `main.dart`); null only where no persisted profile is relevant at
+  /// all (e.g. a test exercising bootstrap in isolation). When null,
+  /// [BootstrapReady.profile] is simply always null. Tests may inject
+  /// `InMemoryUserSettingsRepository` instead of the real Drift adapter to
+  /// exercise the "profile present" path without a database.
   final UserSettingsRepository? userSettingsRepository;
 
   final ContentValidator contentValidator;
