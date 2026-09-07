@@ -60,4 +60,27 @@ void main() {
 
     expect(await controller.submitAnswer(wrongId), isFalse);
   });
+
+  test(
+      'a genuine double-submit (two concurrent calls, e.g. a rapid '
+      'double-tap before the UI disables Submit — not the sequential '
+      're-answer above) records exactly one attempt, and both calls '
+      'resolve to the same result (PREP-664)', () async {
+    final repo = InMemoryProgressRepository();
+    final controller = buildController(repo);
+    final String questionId = controller.currentQuestion.id;
+    final String correctId = controller.currentQuestion.correctAnswerId;
+
+    final Future<bool> first = controller.submitAnswer(correctId);
+    final Future<bool> second = controller.submitAnswer(correctId);
+    final List<bool> results = await Future.wait([first, second]);
+
+    expect(results, [true, true]);
+    final List<AnswerAttempt> attempts =
+        await repo.answerAttemptsForExam(DebugDemoEnvironment.demoExamId);
+    expect(attempts.where((a) => a.questionId == questionId), hasLength(1),
+        reason: 'the second, concurrent call must reuse the first\'s '
+            'in-flight result rather than recording a second attempt for '
+            'one logical submission');
+  });
 }

@@ -6,6 +6,7 @@ void main() {
   PracticeSession buildSession({
     SessionStatus status = SessionStatus.inProgress,
     DateTime? completedAt,
+    String? contentVersion,
   }) {
     return PracticeSession(
       id: 'session-1',
@@ -15,6 +16,7 @@ void main() {
       status: status,
       startedAt: DateTime.utc(2026, 1, 1),
       completedAt: completedAt,
+      contentVersion: contentVersion,
     );
   }
 
@@ -58,5 +60,25 @@ void main() {
       ),
       throwsArgumentError,
     );
+  });
+
+  test(
+      'contentVersion defaults to null, survives copyWith, and '
+      'participates in equality', () {
+    final withoutVersion = buildSession();
+    expect(withoutVersion.contentVersion, isNull);
+
+    final withVersion = buildSession(contentVersion: '2026.1');
+    expect(withVersion, isNot(equals(withoutVersion)));
+    expect(withVersion.contentVersion, '2026.1');
+    expect(withVersion, equals(buildSession(contentVersion: '2026.1')));
+
+    final completed = withVersion.copyWith(
+      status: SessionStatus.completed,
+      completedAt: DateTime.utc(2026, 1, 1, 1),
+    );
+    expect(completed.contentVersion, '2026.1',
+        reason: 'copyWith must not drop the content version it was not '
+            'asked to change');
   });
 }

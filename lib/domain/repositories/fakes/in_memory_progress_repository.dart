@@ -43,7 +43,43 @@ class InMemoryProgressRepository implements ProgressRepository {
 
   @override
   Future<void> recordAnswerAttempt(AnswerAttempt attempt) async {
-    _attempts.add(attempt);
+    // Matches DriftProgressRepository's genuinely-idempotent contract
+    // (PREP-664) exactly, including calling the same
+    // canonicalizeAnswerAttempt — see that class's, canonicalizeAnswerAttempt's,
+    // and the interface method's own doc comments for why: without it,
+    // this fake would (incorrectly) retain full sub-second precision the
+    // real, Drift-backed implementation actually discards, so a
+    // resubmission this fake would treat as identical could disagree
+    // with what the real implementation decides. No `await` sits between
+    // the check and the mutations below, so nothing else running on this
+    // single-threaded fake can interleave and observe a half-applied
+    // state.
+    final AnswerAttempt canonical = canonicalizeAnswerAttempt(attempt);
+    final AnswerAttempt? existing =
+        _attempts.where((a) => a.id == canonical.id).firstOrNull;
+    if (existing != null) {
+      if (existing == canonical) {
+        // Genuinely idempotent: re-recording the exact same attempt is a
+        // safe no-op — critically, without re-running the question-state
+        // update below, which already applied the first time.
+        return;
+      }
+      throw StateError(
+        'An answer attempt with id "${canonical.id}" already exists with '
+        'different content.',
+      );
+    }
+    _attempts.add(canonical);
+    final String key = _questionKey(canonical.examId, canonical.questionId);
+    final QuestionState prior = _questionStates[key] ??
+        QuestionState.unseen(
+          examId: canonical.examId,
+          questionId: canonical.questionId,
+        );
+    _questionStates[key] = prior.withAttempt(
+      isCorrect: canonical.isCorrect,
+      answeredAt: canonical.answeredAt,
+    );
   }
 
   @override

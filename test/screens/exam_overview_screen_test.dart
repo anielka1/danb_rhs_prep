@@ -49,6 +49,12 @@ void main() {
         controller.questions.map((q) => q.id).toList(),
         DebugDemoEnvironment.demoQuestions.map((q) => q.id).toList(),
       );
+      expect(
+        controller.session.contentVersion,
+        DebugDemoEnvironment.demoContentPackage.contentVersion,
+        reason: 'a newly-created session (PREP-664) must record which '
+            'content version its questions were drawn from',
+      );
     });
   });
 

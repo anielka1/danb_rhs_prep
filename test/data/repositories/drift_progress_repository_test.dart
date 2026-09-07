@@ -79,19 +79,203 @@ void main() {
     });
 
     test(
-        'recording two attempts with the same id fails loudly rather '
-        'than silently overwriting history', () async {
+        'recording two attempts with the same id but different content '
+        'fails loudly rather than silently overwriting history', () async {
       await repository.recordAnswerAttempt(buildAttempt(id: 'dup'));
       await expectLater(
-        repository.recordAnswerAttempt(buildAttempt(id: 'dup')),
+        // Same id, but a different selected answer/outcome than what was
+        // already recorded — a real conflict, not a retry.
+        repository.recordAnswerAttempt(AnswerAttempt(
+          id: 'dup',
+          examId: 'danb-rhs',
+          questionId: 'q1',
+          domainId: 'radiation-protection',
+          topicId: 'shielding',
+          difficulty: 2,
+          sessionId: 'session-1',
+          sessionType: AttemptSessionType.practice,
+          selectedAnswerId: 'a2',
+          isCorrect: false,
+          answeredAt: DateTime.utc(2026, 1, 1),
+        )),
         throwsA(anything),
       );
+    });
+
+    test(
+        'recording the exact same attempt twice (same id, identical '
+        'content) is a genuinely idempotent no-op — PREP-664 — not a '
+        'failure and not a second history entry', () async {
+      final attempt = buildAttempt(id: 'dup');
+      await repository.recordAnswerAttempt(attempt);
+
+      await repository.recordAnswerAttempt(attempt);
+
+      final attempts = await repository.answerAttemptsForExam('danb-rhs');
+      expect(attempts, [attempt],
+          reason: 'the identical resubmission must not add a second row');
+    });
+
+    test(
+        'a genuinely idempotent resubmission (PREP-664) does not '
+        're-count the question-state update — only the original, '
+        'first-time recording affected it', () async {
+      final attempt = buildAttempt(id: 'dup');
+      await repository.recordAnswerAttempt(attempt);
+      final QuestionState afterFirst =
+          await repository.questionState('danb-rhs', 'q1');
+      expect(afterFirst.timesSeen, 1);
+
+      await repository.recordAnswerAttempt(attempt);
+
+      final QuestionState afterIdempotentResubmit =
+          await repository.questionState('danb-rhs', 'q1');
+      expect(afterIdempotentResubmit, afterFirst,
+          reason: 'timesSeen/timesCorrect must not double-count a safe, '
+              'idempotent no-op resubmission');
+    });
+
+    test(
+        'a resubmitted attempt whose answeredAt carries milliseconds and '
+        'microseconds is still recognized as identical and stays a safe '
+        'no-op (PREP-664) — Drift\'s DateTimeColumn storage silently '
+        'truncates sub-second precision on write, so comparing against '
+        'an un-truncated value would otherwise misjudge this exact '
+        'resubmission as a conflicting different attempt', () async {
+      final DateTime preciseAnsweredAt =
+          DateTime.utc(2026, 1, 1, 12, 30, 45, 123, 456);
+      final attempt = AnswerAttempt(
+        id: 'precise-attempt',
+        examId: 'danb-rhs',
+        questionId: 'q1',
+        domainId: 'radiation-protection',
+        topicId: 'shielding',
+        difficulty: 2,
+        sessionId: 'session-1',
+        sessionType: AttemptSessionType.practice,
+        selectedAnswerId: 'a1',
+        isCorrect: true,
+        answeredAt: preciseAnsweredAt,
+      );
+
+      await repository.recordAnswerAttempt(attempt);
+      final QuestionState afterFirst =
+          await repository.questionState('danb-rhs', 'q1');
+      expect(afterFirst.timesSeen, 1);
+
+      // The exact same attempt object — same milliseconds/microseconds
+      // included — resubmitted.
+      await repository.recordAnswerAttempt(attempt);
+
+      final attempts = await repository.answerAttemptsForExam('danb-rhs');
+      expect(attempts, hasLength(1),
+          reason: 'the resubmission must not add a second row');
+      final QuestionState afterResubmit =
+          await repository.questionState('danb-rhs', 'q1');
+      expect(afterResubmit, afterFirst,
+          reason: 'the resubmission must not double-count the question '
+              'state');
     });
 
     test('answeredAt is read back as UTC', () async {
       await repository.recordAnswerAttempt(buildAttempt());
       final attempts = await repository.answerAttemptsForExam('danb-rhs');
       expect(attempts.single.answeredAt.isUtc, isTrue);
+    });
+
+    test('contentVersion round-trips, and is null when not given', () async {
+      final versioned = AnswerAttempt(
+        id: 'attempt-versioned',
+        examId: 'danb-rhs',
+        questionId: 'q1',
+        domainId: 'radiation-protection',
+        topicId: 'shielding',
+        difficulty: 2,
+        sessionId: 'session-1',
+        sessionType: AttemptSessionType.practice,
+        selectedAnswerId: 'a1',
+        isCorrect: true,
+        answeredAt: DateTime.utc(2026, 1, 1),
+        contentVersion: '2026.1',
+      );
+      await repository.recordAnswerAttempt(versioned);
+      await repository.recordAnswerAttempt(buildAttempt(id: 'attempt-plain'));
+
+      final attempts = await repository.answerAttemptsForExam('danb-rhs');
+      expect(
+        attempts.firstWhere((a) => a.id == 'attempt-versioned').contentVersion,
+        '2026.1',
+      );
+      expect(
+        attempts.firstWhere((a) => a.id == 'attempt-plain').contentVersion,
+        isNull,
+      );
+    });
+
+    test(
+        'recordAnswerAttempt (PREP-664) atomically updates the aggregate '
+        'question state in the same call — a caller never has to '
+        'separately call questionState/saveQuestionState itself', () async {
+      await repository.recordAnswerAttempt(buildAttempt(id: 'attempt-1'));
+      await repository.recordAnswerAttempt(AnswerAttempt(
+        id: 'attempt-2',
+        examId: 'danb-rhs',
+        questionId: 'q1',
+        domainId: 'radiation-protection',
+        topicId: 'shielding',
+        difficulty: 2,
+        sessionId: 'session-1',
+        sessionType: AttemptSessionType.practice,
+        selectedAnswerId: 'wrong',
+        isCorrect: false,
+        answeredAt: DateTime.utc(2026, 1, 2),
+      ));
+
+      final state = await repository.questionState('danb-rhs', 'q1');
+      expect(state.timesSeen, 2);
+      expect(state.timesCorrect, 1);
+      expect(state.timesIncorrect, 1);
+      expect(state.consecutiveCorrect, 0,
+          reason: 'the second, incorrect attempt must reset the streak');
+      expect(state.lastAnsweredAt, DateTime.utc(2026, 1, 2));
+    });
+
+    test(
+        'a rejected same-id-different-content conflict never applies its '
+        'question-state update either — the conflict check and the '
+        'state update are part of one atomic transaction, not two '
+        'independent writes', () async {
+      await repository.recordAnswerAttempt(buildAttempt(id: 'attempt-1'));
+      final QuestionState afterFirst =
+          await repository.questionState('danb-rhs', 'q1');
+      expect(afterFirst.timesSeen, 1);
+
+      // Same id as the attempt already recorded above, but different
+      // content — a real conflict, which must fail before ever reaching
+      // the question-state update inside the same transaction.
+      await expectLater(
+        repository.recordAnswerAttempt(AnswerAttempt(
+          id: 'attempt-1',
+          examId: 'danb-rhs',
+          questionId: 'q1',
+          domainId: 'radiation-protection',
+          topicId: 'shielding',
+          difficulty: 2,
+          sessionId: 'session-1',
+          sessionType: AttemptSessionType.practice,
+          selectedAnswerId: 'different-answer',
+          isCorrect: false,
+          answeredAt: DateTime.utc(2026, 1, 1),
+        )),
+        throwsA(anything),
+      );
+
+      final QuestionState afterRejectedConflict =
+          await repository.questionState('danb-rhs', 'q1');
+      expect(afterRejectedConflict, afterFirst,
+          reason: 'the rejected conflict must not have double-counted the '
+              'question state — proving the conflict check and the state '
+              'update roll back together, not independently');
     });
   });
 
@@ -189,6 +373,22 @@ void main() {
 
       final reloaded = await repository.inProgressPracticeSession('danb-rhs');
       expect(reloaded!.questionIds, ['q3', 'q1', 'q2']);
+    });
+
+    test('contentVersion round-trips, and is null when not given', () async {
+      final versioned = PracticeSession(
+        id: 'session-1',
+        examId: 'danb-rhs',
+        mode: PracticeMode.quickPractice,
+        questionIds: const ['q1'],
+        status: SessionStatus.inProgress,
+        startedAt: DateTime.utc(2026, 1, 1),
+        contentVersion: '2026.1',
+      );
+      await repository.savePracticeSession(versioned);
+
+      final reloaded = await repository.inProgressPracticeSession('danb-rhs');
+      expect(reloaded!.contentVersion, '2026.1');
     });
   });
 
