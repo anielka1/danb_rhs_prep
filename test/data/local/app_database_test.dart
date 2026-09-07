@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:drift/drift.dart' hide isNull;
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sqlite3/sqlite3.dart';
@@ -278,6 +279,108 @@ void main() {
         () => db.migration.onUpgrade(db.createMigrator(), 2, 3),
         throwsStateError,
       );
+    });
+  });
+
+  group('interrupted write (PREP-665)', () {
+    test(
+        'any exception mid-transaction rolls back every statement already '
+        'issued inside it — not just the one specific conflict '
+        'DriftProgressRepository happens to check for. This is the '
+        'general guarantee "przerwany zapis" (an interrupted write, e.g. '
+        'the process dying before a transaction commits) relies on: '
+        'drift/sqlite3\'s own transaction semantics, exercised directly '
+        'against this app\'s real database rather than assumed.', () async {
+      final AppDatabase db = AppDatabase.forTesting(NativeDatabase.memory());
+      addTearDown(db.close);
+
+      await expectLater(
+        db.transaction(() async {
+          await db.into(db.answerAttempts).insert(
+                AnswerAttemptsCompanion.insert(
+                  id: 'attempt-1',
+                  examId: 'danb-rhs',
+                  questionId: 'q1',
+                  domainId: 'radiation-protection',
+                  topicId: 'shielding',
+                  difficulty: 2,
+                  sessionId: 'session-1',
+                  sessionType: 'practice',
+                  selectedAnswerId: 'a1',
+                  isCorrect: true,
+                  answeredAt: DateTime.utc(2026, 1, 1),
+                ),
+              );
+          await db.into(db.questionStates).insert(
+                QuestionStatesCompanion.insert(
+                  examId: 'danb-rhs',
+                  questionId: 'q1',
+                ),
+              );
+          // Simulates the write being interrupted for a reason unrelated
+          // to any row-level conflict — e.g. the kind of unexpected
+          // failure a real process interruption would surface as, from
+          // the transaction's point of view.
+          throw Exception('simulated interruption');
+        }),
+        throwsException,
+      );
+
+      expect(await db.select(db.answerAttempts).get(), isEmpty,
+          reason: 'the interrupted transaction must leave no trace of '
+              'its first statement');
+      expect(await db.select(db.questionStates).get(), isEmpty,
+          reason: 'nor of its second — an interrupted write must never '
+              'leave a half-applied state, only "before" or "after", '
+              'never "some of it happened"');
+    });
+
+    test(
+        'a successful transaction that commits is durable across a '
+        'simulated restart — the "before" half of the same guarantee: '
+        'only a genuinely interrupted write is rolled back, a completed '
+        'one survives exactly like the rest of this database\'s restart '
+        'durability', () async {
+      final Directory tempDir =
+          Directory.systemTemp.createTempSync('app_database_interrupted');
+      addTearDown(() => tempDir.deleteSync(recursive: true));
+      final File dbFile = File('${tempDir.path}/app.sqlite');
+
+      final AppDatabase first = AppDatabase.forTesting(NativeDatabase(dbFile));
+      await first.transaction(() async {
+        await first.into(first.answerAttempts).insert(
+              AnswerAttemptsCompanion.insert(
+                id: 'attempt-1',
+                examId: 'danb-rhs',
+                questionId: 'q1',
+                domainId: 'radiation-protection',
+                topicId: 'shielding',
+                difficulty: 2,
+                sessionId: 'session-1',
+                sessionType: 'practice',
+                selectedAnswerId: 'a1',
+                isCorrect: true,
+                answeredAt: DateTime.utc(2026, 1, 1),
+              ),
+            );
+        await first.into(first.questionStates).insert(
+              QuestionStatesCompanion.insert(
+                examId: 'danb-rhs',
+                questionId: 'q1',
+                timesSeen: const Value(1),
+              ),
+            );
+      });
+      await first.close();
+
+      final AppDatabase reopened =
+          AppDatabase.forTesting(NativeDatabase(dbFile));
+      addTearDown(reopened.close);
+
+      expect(
+          await reopened.select(reopened.answerAttempts).get(), hasLength(1));
+      expect(
+          await reopened.select(reopened.questionStates).get(), hasLength(1));
     });
   });
 }

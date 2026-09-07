@@ -97,8 +97,16 @@ class DriftProgressRepository implements ProgressRepository {
 
   @override
   Future<List<AnswerAttempt>> answerAttemptsForExam(String examId) async {
+    // Ordered explicitly (PREP-665) to satisfy this interface method's
+    // own "recorded order" contract — never left to an unordered scan's
+    // incidental behavior. Two attempts can still tie on answeredAt
+    // itself (whole-second precision — see canonicalizeAnswerAttempt);
+    // SQLite falls back to physical row order for a tied sort key, which
+    // for this table (an ordinary rowid table, insert-only, never
+    // reordered) matches insertion order in practice.
     final rows = await (_db.select(_db.answerAttempts)
-          ..where((t) => t.examId.equals(examId)))
+          ..where((t) => t.examId.equals(examId))
+          ..orderBy([(t) => OrderingTerm.asc(t.answeredAt)]))
         .get();
     return rows.map(_attemptToDomain).toList(growable: false);
   }

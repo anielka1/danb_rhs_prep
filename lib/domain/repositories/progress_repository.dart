@@ -85,6 +85,14 @@ abstract interface class ProgressRepository {
   ///   since that is silent corruption of a different attempt's history,
   ///   never a legitimate retry.
   Future<void> recordAnswerAttempt(AnswerAttempt attempt);
+
+  /// Every attempt recorded for [examId], in the order they were
+  /// recorded (PREP-665) — oldest first. This is a real contract, not an
+  /// incidental detail: [PracticeSessionController.resume] relies on it
+  /// to find each question's *latest* attempt within one session by
+  /// taking the last matching entry in this list, since two attempts can
+  /// carry the identical [AnswerAttempt.answeredAt] (see that field's own
+  /// doc comment) with nothing else able to break the tie.
   Future<List<AnswerAttempt>> answerAttemptsForExam(String examId);
 
   Future<QuestionState> questionState(String examId, String questionId);

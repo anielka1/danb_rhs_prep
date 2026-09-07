@@ -112,11 +112,23 @@ class _ExamOverviewScreenState extends State<ExamOverviewScreen> {
       for (final id in session.questionIds) byId.firstWhere((q) => q.id == id),
     ];
 
-    final PracticeSessionController controller = PracticeSessionController(
-      session: session,
-      questions: questions,
-      progressRepository: repository,
-    );
+    // A resumed session (PREP-665) needs its per-question answered state
+    // restored from repository history — the plain constructor always
+    // starts empty, which is only correct for the brand-new-session
+    // branch below. See PracticeSessionController.resume's own doc
+    // comment.
+    final PracticeSessionController controller =
+        existing != null && repository != null
+            ? await PracticeSessionController.resume(
+                session: session,
+                questions: questions,
+                progressRepository: repository,
+              )
+            : PracticeSessionController(
+                session: session,
+                questions: questions,
+                progressRepository: repository,
+              );
 
     if (!mounted) return;
     setState(() => _starting = false);

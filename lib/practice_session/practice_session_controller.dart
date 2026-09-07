@@ -47,6 +47,90 @@ class PracticeSessionController {
     return true;
   }
 
+  /// Builds a controller for [session] with its per-question
+  /// answered/correct state restored from [progressRepository]'s
+  /// already-recorded [AnswerAttempt]s for it (PREP-665).
+  ///
+  /// The plain constructor always starts with empty
+  /// [_selectedAnswerIds]/[_isCorrect] maps — correct for a session that
+  /// is genuinely starting now, but wrong for one restored from
+  /// [ProgressRepository.inProgressPracticeSession] after a restart: the
+  /// database layer already survives a restart correctly (attempts,
+  /// question state, and the session's own row are all still there —
+  /// see `test/practice_session/practice_session_restart_test.dart`),
+  /// but a freshly constructed controller alone has no way to know what
+  /// was already answered, since that map is pure in-memory state. Use
+  /// this constructor instead of the plain one whenever [session] might
+  /// already be in progress; use the plain one only for a session that
+  /// is verifiably brand new (nothing to restore, and nothing to query
+  /// for).
+  ///
+  /// Best-effort, matching every other read/write here: a failing
+  /// [progressRepository] returns a controller with an empty (not
+  /// crashed) answered map — the interactive flow must still work,
+  /// exactly as [submitAnswer]'s own failures never block it.
+  ///
+  /// Only the *latest* attempt per question is restored — via
+  /// [ProgressRepository.answerAttemptsForExam]'s documented return
+  /// order, not by comparing [AnswerAttempt.answeredAt] values, which can
+  /// tie (see that field's own doc comment on storage precision) — so a
+  /// question answered more than once in this session (changed via
+  /// `moveTo`-ing back) resumes showing its most recent answer, matching
+  /// what actually determines [QuestionState] today. [_currentIndex]
+  /// resumes at the first not-yet-answered question (or the last
+  /// question, if every question already has an answer), so a resumed
+  /// session lands somewhere consistent with its own restored answered
+  /// map, not back at question one.
+  static Future<PracticeSessionController> resume({
+    required PracticeSession session,
+    required List<Question> questions,
+    required ProgressRepository progressRepository,
+    DateTime Function() now = DateTime.now,
+    IdGenerator idGenerator = const IdGenerator(),
+  }) async {
+    final PracticeSessionController controller = PracticeSessionController(
+      session: session,
+      questions: questions,
+      progressRepository: progressRepository,
+      now: now,
+      idGenerator: idGenerator,
+    );
+
+    try {
+      final List<AnswerAttempt> attempts =
+          await progressRepository.answerAttemptsForExam(session.examId);
+      // Last-one-in-the-list wins, not a comparison of answeredAt values
+      // — two attempts can carry the *identical* answeredAt (Drift's
+      // storage truncates to whole seconds, see canonicalizeAnswerAttempt;
+      // two submissions within the same second are ordinary, not
+      // exceptional) with no other field able to break that tie, so
+      // [ProgressRepository.answerAttemptsForExam]'s own return order is
+      // relied on as the true chronological order instead — both
+      // implementations return attempts in the order they were recorded.
+      final Map<String, AnswerAttempt> latestBySession = {};
+      for (final attempt in attempts) {
+        if (attempt.sessionId != session.id) continue;
+        latestBySession[attempt.questionId] = attempt;
+      }
+      for (final attempt in latestBySession.values) {
+        controller._selectedAnswerIds[attempt.questionId] =
+            attempt.selectedAnswerId;
+        controller._isCorrect[attempt.questionId] = attempt.isCorrect;
+      }
+
+      final int firstUnanswered = questions
+          .indexWhere((question) => !controller.isAnswered(question.id));
+      controller._currentIndex =
+          firstUnanswered == -1 ? questions.length - 1 : firstUnanswered;
+    } catch (_) {
+      // Best-effort: see this method's own doc comment. The controller
+      // returned above (with an empty answered map, at question one) is
+      // still fully usable.
+    }
+
+    return controller;
+  }
+
   final ProgressRepository? progressRepository;
   final List<Question> questions;
   final DateTime Function() _now;
