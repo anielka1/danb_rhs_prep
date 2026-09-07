@@ -79,13 +79,60 @@ void main() {
     });
 
     test(
-        'recording two attempts with the same id fails loudly rather '
-        'than silently overwriting history', () async {
+        'recording two attempts with the same id but different content '
+        'fails loudly rather than silently overwriting history', () async {
       await repository.recordAnswerAttempt(buildAttempt(id: 'dup'));
       await expectLater(
-        repository.recordAnswerAttempt(buildAttempt(id: 'dup')),
+        // Same id, but a different selected answer/outcome than what was
+        // already recorded — a real conflict, not a retry.
+        repository.recordAnswerAttempt(AnswerAttempt(
+          id: 'dup',
+          examId: 'danb-rhs',
+          questionId: 'q1',
+          domainId: 'radiation-protection',
+          topicId: 'shielding',
+          difficulty: 2,
+          sessionId: 'session-1',
+          sessionType: AttemptSessionType.practice,
+          selectedAnswerId: 'a2',
+          isCorrect: false,
+          answeredAt: DateTime.utc(2026, 1, 1),
+        )),
         throwsA(anything),
       );
+    });
+
+    test(
+        'recording the exact same attempt twice (same id, identical '
+        'content) is a genuinely idempotent no-op — PREP-664 — not a '
+        'failure and not a second history entry', () async {
+      final attempt = buildAttempt(id: 'dup');
+      await repository.recordAnswerAttempt(attempt);
+
+      await repository.recordAnswerAttempt(attempt);
+
+      final attempts = await repository.answerAttemptsForExam('danb-rhs');
+      expect(attempts, [attempt],
+          reason: 'the identical resubmission must not add a second row');
+    });
+
+    test(
+        'a genuinely idempotent resubmission (PREP-664) does not '
+        're-count the question-state update — only the original, '
+        'first-time recording affected it', () async {
+      final attempt = buildAttempt(id: 'dup');
+      await repository.recordAnswerAttempt(attempt);
+      final QuestionState afterFirst =
+          await repository.questionState('danb-rhs', 'q1');
+      expect(afterFirst.timesSeen, 1);
+
+      await repository.recordAnswerAttempt(attempt);
+
+      final QuestionState afterIdempotentResubmit =
+          await repository.questionState('danb-rhs', 'q1');
+      expect(afterIdempotentResubmit, afterFirst,
+          reason: 'timesSeen/timesCorrect must not double-count a safe, '
+              'idempotent no-op resubmission');
     });
 
     test('answeredAt is read back as UTC', () async {
@@ -152,28 +199,41 @@ void main() {
     });
 
     test(
-        'a failed attempt insert (duplicate id) never applies its '
-        'question-state update either — recording is one atomic '
-        'transaction, not two independent writes', () async {
+        'a rejected same-id-different-content conflict never applies its '
+        'question-state update either — the conflict check and the '
+        'state update are part of one atomic transaction, not two '
+        'independent writes', () async {
       await repository.recordAnswerAttempt(buildAttempt(id: 'attempt-1'));
       final QuestionState afterFirst =
           await repository.questionState('danb-rhs', 'q1');
       expect(afterFirst.timesSeen, 1);
 
-      // Same id as the attempt already recorded above: the insert must
-      // fail (primary-key violation) before ever reaching the
-      // question-state update inside the same transaction.
+      // Same id as the attempt already recorded above, but different
+      // content — a real conflict, which must fail before ever reaching
+      // the question-state update inside the same transaction.
       await expectLater(
-        repository.recordAnswerAttempt(buildAttempt(id: 'attempt-1')),
+        repository.recordAnswerAttempt(AnswerAttempt(
+          id: 'attempt-1',
+          examId: 'danb-rhs',
+          questionId: 'q1',
+          domainId: 'radiation-protection',
+          topicId: 'shielding',
+          difficulty: 2,
+          sessionId: 'session-1',
+          sessionType: AttemptSessionType.practice,
+          selectedAnswerId: 'different-answer',
+          isCorrect: false,
+          answeredAt: DateTime.utc(2026, 1, 1),
+        )),
         throwsA(anything),
       );
 
-      final QuestionState afterFailedDuplicate =
+      final QuestionState afterRejectedConflict =
           await repository.questionState('danb-rhs', 'q1');
-      expect(afterFailedDuplicate, afterFirst,
-          reason: 'the failed duplicate must not have double-counted the '
-              'question state — proving the insert and the state update '
-              'roll back together, not independently');
+      expect(afterRejectedConflict, afterFirst,
+          reason: 'the rejected conflict must not have double-counted the '
+              'question state — proving the conflict check and the state '
+              'update roll back together, not independently');
     });
   });
 

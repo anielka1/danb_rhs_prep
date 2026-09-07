@@ -19,14 +19,9 @@ import '../local/app_database.dart';
 /// change needed to make their data genuinely persist).
 ///
 /// Every [DateTime] is normalized to UTC on the way in and out, and every
-/// enum is stored by its stable `.name`. [recordAnswerAttempt] is a true
-/// `INSERT` (via [AnswerAttempts.id]'s primary-key constraint, never an
-/// upsert) — see `IdGenerator`'s doc comment for why a caller must give
-/// each attempt a genuinely unique id, not a value derived from
-/// session+question that collides the moment the same question is
-/// answered twice in one session — and, as of PREP-664, wraps that insert
-/// and its question-state update in one [AppDatabase.transaction], per
-/// this interface method's own doc comment.
+/// enum is stored by its stable `.name`. [recordAnswerAttempt] is genuinely
+/// idempotent (PREP-664) — see that method's own doc comment — never a
+/// plain `INSERT` that fails on any id collision regardless of content.
 class DriftProgressRepository implements ProgressRepository {
   DriftProgressRepository(this._db);
 
@@ -37,6 +32,31 @@ class DriftProgressRepository implements ProgressRepository {
   @override
   Future<void> recordAnswerAttempt(AnswerAttempt attempt) {
     return _db.transaction(() async {
+      final AnswerAttemptRow? existingRow =
+          await (_db.select(_db.answerAttempts)
+                ..where((t) => t.id.equals(attempt.id)))
+              .getSingleOrNull();
+
+      if (existingRow != null) {
+        if (_attemptToDomain(existingRow) == attempt) {
+          // Genuinely idempotent: re-recording the exact same attempt
+          // (same id, same everything else) is a safe no-op — not an
+          // error, and critically, does NOT re-run the question-state
+          // update below, which already applied the first time this id
+          // was recorded. A caller (or a future retry/sync path) that
+          // isn't sure whether an earlier call actually completed can
+          // safely call this again with the identical attempt.
+          return;
+        }
+        // Same id, different content: never silently overwrite a
+        // different attempt's history — this is corruption, not a retry,
+        // and must fail loudly.
+        throw StateError(
+          'An answer attempt with id "${attempt.id}" already exists with '
+          'different content.',
+        );
+      }
+
       await _db.into(_db.answerAttempts).insert(
             AnswerAttemptsCompanion.insert(
               id: attempt.id,

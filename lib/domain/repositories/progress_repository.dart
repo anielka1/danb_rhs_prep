@@ -17,9 +17,17 @@ abstract interface class ProgressRepository {
   /// now be stale — via [QuestionState.withAttempt].
   ///
   /// [attempt.id] must be a stable, caller-generated UUID unique to this
-  /// one submission (see `IdGenerator`): a duplicate id fails loudly
-  /// (never silently overwrites a prior attempt), and neither this
-  /// attempt nor its question-state update is applied when it does.
+  /// one submission (see `IdGenerator`). This method is genuinely
+  /// idempotent by that id, not just duplicate-safe: calling it again
+  /// with an id that's already recorded is
+  /// * a safe no-op — including skipping the question-state update
+  ///   entirely, since it already applied the first time — when every
+  ///   other field is identical to what's already stored (a caller, or a
+  ///   future retry/sync path, unsure whether an earlier call actually
+  ///   completed can always call this again with the same attempt); or
+  /// * a loud failure when any field differs, since that is silent
+  ///   corruption of a different attempt's history, never a legitimate
+  ///   retry.
   Future<void> recordAnswerAttempt(AnswerAttempt attempt);
   Future<List<AnswerAttempt>> answerAttemptsForExam(String examId);
 

@@ -43,6 +43,55 @@ void main() {
     expect(attempts, [attempt]);
   });
 
+  test(
+      'recordAnswerAttempt is genuinely idempotent (PREP-664): the exact '
+      'same attempt recorded twice is a safe no-op that does not '
+      're-count the question state, but the same id with different '
+      'content fails loudly', () async {
+    final attempt = AnswerAttempt(
+      id: 'attempt-1',
+      examId: 'danb-rhs',
+      questionId: 'q1',
+      domainId: 'radiation-protection',
+      topicId: 'shielding',
+      difficulty: 2,
+      sessionId: 'session-1',
+      sessionType: AttemptSessionType.practice,
+      selectedAnswerId: 'a1',
+      isCorrect: true,
+      answeredAt: DateTime.utc(2026, 1, 1),
+    );
+
+    await repository.recordAnswerAttempt(attempt);
+    final QuestionState afterFirst =
+        await repository.questionState('danb-rhs', 'q1');
+    expect(afterFirst.timesSeen, 1);
+
+    await repository.recordAnswerAttempt(attempt);
+    expect(await repository.answerAttemptsForExam('danb-rhs'), [attempt],
+        reason: 'the identical resubmission must not add a second row');
+    expect(await repository.questionState('danb-rhs', 'q1'), afterFirst,
+        reason: 'the identical resubmission must not double-count the '
+            'question state');
+
+    await expectLater(
+      repository.recordAnswerAttempt(AnswerAttempt(
+        id: 'attempt-1',
+        examId: 'danb-rhs',
+        questionId: 'q1',
+        domainId: 'radiation-protection',
+        topicId: 'shielding',
+        difficulty: 2,
+        sessionId: 'session-1',
+        sessionType: AttemptSessionType.practice,
+        selectedAnswerId: 'different-answer',
+        isCorrect: false,
+        answeredAt: DateTime.utc(2026, 1, 1),
+      )),
+      throwsStateError,
+    );
+  });
+
   test('an unrecorded question state defaults to unseen', () async {
     final state = await repository.questionState('danb-rhs', 'q1');
     expect(state.hasBeenAnswered, isFalse);
