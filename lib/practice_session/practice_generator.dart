@@ -1,3 +1,4 @@
+import '../domain/models/answer_attempt.dart';
 import '../domain/models/entitlement.dart';
 import '../domain/models/question_state.dart';
 import '../features/content/domain/content_package.dart';
@@ -17,9 +18,8 @@ enum PracticeFocus {
   /// No extra filtering — any eligible question in scope.
   any,
 
-  /// Questions belonging to a topic whose recorded accuracy is below
-  /// [PracticeGenerator.weakTopicAccuracyThreshold] — see that constant's
-  /// own doc comment for why that specific value, and
+  /// Questions belonging to a topic whose recorded accuracy is below the
+  /// active exam's `mockExam.practicePassingPercent` — see
   /// [PracticeGenerator.select]'s doc comment for exactly how "weak" is
   /// computed from [QuestionState] history.
   weakAreas,
@@ -48,15 +48,6 @@ enum PracticeFocus {
 class PracticeGenerator {
   PracticeGenerator._(this.questions, this.requestedCount, this.focus);
 
-  /// Below this accuracy (correct / seen), a topic counts as "weak" for
-  /// [PracticeFocus.weakAreas]. Reuses this app's existing "practice
-  /// passing percent" convention (`MockExamConfig.practicePassingPercent`,
-  /// the same bar a mock exam attempt is judged against) rather than
-  /// inventing a second, unrelated threshold: a topic the user wouldn't
-  /// currently pass a mock exam section on is exactly what "weak" should
-  /// mean here.
-  static const double weakTopicAccuracyThreshold = 0.70;
-
   /// Builds a practice question set.
   ///
   /// [requestedCount] is the number of questions asked for (e.g. 5, 10, or
@@ -82,9 +73,12 @@ class PracticeGenerator {
   ///   [QuestionState] history shows at least one seen question in it and
   ///   the topic's aggregate accuracy (summed correct / summed seen,
   ///   across every question in the topic with recorded history) is below
-  ///   [weakTopicAccuracyThreshold]. [questionStates] entries for a
-  ///   question no longer present in [package] are ignored, never
-  ///   crashing this lookup.
+  ///   [package]'s own `exam.mockExam.practicePassingPercent` (converted
+  ///   from its 0-100 scale) — the same bar a mock exam attempt is judged
+  ///   against, read live from content rather than a second, hard-coded
+  ///   threshold that could drift out of sync with it. [questionStates]
+  ///   entries for a question no longer present in [package] are ignored,
+  ///   never crashing this lookup.
   /// * [PracticeFocus.incorrectQuestions] — any question with
   ///   [QuestionState.timesIncorrect] greater than zero.
   ///
@@ -158,8 +152,10 @@ class PracticeGenerator {
         };
         pool = pool.where((q) => incorrectIds.contains(q.id));
       case PracticeFocus.weakAreas:
+        final double threshold =
+            package.exam.mockExam.practicePassingPercent / 100;
         final Set<String> weakTopicIds =
-            _weakTopicIds(questionStates, package.questions);
+            _weakTopicIds(questionStates, package.questions, threshold);
         pool = pool.where((q) => weakTopicIds.contains(q.topicId));
     }
 
@@ -186,6 +182,7 @@ class PracticeGenerator {
   static Set<String> _weakTopicIds(
     List<QuestionState> questionStates,
     List<Question> allQuestions,
+    double accuracyThreshold,
   ) {
     final Map<String, String> topicByQuestionId = {
       for (final q in allQuestions) q.id: q.topicId,
@@ -204,7 +201,7 @@ class PracticeGenerator {
     return {
       for (final MapEntry(key: topicId, value: (correct, seen))
           in byTopic.entries)
-        if (correct / seen < weakTopicAccuracyThreshold) topicId,
+        if (correct / seen < accuracyThreshold) topicId,
     };
   }
 
@@ -243,4 +240,34 @@ int? maxFreePracticeQuestionsToday({
   if (entitlement.isActiveAt(now)) return null;
   final int remaining = dailyLimit - answeredToday;
   return remaining < 0 ? 0 : remaining;
+}
+
+/// How many of [attempts] count toward today's free-tier practice limit —
+/// the `answeredToday` input [maxFreePracticeQuestionsToday] needs.
+///
+/// Only [AttemptSessionType.practice] attempts count: a diagnostic or mock
+/// exam attempt exercises a question too, but neither is the thing this
+/// specific daily cap governs.
+///
+/// "Today" is a UTC calendar-day comparison ([DateTime.toUtc]'s
+/// year/month/day against [now]'s) — a deliberate simplification, not a
+/// local-timezone day boundary, consistent with this app storing every
+/// timestamp in UTC ([AnswerAttempt.answeredAt] itself is documented as
+/// always UTC).
+int practiceAttemptsAnsweredToday({
+  required List<AnswerAttempt> attempts,
+  required DateTime now,
+}) {
+  final DateTime today = now.toUtc();
+  bool isToday(DateTime t) {
+    final DateTime utc = t.toUtc();
+    return utc.year == today.year &&
+        utc.month == today.month &&
+        utc.day == today.day;
+  }
+
+  return attempts
+      .where((a) =>
+          a.sessionType == AttemptSessionType.practice && isToday(a.answeredAt))
+      .length;
 }

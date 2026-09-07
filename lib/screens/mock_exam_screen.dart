@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../bootstrap/bootstrap_session_scope.dart';
+import '../domain/models/entitlement.dart';
 import '../domain/repositories/progress_repository.dart';
 import '../features/content/domain/content_package.dart';
 import '../mock_exam/mock_exam_blueprint.dart';
@@ -31,6 +32,7 @@ class _MockExamScreenState extends State<MockExamScreen> {
   MockExamController? _controller;
   ContentPackage? _content;
   ProgressRepository? _repository;
+  Entitlement? _entitlement;
   bool _initialized = false;
   bool _loading = true;
   bool _failed = false;
@@ -44,6 +46,7 @@ class _MockExamScreenState extends State<MockExamScreen> {
     final session = BootstrapSessionScope.maybeControllerOf(context);
     _content = widget.contentPackage ?? session?.snapshot.contentPackage;
     _repository = widget.progressRepository ?? session?.progressRepository;
+    _entitlement = session?.snapshot.entitlement;
     _load();
   }
 
@@ -100,7 +103,9 @@ class _MockExamScreenState extends State<MockExamScreen> {
     Navigator.of(context).push(MaterialPageRoute<void>(
       settings: const RouteSettings(name: ExamOverviewScreen.route),
       builder: (_) => ExamOverviewScreen(
-          contentPackage: _content, progressRepository: _repository),
+          contentPackage: _content,
+          progressRepository: _repository,
+          entitlement: _entitlement),
     ));
   }
 

@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:danb_rhs_prep/domain/models/answer_attempt.dart';
 import 'package:danb_rhs_prep/domain/models/entitlement.dart';
 import 'package:danb_rhs_prep/domain/models/question_state.dart';
 import 'package:danb_rhs_prep/domain/models/readiness_band.dart';
@@ -11,14 +12,14 @@ import 'package:danb_rhs_prep/practice_session/practice_generator.dart';
 
 const String _examId = 'test_exam';
 
-ExamConfig _buildExamConfig() {
-  return const ExamConfig(
+ExamConfig _buildExamConfig({double practicePassingPercent = 70}) {
+  return ExamConfig(
     id: _examId,
     name: 'Test Exam',
     provider: 'Test Provider',
     examVersion: 'v1',
     contentVersion: '1.0',
-    domains: [
+    domains: const [
       DomainConfig(id: 'd1', name: 'Domain 1', weight: 0.5, topics: [
         TopicConfig(id: 't1', name: 'Topic 1'),
         TopicConfig(id: 't1b', name: 'Topic 1B'),
@@ -30,17 +31,17 @@ ExamConfig _buildExamConfig() {
     mockExam: MockExamConfig(
       questionCount: 2,
       durationMinutes: 10,
-      practicePassingPercent: 70,
+      practicePassingPercent: practicePassingPercent,
       allowsBackNavigation: true,
       timed: false,
     ),
-    officialScoring: OfficialScoringConfig(
+    officialScoring: const OfficialScoringConfig(
       scaleMinimum: 200,
       scaleMaximum: 800,
       passingScaledScore: 400,
       isComputerAdaptive: false,
     ),
-    readiness: ReadinessConfig(
+    readiness: const ReadinessConfig(
       weights: ReadinessWeights(
         recentAccuracy: 0.2,
         domainMastery: 0.2,
@@ -61,9 +62,9 @@ ExamConfig _buildExamConfig() {
       recencyHalfLifeDays: 14,
       weakDomainPenalty: 0.1,
     ),
-    subscriptionProductIds:
-        SubscriptionProductIds(weekly: 'w', monthly: 'm', threeMonths: '3m'),
-    freeTier: FreeTierConfig(
+    subscriptionProductIds: const SubscriptionProductIds(
+        weekly: 'w', monthly: 'm', threeMonths: '3m'),
+    freeTier: const FreeTierConfig(
         dailyPracticeQuestions: 5,
         diagnosticQuestions: 10,
         includedMockExams: 1),
@@ -99,8 +100,11 @@ Question _buildQuestion({
   );
 }
 
-ContentPackage _buildPackage(List<Question> questions) {
-  final exam = _buildExamConfig();
+ContentPackage _buildPackage(
+  List<Question> questions, {
+  double practicePassingPercent = 70,
+}) {
+  final exam = _buildExamConfig(practicePassingPercent: practicePassingPercent);
   return ContentPackage(
     exam: exam,
     contentVersion: exam.contentVersion,
@@ -460,6 +464,46 @@ void main() {
         reason: '70% accuracy is exactly the threshold, not below it',
       );
     });
+
+    test(
+        'the weak threshold is derived from the package\'s own '
+        'practicePassingPercent, not a hard-coded 70% — a topic at 60% is '
+        'weak under a 70% passing bar but not under a 50% one', () {
+      final questions = [
+        _buildQuestion(id: 'q1', domainId: 'd1', topicId: 't1'),
+      ];
+      final states = [
+        // 6 correct / 10 seen = 60% accuracy.
+        _seenState(
+            questionId: 'q1',
+            timesSeen: 10,
+            timesCorrect: 6,
+            timesIncorrect: 4),
+      ];
+
+      final underDefaultThreshold = PracticeGenerator.select(
+        package: _buildPackage(questions),
+        questionStates: states,
+        requestedCount: 10,
+        focus: PracticeFocus.weakAreas,
+      );
+      expect(underDefaultThreshold.questions.map((q) => q.id), ['q1'],
+          reason: '60% < 70% (this package\'s practicePassingPercent), so '
+              'the topic is weak');
+
+      expect(
+        () => PracticeGenerator.select(
+          package: _buildPackage(questions, practicePassingPercent: 50),
+          questionStates: states,
+          requestedCount: 10,
+          focus: PracticeFocus.weakAreas,
+        ),
+        throwsA(isA<PracticeGenerationUnavailable>()),
+        reason: '60% >= 50% (a lower configured passing percent), so the '
+            'same topic is no longer weak — proving the threshold is read '
+            'from content, not hard-coded',
+      );
+    });
   });
 
   group('free-tier maxCount', () {
@@ -664,6 +708,83 @@ void main() {
       );
 
       expect(result, 3);
+    });
+  });
+
+  group('practiceAttemptsAnsweredToday', () {
+    AnswerAttempt buildAttempt({
+      required String id,
+      required AttemptSessionType sessionType,
+      required DateTime answeredAt,
+    }) {
+      return AnswerAttempt(
+        id: id,
+        examId: _examId,
+        questionId: 'q1',
+        domainId: 'd1',
+        topicId: 't1',
+        difficulty: 1,
+        sessionId: 'session-1',
+        sessionType: sessionType,
+        selectedAnswerId: 'a',
+        isCorrect: true,
+        answeredAt: answeredAt,
+      );
+    }
+
+    test('counts only practice-type attempts from today (UTC)', () {
+      final now = DateTime.utc(2026, 3, 5, 12);
+      final attempts = [
+        buildAttempt(
+            id: 'a1',
+            sessionType: AttemptSessionType.practice,
+            answeredAt: DateTime.utc(2026, 3, 5, 1)),
+        buildAttempt(
+            id: 'a2',
+            sessionType: AttemptSessionType.practice,
+            answeredAt: DateTime.utc(2026, 3, 5, 23, 59)),
+        buildAttempt(
+            id: 'a3',
+            sessionType: AttemptSessionType.mock,
+            answeredAt: DateTime.utc(2026, 3, 5, 12)),
+        buildAttempt(
+            id: 'a4',
+            sessionType: AttemptSessionType.diagnostic,
+            answeredAt: DateTime.utc(2026, 3, 5, 12)),
+        buildAttempt(
+            id: 'a5',
+            sessionType: AttemptSessionType.practice,
+            answeredAt: DateTime.utc(2026, 3, 4, 23, 59)),
+      ];
+
+      final result =
+          practiceAttemptsAnsweredToday(attempts: attempts, now: now);
+
+      expect(result, 2,
+          reason: 'only a1 and a2 are practice-type and answered on the '
+              'same UTC calendar day as now; a3/a4 are the wrong session '
+              'type and a5 is the previous UTC day');
+    });
+
+    test('a local-time DateTime is normalized to UTC before comparing', () {
+      final now = DateTime.utc(2026, 3, 5, 12);
+      final localAnsweredAt = DateTime.utc(2026, 3, 5, 8).toLocal();
+      final attempts = [
+        buildAttempt(
+            id: 'a1',
+            sessionType: AttemptSessionType.practice,
+            answeredAt: localAnsweredAt),
+      ];
+
+      expect(practiceAttemptsAnsweredToday(attempts: attempts, now: now), 1);
+    });
+
+    test('an empty attempt list is zero', () {
+      expect(
+        practiceAttemptsAnsweredToday(
+            attempts: const [], now: DateTime.utc(2026, 3, 5)),
+        0,
+      );
     });
   });
 }
