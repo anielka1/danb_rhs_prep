@@ -3,6 +3,7 @@ import '../domain/models/practice_session.dart';
 import '../domain/repositories/progress_repository.dart';
 import '../features/content/domain/content_package.dart';
 import '../features/questions/domain/question.dart';
+import '../practice_session/practice_generator.dart';
 import '../practice_session/practice_session_controller.dart';
 import '../practice_session/practice_session_scope.dart';
 import '../theme/app_theme.dart';
@@ -67,13 +68,36 @@ class ExamOverviewScreen extends StatefulWidget {
 class _ExamOverviewScreenState extends State<ExamOverviewScreen> {
   bool _starting = false;
 
+  /// Set only when a fresh (never-resumed) session could not be
+  /// generated — e.g. no approved questions exist yet for this exam
+  /// (PREP-667: [PracticeGenerator.select] deliberately excludes drafts,
+  /// matching [MockExamBlueprint]'s already-accepted behavior; the real
+  /// bundled DANB RHS content has none approved yet, pending Phase 4
+  /// content review — see `docs/PROTOTYPE_CONTENT_AUDIT.md`, this is a
+  /// known, tracked content gap, not a bug here). Shown in the same
+  /// caption slot as the "no content package at all" message below,
+  /// cleared on every new attempt.
+  String? _unavailableReason;
+
+  /// The default question-set size for the single "Quick Practice"
+  /// button today — a placeholder pending a real 5/10/20 count-picker UI
+  /// (PREP-667 builds the engine `PracticeGenerator` itself supports
+  /// that; wiring a picker is separate, future UI work). Deliberately
+  /// the middle of that range, not a magic number: enough for a
+  /// meaningful session without assuming the larger 20 is always
+  /// available or wanted.
+  static const int _defaultQuickPracticeCount = 10;
+
   bool get _hasContent =>
       widget.contentPackage != null &&
       widget.contentPackage!.questions.isNotEmpty;
 
   Future<void> _startOrResumePractice() async {
     if (_starting || !_hasContent) return;
-    setState(() => _starting = true);
+    setState(() {
+      _starting = true;
+      _unavailableReason = null;
+    });
 
     final ContentPackage package = widget.contentPackage!;
     final ProgressRepository? repository = widget.progressRepository;
@@ -88,16 +112,44 @@ class _ExamOverviewScreenState extends State<ExamOverviewScreen> {
       }
     }
 
-    final PracticeSession session = existing ??
-        PracticeSession(
-          id: 'practice-$examId-${DateTime.now().toUtc().microsecondsSinceEpoch}',
-          examId: examId,
-          mode: PracticeMode.quickPractice,
-          questionIds: package.questions.map((q) => q.id).toList(),
-          status: SessionStatus.inProgress,
-          startedAt: DateTime.now().toUtc(),
-          contentVersion: package.contentVersion,
+    final PracticeSession session;
+    if (existing != null) {
+      session = existing;
+    } else {
+      final PracticeGenerator generator;
+      try {
+        // No progress history is threaded in for this default "Quick
+        // Practice" entry point — PracticeFocus.any never reads it. A
+        // future weak-areas/incorrect-questions picker UI would fetch
+        // real QuestionState history before calling this. maxCount is
+        // deliberately null (no free-tier cap enforced here yet): doing
+        // so for real needs the user's current Entitlement, which this
+        // screen has no access to today — see maxFreePracticeQuestionsToday's
+        // own doc comment for the (already built and tested) function
+        // ready to wire in once entitlement reaches this screen.
+        generator = PracticeGenerator.select(
+          package: package,
+          questionStates: const [],
+          requestedCount: _defaultQuickPracticeCount,
         );
+      } on PracticeGenerationUnavailable catch (error) {
+        if (!mounted) return;
+        setState(() {
+          _starting = false;
+          _unavailableReason = error.message;
+        });
+        return;
+      }
+      session = PracticeSession(
+        id: 'practice-$examId-${DateTime.now().toUtc().microsecondsSinceEpoch}',
+        examId: examId,
+        mode: PracticeMode.quickPractice,
+        questionIds: generator.questions.map((q) => q.id).toList(),
+        status: SessionStatus.inProgress,
+        startedAt: DateTime.now().toUtc(),
+        contentVersion: package.contentVersion,
+      );
+    }
 
     if (existing == null && repository != null) {
       try {
@@ -213,6 +265,21 @@ class _ExamOverviewScreenState extends State<ExamOverviewScreen> {
               Text(
                 "Practice questions aren't available from here yet.",
                 style: textStyles.bodySmall,
+              ),
+            ],
+            if (_unavailableReason != null) ...[
+              const SizedBox(height: AppSpacing.sm),
+              // A live region: unlike the static caption above (present
+              // from this screen's very first frame), this one appears
+              // only after the user taps Start — VoiceOver/TalkBack must
+              // be told about it explicitly, not merely rely on it being
+              // discoverable in the visual tree.
+              Semantics(
+                liveRegion: true,
+                child: Text(
+                  _unavailableReason!,
+                  style: textStyles.bodySmall,
+                ),
               ),
             ],
           ],

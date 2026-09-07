@@ -1,0 +1,246 @@
+import '../domain/models/entitlement.dart';
+import '../domain/models/question_state.dart';
+import '../features/content/domain/content_package.dart';
+import '../features/content/domain/content_validation.dart';
+import '../features/questions/domain/question.dart';
+import '../mock_exam/mock_exam_blueprint.dart' show MockExamBlueprint;
+
+/// A safe, user-facing reason why a practice session can't be generated.
+class PracticeGenerationUnavailable implements Exception {
+  const PracticeGenerationUnavailable(this.message);
+  final String message;
+}
+
+/// What determines a practice session's question pool, beyond the
+/// always-applied approved-only/domain/topic filters (PREP-667).
+enum PracticeFocus {
+  /// No extra filtering — any eligible question in scope.
+  any,
+
+  /// Questions belonging to a topic whose recorded accuracy is below
+  /// [PracticeGenerator.weakTopicAccuracyThreshold] — see that constant's
+  /// own doc comment for why that specific value, and
+  /// [PracticeGenerator.select]'s doc comment for exactly how "weak" is
+  /// computed from [QuestionState] history.
+  weakAreas,
+
+  /// Questions the user has answered incorrectly at least once
+  /// ([QuestionState.timesIncorrect] greater than zero) — "previously
+  /// missed", regardless of whether it's since been answered correctly
+  /// too.
+  incorrectQuestions,
+}
+
+/// Selects a deterministic, duplicate-free, approved-only question set for
+/// a practice session — Section 12's "Question Engine" (obtain approved
+/// questions, filter by domain/topic/weak/incorrect, create sessions
+/// without duplicates, enforce available question count), deliberately
+/// **not** Section 16's much larger weighted adaptive-priority engine,
+/// which is separate, later work.
+///
+/// Mirrors [MockExamBlueprint]'s shape and determinism: no randomness
+/// anywhere (selection is a stable sort by [Question.id], exactly like
+/// that class), so the same package/history/parameters always produce the
+/// same session — this is what makes the class testable with plain fakes
+/// (no repository needed) and what "deterministyczny wybor" in this
+/// ticket's scope means: not merely reproducible in tests, but genuinely
+/// free of hidden randomness in production too.
+class PracticeGenerator {
+  PracticeGenerator._(this.questions, this.requestedCount, this.focus);
+
+  /// Below this accuracy (correct / seen), a topic counts as "weak" for
+  /// [PracticeFocus.weakAreas]. Reuses this app's existing "practice
+  /// passing percent" convention (`MockExamConfig.practicePassingPercent`,
+  /// the same bar a mock exam attempt is judged against) rather than
+  /// inventing a second, unrelated threshold: a topic the user wouldn't
+  /// currently pass a mock exam section on is exactly what "weak" should
+  /// mean here.
+  static const double weakTopicAccuracyThreshold = 0.70;
+
+  /// Builds a practice question set.
+  ///
+  /// [requestedCount] is the number of questions asked for (e.g. 5, 10, or
+  /// 20 from a future picker UI) — this engine itself does not restrict it
+  /// to those specific values; that's a UI-level convention, not a rule
+  /// this general-purpose selector should hard-code.
+  ///
+  /// [maxCount], when given, is an additional hard ceiling — the
+  /// free-tier daily practice limit, already resolved by the caller (see
+  /// [maxFreePracticeQuestionsToday]) into a plain number *before*
+  /// calling this. This engine never itself queries a repository or an
+  /// entitlement to compute that number, keeping it testable purely
+  /// against fakes ("silniki mozna rozwijac na fakes"). `maxCount == 0`
+  /// throws [PracticeGenerationUnavailable] with a distinct message from
+  /// "no eligible questions", so a caller (and its UI) can tell "you've
+  /// hit today's limit" apart from "there's nothing to practice at all".
+  ///
+  /// [domainId]/[topicId], when given, restrict the pool before [focus]
+  /// is applied; both may be combined with any [focus].
+  ///
+  /// [focus] narrows the pool further:
+  /// * [PracticeFocus.weakAreas] — a topic is "weak" when
+  ///   [QuestionState] history shows at least one seen question in it and
+  ///   the topic's aggregate accuracy (summed correct / summed seen,
+  ///   across every question in the topic with recorded history) is below
+  ///   [weakTopicAccuracyThreshold]. [questionStates] entries for a
+  ///   question no longer present in [package] are ignored, never
+  ///   crashing this lookup.
+  /// * [PracticeFocus.incorrectQuestions] — any question with
+  ///   [QuestionState.timesIncorrect] greater than zero.
+  ///
+  /// Fewer than [requestedCount] eligible questions ("mala pule") is not
+  /// an error — every eligible question (up to [maxCount], if given) is
+  /// returned; check `questions.length` against [requestedCount] to show
+  /// "N of M available" messaging if desired. Zero eligible questions
+  /// ("brak pytan") does throw [PracticeGenerationUnavailable], matching
+  /// [ExamOverviewScreen]'s existing "never start a session with zero
+  /// real questions" empty-state principle — never a session that
+  /// silently has nothing in it.
+  factory PracticeGenerator.select({
+    required ContentPackage package,
+    required List<QuestionState> questionStates,
+    required int requestedCount,
+    int? maxCount,
+    String? domainId,
+    String? topicId,
+    PracticeFocus focus = PracticeFocus.any,
+  }) {
+    if (requestedCount <= 0) {
+      throw ArgumentError.value(
+          requestedCount, 'requestedCount', 'must be positive');
+    }
+    if (maxCount != null && maxCount <= 0) {
+      throw const PracticeGenerationUnavailable(
+        "You've reached today's free practice limit.",
+      );
+    }
+
+    final validation = const ContentValidator().validate(package);
+    if (!validation.isValid) {
+      throw const PracticeGenerationUnavailable('Practice content is invalid.');
+    }
+
+    // Mirrors MockExamBlueprint.fromPackage's own demo detection and
+    // validation exactly, including reusing its ensureDemoAllowed gate —
+    // see that class's doc comment; not duplicated as a second gate.
+    final bool isDemo = package.exam.id.startsWith('demo_') ||
+        package.questions.any((q) => q.tags.contains('demo'));
+    if (isDemo) {
+      MockExamBlueprint.ensureDemoAllowed();
+      if (!package.exam.id.startsWith('demo_') ||
+          package.questions.any((q) =>
+              !q.tags.contains('demo') ||
+              !q.id.startsWith('demo-') ||
+              !q.questionText.startsWith('[Demo]') ||
+              q.status != QuestionStatus.draft)) {
+        throw const PracticeGenerationUnavailable(
+            'Demo questions must be clearly labelled drafts.');
+      }
+    }
+    final List<Question> eligible =
+        isDemo ? package.questions : package.approvedQuestions;
+
+    Iterable<Question> pool = eligible;
+    if (domainId != null) {
+      pool = pool.where((q) => q.domainId == domainId);
+    }
+    if (topicId != null) {
+      pool = pool.where((q) => q.topicId == topicId);
+    }
+
+    switch (focus) {
+      case PracticeFocus.any:
+        break;
+      case PracticeFocus.incorrectQuestions:
+        final Set<String> incorrectIds = {
+          for (final state in questionStates)
+            if (state.timesIncorrect > 0) state.questionId,
+        };
+        pool = pool.where((q) => incorrectIds.contains(q.id));
+      case PracticeFocus.weakAreas:
+        final Set<String> weakTopicIds =
+            _weakTopicIds(questionStates, package.questions);
+        pool = pool.where((q) => weakTopicIds.contains(q.topicId));
+    }
+
+    final List<Question> sorted = pool.toList()
+      ..sort((a, b) => a.id.compareTo(b.id));
+    if (sorted.isEmpty) {
+      throw const PracticeGenerationUnavailable(
+          'There are no eligible questions for this selection.');
+    }
+
+    final int cap = [
+      requestedCount,
+      if (maxCount != null) maxCount,
+      sorted.length,
+    ].reduce((a, b) => a < b ? a : b);
+
+    return PracticeGenerator._(
+      List.unmodifiable(sorted.take(cap)),
+      requestedCount,
+      focus,
+    );
+  }
+
+  static Set<String> _weakTopicIds(
+    List<QuestionState> questionStates,
+    List<Question> allQuestions,
+  ) {
+    final Map<String, String> topicByQuestionId = {
+      for (final q in allQuestions) q.id: q.topicId,
+    };
+    final Map<String, (int correct, int seen)> byTopic = {};
+    for (final state in questionStates) {
+      if (state.timesSeen == 0) continue;
+      final String? topicId = topicByQuestionId[state.questionId];
+      // A question the user has history for but that no longer exists in
+      // the current content package (e.g. retired) contributes nothing —
+      // never crashes this lookup.
+      if (topicId == null) continue;
+      final (correct, seen) = byTopic[topicId] ?? (0, 0);
+      byTopic[topicId] = (correct + state.timesCorrect, seen + state.timesSeen);
+    }
+    return {
+      for (final MapEntry(key: topicId, value: (correct, seen))
+          in byTopic.entries)
+        if (correct / seen < weakTopicAccuracyThreshold) topicId,
+    };
+  }
+
+  /// The questions selected — never empty (see [select]'s doc comment),
+  /// never containing a duplicate [Question.id], in a stable,
+  /// deterministic order.
+  final List<Question> questions;
+
+  /// What was originally asked for — compare against `questions.length`
+  /// to detect a small-pool result that returned fewer.
+  final int requestedCount;
+
+  final PracticeFocus focus;
+}
+
+/// The `maxCount` to pass to [PracticeGenerator.select] for today's
+/// free-tier practice limit, or `null` for no limit at all (an
+/// entitlement that [Entitlement.isActiveAt] `now`).
+///
+/// [answeredToday] must come from real, persisted attempt history (e.g.
+/// practice-type entries in `ProgressRepository.answerAttemptsForExam`,
+/// filtered by the caller to today) — never an in-memory or easily-reset
+/// counter; per this architecture's Section 22, "Daily usage is
+/// calculated from persisted attempts, not an easily reset widget
+/// counter."
+///
+/// Never negative: a free user who has already answered at or beyond
+/// [dailyLimit] today gets `0` — a real, hard "no more today" signal to
+/// [PracticeGenerator.select] — not a negative number.
+int? maxFreePracticeQuestionsToday({
+  required Entitlement entitlement,
+  required DateTime now,
+  required int answeredToday,
+  required int dailyLimit,
+}) {
+  if (entitlement.isActiveAt(now)) return null;
+  final int remaining = dailyLimit - answeredToday;
+  return remaining < 0 ? 0 : remaining;
+}
