@@ -28,6 +28,7 @@ class PracticeSession {
     required this.status,
     required this.startedAt,
     this.completedAt,
+    this.contentVersion,
   }) : questionIds = List.unmodifiable(questionIds) {
     if ((completedAt != null) != (status == SessionStatus.completed)) {
       throw ArgumentError(
@@ -48,6 +49,14 @@ class PracticeSession {
   /// Always stored in UTC. Null unless [status] is completed.
   final DateTime? completedAt;
 
+  /// The content package version [questionIds] were drawn from
+  /// (`ContentPackage.contentVersion`) — the same concept
+  /// [MockAttempt.contentVersion] already tracks per mock attempt. Null
+  /// for a session recorded before this field existed, or a caller with
+  /// no content version to give (e.g. a test). See
+  /// [AnswerAttempt.contentVersion]'s doc comment for why this matters.
+  final String? contentVersion;
+
   PracticeSession copyWith({
     SessionStatus? status,
     DateTime? completedAt,
@@ -60,6 +69,7 @@ class PracticeSession {
       status: status ?? this.status,
       startedAt: startedAt,
       completedAt: completedAt ?? this.completedAt,
+      contentVersion: contentVersion,
     );
   }
 
@@ -73,7 +83,8 @@ class PracticeSession {
         _listEquals(other.questionIds, questionIds) &&
         other.status == status &&
         other.startedAt == startedAt &&
-        other.completedAt == completedAt;
+        other.completedAt == completedAt &&
+        other.contentVersion == contentVersion;
   }
 
   @override
@@ -85,6 +96,7 @@ class PracticeSession {
         status,
         startedAt,
         completedAt,
+        contentVersion,
       );
 }
 

@@ -24,7 +24,9 @@ import '../local/app_database.dart';
 /// upsert) — see `IdGenerator`'s doc comment for why a caller must give
 /// each attempt a genuinely unique id, not a value derived from
 /// session+question that collides the moment the same question is
-/// answered twice in one session.
+/// answered twice in one session — and, as of PREP-664, wraps that insert
+/// and its question-state update in one [AppDatabase.transaction], per
+/// this interface method's own doc comment.
 class DriftProgressRepository implements ProgressRepository {
   DriftProgressRepository(this._db);
 
@@ -33,22 +35,37 @@ class DriftProgressRepository implements ProgressRepository {
   // ---- Answer attempts (append-only) ----
 
   @override
-  Future<void> recordAnswerAttempt(AnswerAttempt attempt) async {
-    await _db.into(_db.answerAttempts).insert(
-          AnswerAttemptsCompanion.insert(
-            id: attempt.id,
-            examId: attempt.examId,
-            questionId: attempt.questionId,
-            domainId: attempt.domainId,
-            topicId: attempt.topicId,
-            difficulty: attempt.difficulty,
-            sessionId: attempt.sessionId,
-            sessionType: attempt.sessionType.name,
-            selectedAnswerId: attempt.selectedAnswerId,
-            isCorrect: attempt.isCorrect,
-            answeredAt: attempt.answeredAt.toUtc(),
-          ),
-        );
+  Future<void> recordAnswerAttempt(AnswerAttempt attempt) {
+    return _db.transaction(() async {
+      await _db.into(_db.answerAttempts).insert(
+            AnswerAttemptsCompanion.insert(
+              id: attempt.id,
+              examId: attempt.examId,
+              questionId: attempt.questionId,
+              domainId: attempt.domainId,
+              topicId: attempt.topicId,
+              difficulty: attempt.difficulty,
+              sessionId: attempt.sessionId,
+              sessionType: attempt.sessionType.name,
+              selectedAnswerId: attempt.selectedAnswerId,
+              isCorrect: attempt.isCorrect,
+              answeredAt: attempt.answeredAt.toUtc(),
+              contentVersion: Value(attempt.contentVersion),
+            ),
+          );
+      // Reuses questionState/saveQuestionState below rather than
+      // duplicating their row<->domain mapping — Drift routes queries
+      // made on `_db` during a `transaction()` callback through that same
+      // transaction automatically, so this participates in the one above,
+      // not a separate implicit one of its own. If the insert above had
+      // failed, execution would never reach here at all.
+      final QuestionState prior =
+          await questionState(attempt.examId, attempt.questionId);
+      await saveQuestionState(prior.withAttempt(
+        isCorrect: attempt.isCorrect,
+        answeredAt: attempt.answeredAt.toUtc(),
+      ));
+    });
   }
 
   @override
@@ -75,6 +92,7 @@ class DriftProgressRepository implements ProgressRepository {
       selectedAnswerId: row.selectedAnswerId,
       isCorrect: row.isCorrect,
       answeredAt: row.answeredAt.toUtc(),
+      contentVersion: row.contentVersion,
     );
   }
 
@@ -149,6 +167,7 @@ class DriftProgressRepository implements ProgressRepository {
             status: session.status.name,
             startedAt: session.startedAt.toUtc(),
             completedAt: Value(session.completedAt?.toUtc()),
+            contentVersion: Value(session.contentVersion),
           ),
         );
   }
@@ -175,6 +194,7 @@ class DriftProgressRepository implements ProgressRepository {
       ),
       startedAt: row.startedAt.toUtc(),
       completedAt: row.completedAt?.toUtc(),
+      contentVersion: row.contentVersion,
     );
   }
 

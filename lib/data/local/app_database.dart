@@ -32,6 +32,11 @@ class AnswerAttempts extends Table {
   /// uniformly across every `DateTimeColumn` in this database.
   DateTimeColumn get answeredAt => dateTime()();
 
+  /// Added in schema 2 (PREP-664) — see [AnswerAttempt.contentVersion]'s
+  /// doc comment. Nullable so every row from schema 1 remains valid
+  /// after the upgrade, with no value to backfill it from.
+  TextColumn get contentVersion => text().nullable()();
+
   @override
   Set<Column> get primaryKey => {id};
 }
@@ -72,6 +77,12 @@ class PracticeSessions extends Table {
   TextColumn get status => text()();
   DateTimeColumn get startedAt => dateTime()();
   DateTimeColumn get completedAt => dateTime().nullable()();
+
+  /// Added in schema 2 (PREP-664) — see
+  /// [PracticeSession.contentVersion]'s doc comment. Nullable so every
+  /// row from schema 1 remains valid after the upgrade, with no value to
+  /// backfill it from.
+  TextColumn get contentVersion => text().nullable()();
 
   @override
   Set<Column> get primaryKey => {id};
@@ -198,28 +209,37 @@ class AppDatabase extends _$AppDatabase {
   // ignore: use_super_parameters
   AppDatabase.forTesting(QueryExecutor executor) : super(executor);
 
-  /// Schema version 1 — the first version. Bumping this requires adding a
-  /// matching branch to [migration]'s `onUpgrade` (see its doc comment)
-  /// and a test proving the upgrade preserves existing rows; see
-  /// `test/data/local/app_database_migration_test.dart`.
+  /// Schema version 2 (PREP-664): added `AnswerAttempts.contentVersion`
+  /// and `PracticeSessions.contentVersion`. Bumping this further requires
+  /// adding a matching branch to [migration]'s `onUpgrade` (see its doc
+  /// comment) and a test proving the upgrade preserves existing rows;
+  /// see `test/data/local/app_database_migration_test.dart`.
   @override
-  int get schemaVersion => 1;
+  int get schemaVersion => 2;
 
   @override
   MigrationStrategy get migration {
     return MigrationStrategy(
       onCreate: (Migrator m) => m.createAll(),
-      // No schema version beyond 1 exists yet, so there is intentionally
-      // no upgrade branch to write today. This still throws (rather than
-      // being a silent no-op) so that the day a future schema bump adds
-      // schemaVersion 2 without also adding its migration step here, that
-      // mistake fails loudly during the upgrade itself — never a
-      // half-migrated database masquerading as a successful one. Adding a
-      // real migration: `if (from == 1 && to == 2) { await m.addColumn(...); }`
-      // (or `m.createTable(...)`/`m.alterTable(...)` as needed), and a
-      // test that seeds a v1 database, opens it as v2, and asserts every
-      // pre-existing row survived untouched.
       onUpgrade: (Migrator m, int from, int to) async {
+        if (from == 1 && to == 2) {
+          // Nullable, no backfill possible or needed — see both new
+          // columns' own doc comments.
+          await m.addColumn(answerAttempts, answerAttempts.contentVersion);
+          await m.addColumn(practiceSessions, practiceSessions.contentVersion);
+          return;
+        }
+        // Every schema jump this database has ever needed to handle is
+        // listed above explicitly. This still throws (rather than being
+        // a silent no-op) so that the day a future schema bump adds a
+        // new version without also adding its migration branch here,
+        // that mistake fails loudly during the upgrade itself — never a
+        // half-migrated database masquerading as a successful one.
+        // Adding one: another `if (from == x && to == y) { ...; return; }`
+        // branch (`m.addColumn(...)`/`m.createTable(...)`/
+        // `m.alterTable(...)` as needed), and a test that seeds a
+        // database at the starting version, opens it at the new one, and
+        // asserts every pre-existing row survived untouched.
         throw StateError(
           'No migration path is defined from schema $from to $to. Add one '
           'to AppDatabase.migration before bumping schemaVersion.',

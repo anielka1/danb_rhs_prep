@@ -31,7 +31,13 @@ void main() {
     );
 
     await repository.recordAnswerAttempt(attempt);
-    await repository.recordAnswerAttempt(attempt.copyWithExam('other-exam'));
+    // A distinct id, exactly like a real caller (IdGenerator) always
+    // gives every attempt — reusing the same id across exams would be
+    // just as much a collision against the real primary key as reusing
+    // it within one exam.
+    await repository.recordAnswerAttempt(
+      attempt.copyWithIdAndExam(id: 'attempt-2', examId: 'other-exam'),
+    );
 
     final attempts = await repository.answerAttemptsForExam('danb-rhs');
     expect(attempts, [attempt]);
@@ -142,7 +148,8 @@ void main() {
 }
 
 extension on AnswerAttempt {
-  AnswerAttempt copyWithExam(String examId) {
+  AnswerAttempt copyWithIdAndExam(
+      {required String id, required String examId}) {
     return AnswerAttempt(
       id: id,
       examId: examId,

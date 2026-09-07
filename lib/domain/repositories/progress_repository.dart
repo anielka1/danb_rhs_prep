@@ -7,6 +7,19 @@ import '../models/readiness_snapshot.dart';
 /// Persists and retrieves everything the practice, mock exam, progress, and
 /// readiness engines need, independent of the underlying storage.
 abstract interface class ProgressRepository {
+  /// Records [attempt] and updates the aggregate [QuestionState] for the
+  /// question it answered — atomically (PREP-664): both persist, or
+  /// neither does, so a crash between them can never leave a recorded
+  /// attempt whose question-state totals don't reflect it. The updated
+  /// state is derived from whatever is currently persisted for
+  /// `(attempt.examId, attempt.questionId)`, read as part of the same
+  /// atomic operation — never a value the caller read earlier and might
+  /// now be stale — via [QuestionState.withAttempt].
+  ///
+  /// [attempt.id] must be a stable, caller-generated UUID unique to this
+  /// one submission (see `IdGenerator`): a duplicate id fails loudly
+  /// (never silently overwrites a prior attempt), and neither this
+  /// attempt nor its question-state update is applied when it does.
   Future<void> recordAnswerAttempt(AnswerAttempt attempt);
   Future<List<AnswerAttempt>> answerAttemptsForExam(String examId);
 

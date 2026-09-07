@@ -93,6 +93,88 @@ void main() {
       final attempts = await repository.answerAttemptsForExam('danb-rhs');
       expect(attempts.single.answeredAt.isUtc, isTrue);
     });
+
+    test('contentVersion round-trips, and is null when not given', () async {
+      final versioned = AnswerAttempt(
+        id: 'attempt-versioned',
+        examId: 'danb-rhs',
+        questionId: 'q1',
+        domainId: 'radiation-protection',
+        topicId: 'shielding',
+        difficulty: 2,
+        sessionId: 'session-1',
+        sessionType: AttemptSessionType.practice,
+        selectedAnswerId: 'a1',
+        isCorrect: true,
+        answeredAt: DateTime.utc(2026, 1, 1),
+        contentVersion: '2026.1',
+      );
+      await repository.recordAnswerAttempt(versioned);
+      await repository.recordAnswerAttempt(buildAttempt(id: 'attempt-plain'));
+
+      final attempts = await repository.answerAttemptsForExam('danb-rhs');
+      expect(
+        attempts.firstWhere((a) => a.id == 'attempt-versioned').contentVersion,
+        '2026.1',
+      );
+      expect(
+        attempts.firstWhere((a) => a.id == 'attempt-plain').contentVersion,
+        isNull,
+      );
+    });
+
+    test(
+        'recordAnswerAttempt (PREP-664) atomically updates the aggregate '
+        'question state in the same call — a caller never has to '
+        'separately call questionState/saveQuestionState itself', () async {
+      await repository.recordAnswerAttempt(buildAttempt(id: 'attempt-1'));
+      await repository.recordAnswerAttempt(AnswerAttempt(
+        id: 'attempt-2',
+        examId: 'danb-rhs',
+        questionId: 'q1',
+        domainId: 'radiation-protection',
+        topicId: 'shielding',
+        difficulty: 2,
+        sessionId: 'session-1',
+        sessionType: AttemptSessionType.practice,
+        selectedAnswerId: 'wrong',
+        isCorrect: false,
+        answeredAt: DateTime.utc(2026, 1, 2),
+      ));
+
+      final state = await repository.questionState('danb-rhs', 'q1');
+      expect(state.timesSeen, 2);
+      expect(state.timesCorrect, 1);
+      expect(state.timesIncorrect, 1);
+      expect(state.consecutiveCorrect, 0,
+          reason: 'the second, incorrect attempt must reset the streak');
+      expect(state.lastAnsweredAt, DateTime.utc(2026, 1, 2));
+    });
+
+    test(
+        'a failed attempt insert (duplicate id) never applies its '
+        'question-state update either — recording is one atomic '
+        'transaction, not two independent writes', () async {
+      await repository.recordAnswerAttempt(buildAttempt(id: 'attempt-1'));
+      final QuestionState afterFirst =
+          await repository.questionState('danb-rhs', 'q1');
+      expect(afterFirst.timesSeen, 1);
+
+      // Same id as the attempt already recorded above: the insert must
+      // fail (primary-key violation) before ever reaching the
+      // question-state update inside the same transaction.
+      await expectLater(
+        repository.recordAnswerAttempt(buildAttempt(id: 'attempt-1')),
+        throwsA(anything),
+      );
+
+      final QuestionState afterFailedDuplicate =
+          await repository.questionState('danb-rhs', 'q1');
+      expect(afterFailedDuplicate, afterFirst,
+          reason: 'the failed duplicate must not have double-counted the '
+              'question state — proving the insert and the state update '
+              'roll back together, not independently');
+    });
   });
 
   group('question state', () {
@@ -189,6 +271,22 @@ void main() {
 
       final reloaded = await repository.inProgressPracticeSession('danb-rhs');
       expect(reloaded!.questionIds, ['q3', 'q1', 'q2']);
+    });
+
+    test('contentVersion round-trips, and is null when not given', () async {
+      final versioned = PracticeSession(
+        id: 'session-1',
+        examId: 'danb-rhs',
+        mode: PracticeMode.quickPractice,
+        questionIds: const ['q1'],
+        status: SessionStatus.inProgress,
+        startedAt: DateTime.utc(2026, 1, 1),
+        contentVersion: '2026.1',
+      );
+      await repository.savePracticeSession(versioned);
+
+      final reloaded = await repository.inProgressPracticeSession('danb-rhs');
+      expect(reloaded!.contentVersion, '2026.1');
     });
   });
 

@@ -96,6 +96,7 @@ class _ExamOverviewScreenState extends State<ExamOverviewScreen> {
           questionIds: package.questions.map((q) => q.id).toList(),
           status: SessionStatus.inProgress,
           startedAt: DateTime.now().toUtc(),
+          contentVersion: package.contentVersion,
         );
 
     if (existing == null && repository != null) {

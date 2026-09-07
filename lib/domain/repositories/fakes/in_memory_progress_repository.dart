@@ -43,7 +43,28 @@ class InMemoryProgressRepository implements ProgressRepository {
 
   @override
   Future<void> recordAnswerAttempt(AnswerAttempt attempt) async {
+    // Matches DriftProgressRepository's atomic contract (PREP-664): a
+    // duplicate id fails loudly, before either the attempt or its
+    // question-state update is applied — no `await` sits between the
+    // check and the two mutations below, so nothing else running on this
+    // single-threaded fake can interleave and observe a half-applied
+    // state.
+    if (_attempts.any((existing) => existing.id == attempt.id)) {
+      throw StateError(
+        'An answer attempt with id "${attempt.id}" already exists.',
+      );
+    }
     _attempts.add(attempt);
+    final String key = _questionKey(attempt.examId, attempt.questionId);
+    final QuestionState prior = _questionStates[key] ??
+        QuestionState.unseen(
+          examId: attempt.examId,
+          questionId: attempt.questionId,
+        );
+    _questionStates[key] = prior.withAttempt(
+      isCorrect: attempt.isCorrect,
+      answeredAt: attempt.answeredAt,
+    );
   }
 
   @override

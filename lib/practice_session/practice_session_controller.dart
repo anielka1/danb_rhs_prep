@@ -1,7 +1,6 @@
 import '../data/local/id_generator.dart';
 import '../domain/models/answer_attempt.dart';
 import '../domain/models/practice_session.dart';
-import '../domain/models/question_state.dart';
 import '../domain/repositories/progress_repository.dart';
 import '../features/questions/domain/question.dart';
 
@@ -94,11 +93,28 @@ class PracticeSessionController {
     _currentIndex = index;
   }
 
+  /// A submission already in flight, if any — a rapid double-tap on
+  /// Submit (before the UI's own guard disables the button, or from any
+  /// other caller with no guard of its own) reuses this result instead of
+  /// recording a second attempt for one logical submission. Cleared once
+  /// the in-flight call finishes, successfully or not, so the *next*
+  /// distinct submission (a genuinely new tap, e.g. after `moveTo`-ing
+  /// back to change an earlier answer) always starts fresh.
+  Future<bool>? _pendingSubmit;
+
   /// Records the answer for [currentQuestion] and returns whether it was
   /// correct. Best-effort persistence: a missing or failing
   /// [progressRepository] never prevents the interactive result from
-  /// being returned.
-  Future<bool> submitAnswer(String answerId) async {
+  /// being returned. Resilient to a double-submit — see [_pendingSubmit].
+  Future<bool> submitAnswer(String answerId) {
+    final Future<bool>? pending = _pendingSubmit;
+    if (pending != null) return pending;
+    final Future<bool> result = _submitAnswer(answerId);
+    _pendingSubmit = result;
+    return result.whenComplete(() => _pendingSubmit = null);
+  }
+
+  Future<bool> _submitAnswer(String answerId) async {
     final Question question = currentQuestion;
     final bool correct = answerId == question.correctAnswerId;
     _selectedAnswerIds[question.id] = answerId;
@@ -106,7 +122,6 @@ class PracticeSessionController {
 
     final ProgressRepository? repo = progressRepository;
     if (repo != null) {
-      final DateTime answeredAt = _now().toUtc();
       try {
         await repo.recordAnswerAttempt(
           AnswerAttempt(
@@ -126,13 +141,9 @@ class PracticeSessionController {
             sessionType: AttemptSessionType.practice,
             selectedAnswerId: answerId,
             isCorrect: correct,
-            answeredAt: answeredAt,
+            answeredAt: _now().toUtc(),
+            contentVersion: session.contentVersion,
           ),
-        );
-        final QuestionState priorState =
-            await repo.questionState(question.examId, question.id);
-        await repo.saveQuestionState(
-          priorState.withAttempt(isCorrect: correct, answeredAt: answeredAt),
         );
       } catch (_) {
         // Recording history must never block the interactive result above.
