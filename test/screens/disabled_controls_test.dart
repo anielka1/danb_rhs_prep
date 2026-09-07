@@ -65,8 +65,12 @@ void main() {
   group('AnswerExplanationScreen', () {
     testWidgets('bookmark has no tap action', (tester) async {
       final SemanticsHandle handle = tester.ensureSemantics();
+      final controller = buildDemoPracticeSessionController();
+      // Only reached, in practice, for an already-answered question
+      // (PREP-668) — see this screen's own doc comment.
+      await controller.submitAnswer(controller.currentQuestion.correctAnswerId);
       await tester.pumpWidget(wrap(PracticeSessionScope(
-        controller: buildDemoPracticeSessionController(),
+        controller: controller,
         child: const AnswerExplanationScreen(),
       )));
 

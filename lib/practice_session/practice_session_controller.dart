@@ -1,5 +1,6 @@
 import '../data/local/id_generator.dart';
 import '../domain/models/answer_attempt.dart';
+import '../domain/models/answer_feedback.dart';
 import '../domain/models/practice_session.dart';
 import '../domain/repositories/progress_repository.dart';
 import '../features/questions/domain/question.dart';
@@ -112,10 +113,35 @@ class PracticeSessionController {
         if (attempt.sessionId != session.id) continue;
         latestBySession[attempt.questionId] = attempt;
       }
+      final Map<String, Question> questionsById = {
+        for (final question in questions) question.id: question,
+      };
       for (final attempt in latestBySession.values) {
-        controller._selectedAnswerIds[attempt.questionId] =
-            attempt.selectedAnswerId;
-        controller._isCorrect[attempt.questionId] = attempt.isCorrect;
+        final Question? question = questionsById[attempt.questionId];
+        // A question no longer present in the currently-loaded content
+        // (e.g. retired) can't be reconstructed into a feedback snapshot
+        // — skip it rather than crash; this method is best-effort (see
+        // its own doc comment), and `firstUnanswered` below only ever
+        // looks up ids that are still in `questions` anyway.
+        if (question == null) continue;
+        // Reconstructed from *today's* question content, not whatever it
+        // was when originally answered — this app has no per-attempt
+        // content snapshot to reconstruct from exactly, so this is the
+        // same approximation the pre-PREP-668 code already made (reading
+        // `currentQuestion` directly); `correctAnswerId`/`isCorrect`
+        // still come from the persisted attempt, never recomputed, so a
+        // stale explanation is the only possible drift here, not a
+        // re-graded verdict.
+        controller._feedback[attempt.questionId] = AnswerFeedback(
+          questionId: question.id,
+          questionVersion: question.version,
+          selectedAnswerId: attempt.selectedAnswerId,
+          correctAnswerId: question.correctAnswerId,
+          isCorrect: attempt.isCorrect,
+          explanation: question.explanation,
+          answeredAt: attempt.answeredAt,
+          contentVersion: attempt.contentVersion,
+        );
       }
 
       final int firstUnanswered = questions
@@ -153,17 +179,23 @@ class PracticeSessionController {
       _currentIndex < questions.length - 1 &&
       isAnswered(questions[_currentIndex + 1].id);
 
-  final Map<String, String> _selectedAnswerIds = {};
-  final Map<String, bool> _isCorrect = {};
+  final Map<String, AnswerFeedback> _feedback = {};
 
   String? selectedAnswerFor(String questionId) =>
-      _selectedAnswerIds[questionId];
-  bool isAnswered(String questionId) =>
-      _selectedAnswerIds.containsKey(questionId);
-  bool? isCorrectFor(String questionId) => _isCorrect[questionId];
+      _feedback[questionId]?.selectedAnswerId;
+  bool isAnswered(String questionId) => _feedback.containsKey(questionId);
+  bool? isCorrectFor(String questionId) => _feedback[questionId]?.isCorrect;
 
-  int get answeredCount => _selectedAnswerIds.length;
-  int get correctCount => _isCorrect.values.where((correct) => correct).length;
+  /// The immutable evaluation result for [questionId], if it's been
+  /// answered — see [AnswerFeedback]'s own doc comment for why
+  /// `AnswerExplanationScreen`/`PracticeQuestionScreen` read the correct
+  /// answer, explanation, and correct/incorrect state from this rather
+  /// than independently re-reading them from [questions] at render time.
+  AnswerFeedback? feedbackFor(String questionId) => _feedback[questionId];
+
+  int get answeredCount => _feedback.length;
+  int get correctCount =>
+      _feedback.values.where((feedback) => feedback.isCorrect).length;
 
   Duration get elapsed =>
       (_session.completedAt ?? _now().toUtc()).difference(_session.startedAt);
@@ -184,25 +216,47 @@ class PracticeSessionController {
   /// the in-flight call finishes, successfully or not, so the *next*
   /// distinct submission (a genuinely new tap, e.g. after `moveTo`-ing
   /// back to change an earlier answer) always starts fresh.
-  Future<bool>? _pendingSubmit;
+  Future<AnswerFeedback>? _pendingSubmit;
 
-  /// Records the answer for [currentQuestion] and returns whether it was
-  /// correct. Best-effort persistence: a missing or failing
+  /// Evaluates [answerId] against [currentQuestion] exactly once (PREP-668)
+  /// — guarded by [_pendingSubmit] against a concurrent double-submit the
+  /// same way this always has been — persists an [AnswerAttempt], and
+  /// returns the immutable [AnswerFeedback] built from that same
+  /// evaluation. Best-effort persistence: a missing or failing
   /// [progressRepository] never prevents the interactive result from
-  /// being returned. Resilient to a double-submit — see [_pendingSubmit].
-  Future<bool> submitAnswer(String answerId) {
-    final Future<bool>? pending = _pendingSubmit;
+  /// being returned.
+  Future<AnswerFeedback> submitAnswer(String answerId) {
+    final Future<AnswerFeedback>? pending = _pendingSubmit;
     if (pending != null) return pending;
-    final Future<bool> result = _submitAnswer(answerId);
+    final Future<AnswerFeedback> result = _submitAnswer(answerId);
     _pendingSubmit = result;
     return result.whenComplete(() => _pendingSubmit = null);
   }
 
-  Future<bool> _submitAnswer(String answerId) async {
+  Future<AnswerFeedback> _submitAnswer(String answerId) async {
     final Question question = currentQuestion;
     final bool correct = answerId == question.correctAnswerId;
-    _selectedAnswerIds[question.id] = answerId;
-    _isCorrect[question.id] = correct;
+    // Read once and reused for both the returned feedback and the
+    // persisted attempt below — not two separate `_now()` calls, which
+    // could (with a real clock) tick forward between them and give the
+    // "same evaluation" two different timestamps.
+    final DateTime answeredAt = _now().toUtc();
+
+    // Built once, from this single `question` read above — see
+    // AnswerFeedback's own doc comment for why the UI must read the
+    // correct answer/explanation/version from this returned snapshot
+    // rather than a later, independent read of `questions`.
+    final AnswerFeedback feedback = AnswerFeedback(
+      questionId: question.id,
+      questionVersion: question.version,
+      selectedAnswerId: answerId,
+      correctAnswerId: question.correctAnswerId,
+      isCorrect: correct,
+      explanation: question.explanation,
+      answeredAt: answeredAt,
+      contentVersion: session.contentVersion,
+    );
+    _feedback[question.id] = feedback;
 
     final ProgressRepository? repo = progressRepository;
     if (repo != null) {
@@ -225,7 +279,7 @@ class PracticeSessionController {
             sessionType: AttemptSessionType.practice,
             selectedAnswerId: answerId,
             isCorrect: correct,
-            answeredAt: _now().toUtc(),
+            answeredAt: answeredAt,
             contentVersion: session.contentVersion,
           ),
         );
@@ -233,7 +287,7 @@ class PracticeSessionController {
         // Recording history must never block the interactive result above.
       }
     }
-    return correct;
+    return feedback;
   }
 
   /// Marks the session finished. Best-effort persistence, same reasoning

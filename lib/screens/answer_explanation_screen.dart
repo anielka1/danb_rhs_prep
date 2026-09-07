@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../domain/models/answer_feedback.dart';
 import '../features/questions/domain/question.dart';
 import '../practice_session/practice_session_controller.dart';
 import '../practice_session/practice_session_scope.dart';
@@ -52,7 +53,17 @@ class AnswerExplanationScreen extends StatelessWidget {
     final semanticColors = context.semanticColors;
     final textStyles = context.textStyles;
     final Question question = controller.currentQuestion;
-    final String? selection = controller.selectedAnswerFor(question.id);
+    final AnswerFeedback? feedback = controller.feedbackFor(question.id);
+    if (feedback == null) {
+      // Structurally should never happen — this screen is only reached
+      // for a question `PracticeSessionController` has already recorded
+      // feedback for, via `PracticeQuestionScreen`'s Submit/View
+      // Explanation wiring. An honest "can't show this" beats crashing,
+      // or silently re-deriving the correct answer/explanation from a
+      // possibly-different read of `question` — exactly the ambiguity
+      // AnswerFeedback exists to remove.
+      return const _FeedbackUnavailableView();
+    }
 
     return AppScaffold(
       leading: CircleIconButton(
@@ -109,9 +120,9 @@ class AnswerExplanationScreen extends StatelessWidget {
                 child: AnswerOptionTile(
                   letter: String.fromCharCode(65 + i),
                   text: question.answers[i].text,
-                  state: question.answers[i].id == question.correctAnswerId
+                  state: question.answers[i].id == feedback.correctAnswerId
                       ? AnswerOptionState.correct
-                      : question.answers[i].id == selection
+                      : question.answers[i].id == feedback.selectedAnswerId
                           ? AnswerOptionState.incorrect
                           : AnswerOptionState.disabled,
                 ),
@@ -148,7 +159,7 @@ class AnswerExplanationScreen extends StatelessWidget {
                   ),
                   const SizedBox(height: 10),
                   Text(
-                    question.explanation,
+                    feedback.explanation,
                     // onSuccessContainer (same role used by the header right
                     // above), not an alpha-faded onSurface: fading onSurface
                     // to 75% only reaches ~4.03:1 against successContainer in
@@ -169,6 +180,32 @@ class AnswerExplanationScreen extends StatelessWidget {
             const SizedBox(height: AppSpacing.md),
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// Shown when this screen is reached for a question
+/// [PracticeSessionController.feedbackFor] has no result for — see the
+/// call site's own comment for why this should be structurally
+/// unreachable in practice.
+class _FeedbackUnavailableView extends StatelessWidget {
+  const _FeedbackUnavailableView();
+
+  @override
+  Widget build(BuildContext context) {
+    return AppScaffold(
+      leading: CircleIconButton(
+        icon: Icons.chevron_left_rounded,
+        onPressed: () => Navigator.of(context).maybePop(),
+        semanticLabel: 'Back',
+      ),
+      title: 'Review Question',
+      centerTitle: true,
+      body: const EmptyState(
+        icon: Icons.error_outline_rounded,
+        title: "This result isn't available",
+        message: 'Go back and try answering again.',
       ),
     );
   }
