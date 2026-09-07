@@ -123,6 +123,7 @@ class _HomeScreenState extends State<HomeScreen> {
         builder: (_) => ExamOverviewScreen(
           contentPackage: snapshot.contentPackage,
           progressRepository: widget.progressRepository,
+          entitlement: snapshot.entitlement,
         ),
       ),
     );

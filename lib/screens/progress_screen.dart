@@ -294,16 +294,16 @@ class _ProgressScreenState extends State<ProgressScreen> {
   // reach in a test/context that never supplied a `BootstrapSessionScope`
   // ancestor at all, exactly like `MainShell`'s own contentPackage lookup.
   void _openExamOverview(BuildContext context) {
-    final ContentPackage? package = widget.contentPackage ??
-        BootstrapSessionScope.maybeControllerOf(context)
-            ?.snapshot
-            .contentPackage;
+    final session = BootstrapSessionScope.maybeControllerOf(context);
+    final ContentPackage? package =
+        widget.contentPackage ?? session?.snapshot.contentPackage;
     Navigator.of(context).push(
       MaterialPageRoute(
         settings: const RouteSettings(name: ExamOverviewScreen.route),
         builder: (_) => ExamOverviewScreen(
           contentPackage: package,
           progressRepository: widget.progressRepository,
+          entitlement: session?.snapshot.entitlement,
         ),
       ),
     );

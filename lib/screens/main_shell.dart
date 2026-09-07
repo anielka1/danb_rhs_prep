@@ -218,6 +218,7 @@ class _MainShellState extends State<MainShell>
     final contentPackage = session?.snapshot.contentPackage;
     final progressRepository =
         widget.progressRepository ?? session?.progressRepository;
+    final entitlement = session?.snapshot.entitlement;
 
     return MainShellScope(
       controller: this,
@@ -238,6 +239,7 @@ class _MainShellState extends State<MainShell>
                 ExamOverviewScreen(
                   contentPackage: contentPackage,
                   progressRepository: progressRepository,
+                  entitlement: entitlement,
                 ),
               ),
               _tabNavigator(
