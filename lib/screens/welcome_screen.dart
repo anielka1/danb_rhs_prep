@@ -4,6 +4,7 @@ import '../bootstrap/app_bootstrap_service.dart';
 import '../bootstrap/bootstrap_session_controller.dart';
 import '../bootstrap/bootstrap_session_scope.dart';
 import '../domain/repositories/bootstrap_local_store.dart';
+import '../domain/repositories/user_settings_repository.dart';
 import '../services/analytics_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/app_scaffold.dart';
@@ -30,10 +31,17 @@ class WelcomeScreen extends StatefulWidget {
     super.key,
     required this.localStore,
     this.analytics = const NoOpAnalyticsService(),
+    this.userSettingsRepository,
   });
 
   final BootstrapLocalStore localStore;
   final AnalyticsService analytics;
+
+  /// Forwarded straight to [ExamDateScreen], and from there to
+  /// [ExperienceLevelScreen] — this screen itself never reads or writes
+  /// through it. See [ExperienceLevelScreen]'s own doc comment for what
+  /// it enables.
+  final UserSettingsRepository? userSettingsRepository;
 
   @override
   State<WelcomeScreen> createState() => _WelcomeScreenState();
@@ -91,6 +99,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
           child: ExamDateScreen(
             localStore: widget.localStore,
             analytics: widget.analytics,
+            userSettingsRepository: widget.userSettingsRepository,
           ),
         ),
       ),

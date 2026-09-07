@@ -43,8 +43,11 @@ final class BootstrapReady extends BootstrapResult {
   final String selectedExamId;
   final ContentPackage contentPackage;
 
-  /// Null until real onboarding (Phase 3.2-3.6) exists and saves one —
-  /// always null today, which is the honest state, not a placeholder.
+  /// The real, saved profile for [selectedExamId], if one exists —
+  /// `ExperienceLevelScreen`'s onboarding-completion step is the only
+  /// writer today (PREP-663), via [userSettingsRepository]. Null on a
+  /// fresh install, before onboarding has completed once, or whenever
+  /// [userSettingsRepository] itself is null.
   final UserProfile? profile;
 
   final ThemePreference themePreference;
