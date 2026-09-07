@@ -213,7 +213,29 @@ class AppDatabase extends _$AppDatabase {
   /// and `PracticeSessions.contentVersion`. Bumping this further requires
   /// adding a matching branch to [migration]'s `onUpgrade` (see its doc
   /// comment) and a test proving the upgrade preserves existing rows;
-  /// see `test/data/local/app_database_migration_test.dart`.
+  /// see `test/data/local/app_database_migration_v2_test.dart` (the real
+  /// migration, seeded from a frozen schema-1 snapshot) and
+  /// `test/data/local/app_database_migration_test.dart` (the same
+  /// `addColumn`-preserves-rows mechanism, proven generically against a
+  /// disposable fixture schema before it was ever used for real).
+  ///
+  /// **Rollback plan for a defect discovered after release (PREP-665):**
+  /// forward-fix only, always keeping (or raising) this schema version —
+  /// never revert to an app build declaring a lower `schemaVersion` than
+  /// what may already be on a user's device. Once any device has opened
+  /// a schema-2 database, its on-disk `PRAGMA user_version` is 2; an
+  /// older app build that only declares `schemaVersion == 1` has no
+  /// defined behavior for opening a file whose stored version is already
+  /// higher than that (drift's migration system is one-directional, by
+  /// design — [onUpgrade] only ever runs for `from < to`), so "just
+  /// revert the PR" is not a safe rollback here. Concretely: both columns
+  /// [migration] added for schema 2 are nullable and purely additive, so
+  /// a corrective change never needs to remove them — it can always ship
+  /// as a normal forward fix at the *same* schema version (if the defect
+  /// is in application code, not the schema itself) or a new
+  /// `onUpgrade` branch to a higher version (if the schema itself needs
+  /// correcting), per this class's own "never erase progress on
+  /// error/migration" rule below.
   @override
   int get schemaVersion => 2;
 
