@@ -77,6 +77,43 @@ void main() {
             updatedAt: DateTime.utc(2026, 1, 1),
           ),
         );
+    await v2.into(v2.questionStatesV2).insert(
+          QuestionStatesV2Companion.insert(
+            examId: 'danb-rhs',
+            questionId: 'q1',
+            timesSeen: const Value(3),
+            timesCorrect: const Value(2),
+            timesIncorrect: const Value(1),
+          ),
+        );
+    await v2.into(v2.mockAttemptsV2).insert(
+          MockAttemptsV2Companion.insert(
+            id: 'mock-1',
+            examId: 'danb-rhs',
+            questionIdsJson: '["q1","q2"]',
+            answersJson: '{"q1":"a1"}',
+            flaggedQuestionIdsJson: '[]',
+            status: 'inProgress',
+            startedAt: DateTime.utc(2026, 1, 1),
+            durationMinutes: 90,
+          ),
+        );
+    await v2.into(v2.readinessSnapshotsV2).insert(
+          ReadinessSnapshotsV2Companion.insert(
+            id: 'readiness-1',
+            examId: 'danb-rhs',
+            calculatedAt: DateTime.utc(2026, 1, 1),
+            overallScore: 42.0,
+            band: 'developing',
+            recentAccuracyComponent: 0.5,
+            domainMasteryComponent: 0.5,
+            mockPerformanceComponent: 0.5,
+            repeatedMasteryComponent: 0.5,
+            coverageComponent: 0.5,
+            evidenceConfidence: 0.5,
+            uniqueQuestionsAnswered: 5,
+          ),
+        );
     await v2.close();
 
     final AppDatabase v3 = AppDatabase.forTesting(NativeDatabase(dbFile));
@@ -105,6 +142,20 @@ void main() {
         reason: 'a table untouched by this migration must still survive '
             'the upgrade intact');
     expect(profileRows.single.examId, 'danb-rhs');
+
+    // The three remaining tables this migration doesn't touch at all —
+    // proven with real seeded rows, not asserted by name alone.
+    final questionStateRows = await v3.select(v3.questionStates).get();
+    expect(questionStateRows, hasLength(1));
+    expect(questionStateRows.single.timesSeen, 3);
+
+    final mockAttemptRows = await v3.select(v3.mockAttempts).get();
+    expect(mockAttemptRows, hasLength(1));
+    expect(mockAttemptRows.single.id, 'mock-1');
+
+    final readinessRows = await v3.select(v3.readinessSnapshots).get();
+    expect(readinessRows, hasLength(1));
+    expect(readinessRows.single.id, 'readiness-1');
 
     // The three new columns are genuinely writable post-migration, not
     // just present-but-inert.

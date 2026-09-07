@@ -211,6 +211,44 @@ void main() {
       expect(stillOnlyOneInProgress?.id,
           DebugDemoEnvironment.demoInProgressPracticeSession.id);
     });
+
+    testWidgets(
+        'shows an honest unavailable reason instead of crashing when a '
+        "question in the in-progress session's questionIds is no longer "
+        'in the current content package (PREP-668)', (tester) async {
+      final repository = DebugDemoEnvironment.buildProgressRepository();
+      final ContentPackage packageMissingAQuestion = ContentPackage(
+        exam: DebugDemoEnvironment.demoContentPackage.exam,
+        contentVersion: DebugDemoEnvironment.demoContentPackage.contentVersion,
+        sourceVersion: DebugDemoEnvironment.demoContentPackage.sourceVersion,
+        generatedAt: DebugDemoEnvironment.demoContentPackage.generatedAt,
+        // demoInProgressPracticeSession.questionIds names all three of
+        // demoQuestions[2..4]; dropping one of them here simulates it
+        // having since been retired from the active content package,
+        // while the persisted session still references it.
+        questions: DebugDemoEnvironment.demoQuestions
+            .where((q) =>
+                q.id !=
+                DebugDemoEnvironment
+                    .demoInProgressPracticeSession.questionIds.first)
+            .toList(),
+      );
+
+      await tester.pumpWidget(wrap(ExamOverviewScreen(
+        contentPackage: packageMissingAQuestion,
+        progressRepository: repository,
+      )));
+
+      await tester.ensureVisible(find.text('Start Practice Exam'));
+      await tester.tap(find.text('Start Practice Exam'));
+      await tester.pumpAndSettle();
+
+      expect(tester.takeException(), isNull,
+          reason: 'a missing session question must be handled, never an '
+              'uncaught StateError from firstWhere');
+      expect(find.byType(PracticeQuestionScreen), findsNothing);
+      expect(find.textContaining("can't be resumed"), findsOneWidget);
+    });
   });
 
   group('free-tier daily practice limit (PREP-667 correction)', () {

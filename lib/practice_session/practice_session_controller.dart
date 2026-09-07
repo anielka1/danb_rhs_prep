@@ -52,19 +52,32 @@ class PracticeSessionController {
   /// answered/correct state restored from [progressRepository]'s
   /// already-recorded [AnswerAttempt]s for it (PREP-665).
   ///
-  /// The plain constructor always starts with empty
-  /// [_selectedAnswerIds]/[_isCorrect] maps — correct for a session that
-  /// is genuinely starting now, but wrong for one restored from
-  /// [ProgressRepository.inProgressPracticeSession] after a restart: the
-  /// database layer already survives a restart correctly (attempts,
-  /// question state, and the session's own row are all still there —
-  /// see `test/practice_session/practice_session_restart_test.dart`),
-  /// but a freshly constructed controller alone has no way to know what
-  /// was already answered, since that map is pure in-memory state. Use
-  /// this constructor instead of the plain one whenever [session] might
+  /// The plain constructor always starts with an empty [_feedback] map —
+  /// correct for a session that is genuinely starting now, but wrong for
+  /// one restored from [ProgressRepository.inProgressPracticeSession]
+  /// after a restart: the database layer already survives a restart
+  /// correctly (attempts, question state, and the session's own row are
+  /// all still there — see
+  /// `test/practice_session/practice_session_restart_test.dart`), but a
+  /// freshly constructed controller alone has no way to know what was
+  /// already answered, since that map is pure in-memory state. Use this
+  /// constructor instead of the plain one whenever [session] might
   /// already be in progress; use the plain one only for a session that
   /// is verifiably brand new (nothing to restore, and nothing to query
   /// for).
+  ///
+  /// Only an [AnswerAttempt] whose [AnswerAttempt.sessionId] equals
+  /// [session]'s own id, *and* whose [AnswerAttempt.questionId] is
+  /// actually one of [PracticeSession.questionIds], is restored — a
+  /// record matching the session id but naming a foreign or corrupted
+  /// question id can never inflate [answeredCount]/[correctCount] or be
+  /// shown as this session's feedback. This controller-level check does
+  /// not, by itself, guarantee every id in [PracticeSession.questionIds]
+  /// still resolves to a real [Question] in [questions] — a question
+  /// retired from the active content package after this session was
+  /// created is a separate, known gap handled (as a crash guard, not a
+  /// full resolution) at `ExamOverviewScreen._startOrResumePractice`'s
+  /// own `questionsById` lookup, not here.
   ///
   /// Best-effort, matching every other read/write here: a failing
   /// [progressRepository] returns a controller with an empty (not
@@ -108,9 +121,17 @@ class PracticeSessionController {
       // [ProgressRepository.answerAttemptsForExam]'s own return order is
       // relied on as the true chronological order instead — both
       // implementations return attempts in the order they were recorded.
+      final Set<String> sessionQuestionIds = session.questionIds.toSet();
       final Map<String, AnswerAttempt> latestBySession = {};
       for (final attempt in attempts) {
         if (attempt.sessionId != session.id) continue;
+        // A record sharing this sessionId but naming a questionId that
+        // isn't actually part of this session (foreign data mixed in by
+        // an id collision, or a corrupted/hand-edited row) must never
+        // inflate answeredCount/correctCount or be shown as this
+        // session's own feedback — sessionId alone is not sufficient
+        // proof of membership.
+        if (!sessionQuestionIds.contains(attempt.questionId)) continue;
         latestBySession[attempt.questionId] = attempt;
       }
       for (final attempt in latestBySession.values) {

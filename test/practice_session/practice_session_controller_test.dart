@@ -285,43 +285,55 @@ void main() {
       expect(feedback.explanation, q0.explanation);
     });
 
+    // Deliberately NOT a test of "a question retired from the active
+    // content package while session.questionIds still names it" — that
+    // different, real product scenario is handled (as a crash guard,
+    // not a full resolution) at
+    // ExamOverviewScreen._startOrResumePractice's own questionsById
+    // lookup, not here. This test is purely a controller-level
+    // data-integrity check: a record sharing this session's id but
+    // naming a questionId that was never actually part of
+    // session.questionIds (a foreign or corrupted row) must be ignored,
+    // never counted.
     test(
-        'still reconstructs feedback for an attempt whose question is no '
-        'longer in the resumed questions list — the snapshot lives on '
-        'the persisted attempt itself now, not on a live Question lookup '
-        '(PREP-668)', () async {
+        "ignores an attempt whose questionId isn't part of this "
+        "session's own questionIds, even though it shares the "
+        "session's id — and doesn't let it inflate answeredCount/"
+        'correctCount either (PREP-668)', () async {
       final repo = InMemoryProgressRepository();
       final firstController = buildController(repo);
       final Question q0 = firstController.questions[0];
       await firstController.submitAnswer(q0.correctAnswerId);
 
-      // Same session id (so the persisted attempt, recorded against it,
-      // is still picked up) but a shorter questionIds/questions list, as
-      // if q0 had since been retired from the active content package.
-      final shorterSession = PracticeSession(
-        id: firstController.session.id,
+      const String foreignQuestionId = 'not-actually-in-this-session';
+      await repo.recordAnswerAttempt(AnswerAttempt(
+        id: 'foreign-attempt',
         examId: firstController.session.examId,
-        mode: firstController.session.mode,
-        questionIds: firstController.session.questionIds.skip(1).toList(),
-        status: firstController.session.status,
-        startedAt: firstController.session.startedAt,
-      );
+        questionId: foreignQuestionId,
+        domainId: q0.domainId,
+        topicId: q0.topicId,
+        difficulty: q0.difficulty,
+        sessionId: firstController.session.id,
+        sessionType: AttemptSessionType.practice,
+        selectedAnswerId: 'x',
+        isCorrect: true,
+        answeredAt: DateTime.utc(2026, 1, 1, 0, 6),
+        questionVersion: 1,
+        correctAnswerId: 'x',
+        explanation: 'n/a',
+      ));
 
       final resumed = await PracticeSessionController.resume(
-        session: shorterSession,
-        questions: firstController.questions.skip(1).toList(),
+        session: firstController.session,
+        questions: firstController.questions,
         progressRepository: repo,
       );
 
-      final AnswerFeedback? feedback = resumed.feedbackFor(q0.id);
-      expect(feedback, isNotNull,
-          reason: 'q0 is retired from `questions`, but its historical '
-              'feedback is entirely self-contained on the persisted '
-              'AnswerAttempt — there is nothing left to look up on a '
-              'live Question for it anymore');
-      expect(feedback!.correctAnswerId, q0.correctAnswerId);
-      expect(feedback.explanation, q0.explanation);
-      expect(feedback.isCorrect, isTrue);
+      expect(resumed.feedbackFor(foreignQuestionId), isNull);
+      expect(resumed.answeredCount, 1,
+          reason: 'only q0 is genuinely part of this session; the '
+              "foreign record must not inflate the count");
+      expect(resumed.correctCount, 1);
     });
 
     test(
