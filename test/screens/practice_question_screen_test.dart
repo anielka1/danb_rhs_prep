@@ -2,6 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:danb_rhs_prep/debug/debug_demo_environment.dart';
+import 'package:danb_rhs_prep/domain/models/answer_attempt.dart';
+import 'package:danb_rhs_prep/domain/models/practice_session.dart';
+import 'package:danb_rhs_prep/domain/repositories/fakes/in_memory_progress_repository.dart';
+import 'package:danb_rhs_prep/practice_session/practice_session_controller.dart';
 import 'package:danb_rhs_prep/practice_session/practice_session_scope.dart';
 import 'package:danb_rhs_prep/screens/answer_explanation_screen.dart';
 import 'package:danb_rhs_prep/screens/practice_question_screen.dart';
@@ -102,6 +106,64 @@ void main() {
       expect(controller.isAnswered(firstQuestion.id), isTrue);
       expect(find.byType(AnswerExplanationScreen), findsOneWidget);
       expect(find.text(firstQuestion.explanation), findsOneWidget);
+    });
+
+    testWidgets(
+        'a rapid double-tap on Submit Answer records exactly one '
+        'AnswerAttempt, never two (PREP-457)', (tester) async {
+      final repo = InMemoryProgressRepository();
+      final questions = DebugDemoEnvironment.demoQuestions;
+      final session = PracticeSession(
+        id: 'double-submit-test-session',
+        examId: DebugDemoEnvironment.demoExamId,
+        mode: PracticeMode.quickPractice,
+        questionIds: questions.map((q) => q.id).toList(),
+        status: SessionStatus.inProgress,
+        startedAt: DateTime.utc(2026, 1, 1),
+      );
+      final controller = PracticeSessionController(
+        session: session,
+        questions: questions,
+        progressRepository: repo,
+        now: () => DateTime.utc(2026, 1, 1, 0, 5),
+      );
+
+      await tester.pumpWidget(wrap(PracticeSessionScope(
+        controller: controller,
+        child: const PracticeQuestionScreen(),
+      )));
+
+      final firstQuestion = questions.first;
+      await tester.tap(find.text(firstQuestion.answers.first.text));
+      await tester.pump();
+
+      // Invoked directly, twice, with no `pump()` between them — a real
+      // rapid double-tap before the button's own `isLoading` guard has
+      // had a frame to visually disable it. `tester.tap()` twice in a
+      // row would hit-test against a tree that's already navigated away
+      // after the first (a harmless but noisy warning); calling the
+      // exact same callback the first tap would have triggered is the
+      // precise way to simulate two competing activations of one
+      // control, matching how the controller-level test already
+      // exercises this same guard directly.
+      final ElevatedButton button = tester.widget(find.ancestor(
+        of: find.text('Submit Answer'),
+        matching: find.byType(ElevatedButton),
+      ));
+      button.onPressed!();
+      button.onPressed!();
+      await tester.pumpAndSettle();
+
+      final List<AnswerAttempt> attempts =
+          await repo.answerAttemptsForExam(DebugDemoEnvironment.demoExamId);
+      expect(
+        attempts.where((a) => a.questionId == firstQuestion.id),
+        hasLength(1),
+        reason: 'PracticeSessionController.submitAnswer\'s own in-flight '
+            'guard (PREP-664) must prevent a second recorded attempt for '
+            'one logical tap, exercised here through the real screen and '
+            'button, not just called directly on the controller',
+      );
     });
   });
 
