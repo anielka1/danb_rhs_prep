@@ -108,10 +108,13 @@ void main() {
     final List<String> order = semanticsLabelOrder(root);
 
     final int backIndex = order.indexOf('Back');
-    final int changePasswordIndex = order.indexOf('Change Password');
+    // "Sound Effects" is now the last item on the page (PREP-459 removed
+    // the trailing "ACCOUNT" section — "Change Password" no longer
+    // exists to anchor on).
+    final int soundEffectsIndex = order.indexOf('Sound Effects');
     expect(backIndex, greaterThanOrEqualTo(0));
-    expect(changePasswordIndex, greaterThanOrEqualTo(0));
-    expect(backIndex, lessThan(changePasswordIndex),
+    expect(soundEffectsIndex, greaterThanOrEqualTo(0));
+    expect(backIndex, lessThan(soundEffectsIndex),
         reason: 'the toolbar back action should be reachable before scrolling '
             'through the page content below it');
 

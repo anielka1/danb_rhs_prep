@@ -50,6 +50,21 @@ with direct `MaterialPageRoute` pushes carrying real content/repository
 values, since a screen reached via the static route table cannot see the
 ambient `BootstrapSessionScope` a tab can) — those are marked below.
 
+## PREP-459 changes
+
+`ProfileSettingsScreen`'s "Edit Profile" and "Change Password" rows —
+kept by PREP-652 as **Disabled** (reachable, real doc comment, on the
+premise that a future auth phase might still arrive) — are **removed
+outright**. This app is accountless in V1 with no sign-in and no plan to
+add one; a guest explicitly shown "Guest / Not signed in" must never
+also see an "ACCOUNT" section suggesting an account exists to manage.
+Unlike `LoginScreen`'s buttons (removed because the *screen* was
+unreachable), these two rows were perfectly reachable — they're removed
+because the *feature behind them* has no path onto this product's
+roadmap at all, which makes "disabled and waiting" dishonest rather than
+merely premature. See `test/screens/accountless_no_login_test.dart` for
+the test guarding their absence.
+
 ## Summary counts
 
 **Before PREP-652:** 14 no-op controls existed at the time of the prior
@@ -61,12 +76,15 @@ document previously listed no longer exist at all (`ProfileSettingsScreen`
 "Sign Out", `MockExamResultsScreen` "Review Answers" and "Retake Exam" —
 removed by PREP-645/650 respectively). **PREP-652 itself removes 3 more**
 (`LoginScreen`'s Forgot Password, Google, and Apple sign-in) by deleting
-the unreachable screen that contained them. That leaves **8 disabled
-no-op-shaped controls**, all reachable, all with a real future feature and
-an explicit doc comment: `HomeScreen`'s floating "+" button,
+the unreachable screen that contained them, leaving 8 disabled
+no-op-shaped controls. **PREP-459 removes 2 more**
+(`ProfileSettingsScreen`'s "Edit Profile" and "Change Password" — see
+"PREP-459 changes" above). That leaves **6 disabled no-op-shaped
+controls**, all reachable, all with a real future feature and an
+explicit doc comment: `HomeScreen`'s floating "+" button,
 `AnswerExplanationScreen`'s bookmark icon, `PracticeSummaryScreen`'s
 "Review Mistakes", and `ProfileSettingsScreen`'s Push Notifications
-switch, Sound Effects switch, "Edit Profile", and "Change Password".
+switch and Sound Effects switch.
 
 | Screen | Control | Current behavior | Status | Intended behavior | Roadmap phase |
 | --- | --- | --- | --- | --- | --- |
@@ -103,8 +121,8 @@ switch, Sound Effects switch, "Edit Profile", and "Change Password".
 | ProfileSettingsScreen | Push Notifications switch | `onChanged: null`, documented | Disabled | Real notification permission + scheduling | Later phase (not yet in roadmap) |
 | ProfileSettingsScreen | Appearance selector | System/Light/Dark, app-wide, immediate | Working (tested) | — | 2.4 (done) |
 | ProfileSettingsScreen | Sound Effects switch | `onChanged: null`, documented | Disabled | Real audio-feedback system | Later phase (not yet in roadmap) |
-| ProfileSettingsScreen | "Edit Profile" | `onTap: null`, documented | Disabled | Account management | Phase 4 (auth) |
-| ProfileSettingsScreen | "Change Password" | `onTap: null`, documented | Disabled | Account management | Phase 4 (auth) |
+| ProfileSettingsScreen | "Edit Profile" | Row deleted from the screen | **Removed** | — | N/A — accountless V1, no auth phase planned | Removed by PREP-459 |
+| ProfileSettingsScreen | "Change Password" | Row deleted from the screen | **Removed** | — | N/A — accountless V1, no auth phase planned | Removed by PREP-459 |
 | `AppDialog` (Material + Cupertino) | Dialog actions | `Navigator.pop(action.value)` | Working (tested) | — | 2.2 (done) |
 | `ReadinessCard` | "View Details" | Calls caller-supplied `onViewDetail` | Working when a screen supplies one | Not currently mounted on any screen | Progress phase (not yet built) |
 | `SubscriptionProductCard` | Card tap (`onSelect`) | Calls caller-supplied `onSelect` | Working when a screen supplies one; card itself never imports StoreKit | Not currently mounted on any screen | Phase 5 (subscriptions/StoreKit) |
@@ -118,11 +136,23 @@ switch, Sound Effects switch, "Edit Profile", and "Change Password".
   "disabled and waiting for a feature" no longer made sense — it was
   deleted, along with every reference to it. See
   `test/screens/accountless_no_login_test.dart`.
-- **"Removed" vs "Disabled"**: every other no-op found (in this and the
-  prior audit) maps to a real, reachable screen and a plausible future
-  feature, so disabling (not removing) remains correct for those —
-  `LoginScreen` is the only case where the *entire screen*, not just one
-  control, was unreachable.
+- **`ProfileSettingsScreen` "Edit Profile" / "Change Password" — removed
+  outright (PREP-459).** Unlike `LoginScreen`, the *screen* was always
+  reachable; what changed is the product decision behind the *feature*.
+  PREP-652 kept these disabled on the premise that a future auth phase
+  might still arrive. PREP-459 confirms this app is accountless in V1
+  with no plan to add sign-in at all, so "disabled and waiting" was
+  advertising a capability the product will never have — dishonest in
+  the same way a fabricated value would be, just about a *feature*
+  rather than a *number*. Deliberately reverses PREP-652's call for
+  these two rows specifically; see `test/screens/accountless_no_login_test.dart`.
+- **"Removed" vs "Disabled"**: a no-op maps to a real, reachable screen
+  *and* a plausible future feature still on this product's roadmap, so
+  disabling (not removing) remains correct for those. It stops being
+  correct the moment either condition fails — the whole screen is
+  unreachable (`LoginScreen`, PREP-652) or the feature itself has no
+  path onto the roadmap at all (`Edit Profile`/`Change Password`,
+  PREP-459).
 - Controls already covered by the Section 2.3/2.4 navigation and
   accessibility work (tab bar, Settings/back navigation, dialog actions)
   are listed here for completeness but were not re-touched.

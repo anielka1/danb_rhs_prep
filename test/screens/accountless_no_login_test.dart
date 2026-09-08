@@ -35,6 +35,28 @@ void main() {
     expect(find.text('Sign Out'), findsNothing);
   });
 
+  testWidgets(
+      'ProfileSettingsScreen shows no account-management actions for the '
+      'accountless guest (PREP-459)', (tester) async {
+    await tester.pumpWidget(MaterialApp(
+      theme: AppTheme.lightTheme,
+      home: ProfileSettingsScreen(themeModeController: ThemeModeController()),
+    ));
+
+    // This app is accountless in V1, with no plan to add sign-in — a
+    // guest who is explicitly told "Not signed in" must never also see
+    // an "ACCOUNT" section suggesting an account exists to manage.
+    // PREP-652 kept these two rows as *disabled* (reachable, but the
+    // feature behind them doesn't exist yet), on the premise that a
+    // real auth phase might still arrive. PREP-459 deliberately reverses
+    // that call: since there's no auth phase in this product's plan at
+    // all, "disabled and waiting" is dishonest — it advertises a
+    // capability that will never exist, not a merely-not-yet-built one.
+    expect(find.text('ACCOUNT'), findsNothing);
+    expect(find.text('Edit Profile'), findsNothing);
+    expect(find.text('Change Password'), findsNothing);
+  });
+
   test('LoginScreen no longer exists anywhere in the codebase', () {
     expect(
       File('lib/screens/login_screen.dart').existsSync(),

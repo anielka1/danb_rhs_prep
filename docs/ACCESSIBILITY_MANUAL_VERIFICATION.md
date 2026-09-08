@@ -47,7 +47,7 @@ Accessibility Shortcut), then swipe/explore and note what's announced.
 
 ## Appearance selector (new in this task)
 - [ ] Settings → Appearance: selecting System/Light/Dark is announced with the segment's name and its selected state.
-- [ ] The disabled Push Notifications / Sound Effects switches, and the disabled Edit Profile / Change Password / Forgot Password / Google / Apple / Previous / Next / Review Answers / Review Mistakes / bookmark / Home FAB controls, are all announced as unavailable (not silently skipped, not announced as active buttons) — this checks the *live* VoiceOver experience of the `enabled: false` state the automated tests only check structurally.
+- [ ] The disabled Push Notifications / Sound Effects switches, and the disabled Forgot Password / Google / Apple / Previous / Next / Review Answers / Review Mistakes / bookmark / Home FAB controls, are all announced as unavailable (not silently skipped, not announced as active buttons) — this checks the *live* VoiceOver experience of the `enabled: false` state the automated tests only check structurally. ("Edit Profile" / "Change Password" removed outright by PREP-459 — this app is accountless in V1 with no plan to add sign-in, so there's nothing left here to verify.)
 
 ## Light and dark mode
 - [ ] Repeat the Home/tab-bar pass in dark mode — VoiceOver behavior should be identical (this is a rendering/contrast check, not a semantics check, but worth confirming nothing visually breaks while VoiceOver is on).

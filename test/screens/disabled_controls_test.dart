@@ -26,8 +26,7 @@ void main() {
       MaterialApp(theme: AppTheme.lightTheme, home: child);
 
   group('ProfileSettingsScreen', () {
-    testWidgets(
-        'Push Notifications, Sound Effects, and account rows have no tap action',
+    testWidgets('Push Notifications and Sound Effects have no tap action',
         (tester) async {
       final SemanticsHandle handle = tester.ensureSemantics();
       await tester.pumpWidget(wrap(
@@ -41,10 +40,11 @@ void main() {
           _hasTapAction(
               tester.getSemantics(find.bySemanticsLabel('Sound Effects'))),
           isFalse);
-      expect(_hasTapAction(tester.getSemantics(find.text('Edit Profile'))),
-          isFalse);
-      expect(_hasTapAction(tester.getSemantics(find.text('Change Password'))),
-          isFalse);
+      // "Edit Profile"/"Change Password" no longer exist at all (PREP-459)
+      // — this app is accountless with no sign-in and no plan to add one,
+      // so there's no account row left to check for a disabled tap
+      // action; see test/screens/accountless_no_login_test.dart for the
+      // test guarding their absence.
 
       handle.dispose();
     });
