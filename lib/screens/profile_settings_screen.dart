@@ -140,18 +140,15 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen> {
               value: true,
               onChanged: null,
             ),
-            const SizedBox(height: 10),
-            const Divider(),
-            const SizedBox(height: AppSpacing.xl - 2),
-            Align(
-              alignment: Alignment.centerLeft,
-              child: Text('ACCOUNT', style: textStyles.label),
-            ),
-            const SizedBox(height: AppSpacing.sm),
-            // Disabled: both require an authentication/account backend
-            // that doesn't exist yet.
-            const _AccountRow(title: 'Edit Profile', onTap: null),
-            const _AccountRow(title: 'Change Password', onTap: null),
+            // No "ACCOUNT" section (PREP-459): this app is accountless in
+            // V1, with no sign-in and no plan to add one — there is no
+            // account for a guest to edit or a password to change.
+            // PREP-652 had kept "Edit Profile"/"Change Password" visible
+            // but disabled, on the premise that a future auth phase might
+            // still arrive; PREP-459 deliberately reverses that call
+            // (see docs/INTERACTION_CONTROL_AUDIT.md) since "disabled and
+            // waiting" is dishonest for a capability this product will
+            // never have, not merely one that isn't built yet.
             const SizedBox(height: 90),
           ],
         ),
@@ -248,41 +245,6 @@ class _PreferenceRow extends StatelessWidget {
             onChanged: onChanged,
           ),
         ],
-      ),
-    );
-  }
-}
-
-class _AccountRow extends StatelessWidget {
-  final String title;
-
-  /// Null renders (and behaves as) a disabled row: no tap action reaches
-  /// assistive services, and the text is visually muted to match.
-  final VoidCallback? onTap;
-  const _AccountRow({required this.title, required this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    final bool enabled = onTap != null;
-    final Color mutedForeground = context.semanticColors.mutedForeground;
-    final Color textColor =
-        enabled ? context.colors.onSurface : mutedForeground;
-    return InkWell(
-      onTap: onTap,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 14),
-        child: Row(
-          children: [
-            Expanded(
-              child: Text(title,
-                  style: TextStyle(
-                      fontWeight: FontWeight.w700,
-                      fontSize: 15,
-                      color: textColor)),
-            ),
-            Icon(Icons.chevron_right_rounded, color: mutedForeground),
-          ],
-        ),
       ),
     );
   }
