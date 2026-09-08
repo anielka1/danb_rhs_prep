@@ -265,8 +265,9 @@ void main() {
       await tester
           .pumpWidget(wrap(ExamOverviewScreen(contentPackage: package)));
 
-      expect(find.textContaining('60 Minutes'), findsOneWidget);
-      expect(find.textContaining('75 Questions'), findsOneWidget);
+      expect(find.text('5 questions'), findsOneWidget);
+      expect(find.text('10 questions'), findsOneWidget);
+      expect(find.text('20 questions'), findsOneWidget);
       expect(find.textContaining('100 Questions'), findsNothing);
       expect(find.textContaining('1.5 Hours'), findsNothing);
       expect(find.textContaining('Intermediate'), findsNothing,
@@ -289,8 +290,11 @@ void main() {
       await tester
           .pumpWidget(wrap(ExamOverviewScreen(contentPackage: package)));
 
+      await tester.ensureVisible(find.byType(DropdownButtonFormField<String>));
+      await tester.tap(find.byType(DropdownButtonFormField<String>));
+      await tester.pumpAndSettle();
       for (final domain in package.exam.domains) {
-        expect(find.text(domain.name), findsOneWidget,
+        expect(find.text(domain.name), findsWidgets,
             reason: 'every configured domain should be listed');
       }
       expect(find.text('Radiation Physics & Characteristics'), findsNothing);
@@ -312,7 +316,10 @@ void main() {
       await tester
           .pumpWidget(wrap(ExamOverviewScreen(contentPackage: package)));
 
-      expect(find.textContaining('No approved questions'), findsOneWidget);
+      await tester.ensureVisible(find.text('Start Practice Exam'));
+      await tester.tap(find.text('Start Practice Exam'));
+      await tester.pumpAndSettle();
+      expect(find.textContaining('no eligible questions'), findsOneWidget);
       for (final domain in package.exam.domains) {
         expect(find.text(domain.name), findsNothing,
             reason: 'an empty bank should not render a domain list with '
@@ -339,11 +346,20 @@ void main() {
       await tester.pumpWidget(
           wrap(ExamOverviewScreen(contentPackage: packageWithOneApproved)));
 
-      expect(find.text(approvedDomainName), findsOneWidget);
+      await tester.ensureVisible(find.byType(DropdownButtonFormField<String>));
+      await tester.tap(find.byType(DropdownButtonFormField<String>));
+      await tester.pumpAndSettle();
+      expect(find.text(approvedDomainName), findsWidgets);
+      await tester.tap(find.text(approvedDomainName).last);
+      await tester.pumpAndSettle();
       expect(find.textContaining('No approved questions'), findsNothing);
-      expect(find.text('1 Questions'), findsOneWidget,
-          reason: 'the domain with the newly-approved question shows a '
-              'real count of 1, not a fabricated or zero value');
+      await tester.ensureVisible(find.text('Start Practice Exam'));
+      await tester.tap(find.text('Start Practice Exam'));
+      await tester.pumpAndSettle();
+      final controller = PracticeSessionScope.of(
+          tester.element(find.byType(PracticeQuestionScreen)));
+      expect(controller.totalQuestions, 1);
+      expect(controller.currentQuestion.domainId, firstQuestion.domainId);
     });
   });
 

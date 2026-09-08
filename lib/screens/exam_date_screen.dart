@@ -88,8 +88,8 @@ class _ExamDateScreenState extends State<ExamDateScreen> {
         BootstrapSessionScope.snapshotOf(context).examDateSelection;
     if (saved == null) return;
 
-    if (saved.precision == ExamDatePrecision.notScheduled) {
-      _precision = ExamDatePrecision.notScheduled;
+    if (!saved.precision.requiresDate) {
+      _precision = saved.precision;
       return;
     }
 
@@ -108,7 +108,7 @@ class _ExamDateScreenState extends State<ExamDateScreen> {
   bool get _canContinue {
     final ExamDatePrecision? precision = _precision;
     if (precision == null) return false;
-    if (precision == ExamDatePrecision.notScheduled) return true;
+    if (!precision.requiresDate) return true;
     final DateTime? date = _selectedDate;
     if (date == null) return false;
     return !date.isBefore(_today);
@@ -124,7 +124,7 @@ class _ExamDateScreenState extends State<ExamDateScreen> {
     if (precision == null) return null;
     final ExamDateSelection selection = ExamDateSelection(
       precision: precision,
-      date: precision == ExamDatePrecision.notScheduled ? null : _selectedDate,
+      date: precision.requiresDate ? _selectedDate : null,
     );
     return isExamDateSelectionValid(selection, _today) ? selection : null;
   }
@@ -133,7 +133,7 @@ class _ExamDateScreenState extends State<ExamDateScreen> {
     if (_busy) return;
     setState(() {
       _precision = precision;
-      if (precision == ExamDatePrecision.notScheduled) {
+      if (!precision.requiresDate) {
         _selectedDate = null;
       }
       _restoredDateExpired = false;
@@ -253,34 +253,36 @@ class _ExamDateScreenState extends State<ExamDateScreen> {
             const SizedBox(height: AppSpacing.md),
             Text(
               'When is your exam?',
-              style: textStyles.h2,
-              textAlign: TextAlign.center,
+              style: textStyles.h1,
+              textAlign: TextAlign.start,
             ),
             const SizedBox(height: AppSpacing.sm),
             Text(
-              'This helps us shape your study plan. You can change it '
-              'later.',
+              'A rough idea is enough. You can change this anytime.',
               style: textStyles.body,
-              textAlign: TextAlign.center,
+              textAlign: TextAlign.start,
             ),
             const SizedBox(height: AppSpacing.xl),
+            for (final entry in const {
+              ExamDatePrecision.withinMonth: 'Within a month',
+              ExamDatePrecision.oneToThreeMonths: 'In 1–3 months',
+              ExamDatePrecision.later: 'Later',
+              ExamDatePrecision.notScheduled: "I haven't scheduled it yet",
+            }.entries) ...[
+              _ChoiceCard(
+                  label: entry.value,
+                  selected: _precision == entry.key,
+                  onTap: () => _selectPrecision(entry.key)),
+              const SizedBox(height: AppSpacing.sm),
+            ],
             _ChoiceCard(
               label: 'I know the exact date',
               selected: _precision == ExamDatePrecision.exact,
               onTap: () => _selectPrecision(ExamDatePrecision.exact),
             ),
-            const SizedBox(height: AppSpacing.sm),
-            _ChoiceCard(
-              label: 'I have an approximate date',
-              selected: _precision == ExamDatePrecision.approximate,
-              onTap: () => _selectPrecision(ExamDatePrecision.approximate),
-            ),
-            const SizedBox(height: AppSpacing.sm),
-            _ChoiceCard(
-              label: "I haven't scheduled it yet",
-              selected: _precision == ExamDatePrecision.notScheduled,
-              onTap: () => _selectPrecision(ExamDatePrecision.notScheduled),
-            ),
+            if (_precision == ExamDatePrecision.approximate)
+              Text('Previously saved approximate date',
+                  style: textStyles.bodySmall),
             if (needsDateSelector) ...[
               const SizedBox(height: AppSpacing.lg),
               _DateSelector(
@@ -352,13 +354,13 @@ class _ChoiceCard extends StatelessWidget {
             constraints:
                 const BoxConstraints(minHeight: AppTapTarget.minInteractive),
             padding: const EdgeInsets.symmetric(
-                horizontal: AppSpacing.lg, vertical: AppSpacing.md),
+                horizontal: AppSpacing.lg, vertical: AppSpacing.lg),
             decoration: BoxDecoration(
               color:
                   selected ? colors.primaryContainer : colors.surfaceContainer,
               borderRadius: BorderRadius.circular(AppRadii.smallIcon),
               border: Border.all(
-                color: selected ? colors.primary : Colors.transparent,
+                color: selected ? colors.primary : colors.outlineVariant,
                 width: AppBorderWidth.regular,
               ),
             ),
@@ -421,7 +423,7 @@ class _DateSelector extends StatelessWidget {
             constraints:
                 const BoxConstraints(minHeight: AppTapTarget.minInteractive),
             padding: const EdgeInsets.symmetric(
-                horizontal: AppSpacing.lg, vertical: AppSpacing.md),
+                horizontal: AppSpacing.lg, vertical: AppSpacing.lg),
             decoration: BoxDecoration(
               color: colors.surfaceContainer,
               borderRadius: BorderRadius.circular(AppRadii.smallIcon),

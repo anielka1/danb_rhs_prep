@@ -9,7 +9,7 @@ import '../services/analytics_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/app_scaffold.dart';
 import '../widgets/primary_button.dart';
-import '../widgets/radiation_icon.dart';
+import '../widgets/app_card.dart';
 import 'exam_date_screen.dart';
 
 /// The first screen of onboarding: introduces the exam and starts it via
@@ -155,33 +155,53 @@ class _WelcomeContent extends StatelessWidget {
             constraints: const BoxConstraints(maxWidth: 360),
             child: Column(
               mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // 1. App/exam identity.
-                Container(
-                  width: 84,
-                  height: 84,
-                  decoration: BoxDecoration(
-                    color: colors.primaryContainer,
-                    borderRadius: BorderRadius.circular(AppRadii.card),
-                  ),
-                  alignment: Alignment.center,
-                  child: const RadiationIcon(size: 40),
+                Row(
+                  children: [
+                    Expanded(
+                        child: AppCard(
+                            child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Icon(Icons.auto_stories_rounded,
+                            color: colors.secondary, size: 32),
+                        const SizedBox(height: AppSpacing.xl),
+                        Text('Learn.', style: textStyles.h2),
+                      ],
+                    ))),
+                    const SizedBox(width: AppSpacing.md),
+                    Expanded(
+                        child: AppCard(
+                            backgroundColor: colors.primary,
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Icon(Icons.done_all_rounded,
+                                    color: colors.onPrimary, size: 32),
+                                const SizedBox(height: AppSpacing.xl),
+                                Text('Feel ready.',
+                                    style: textStyles.h2
+                                        .copyWith(color: colors.onPrimary)),
+                              ],
+                            ))),
+                  ],
                 ),
-                const SizedBox(height: AppSpacing.lg),
+                const SizedBox(height: AppSpacing.xxxl),
                 Text(
                   examName,
                   style: textStyles.label.copyWith(
                     color: colors.secondary,
                     fontWeight: FontWeight.w700,
                   ),
-                  textAlign: TextAlign.center,
+                  textAlign: TextAlign.start,
                 ),
                 const SizedBox(height: AppSpacing.lg),
                 // 2. Headline.
                 Text(
-                  "Know when you're ready to pass.",
+                  'A little practice.\nMore confidence.',
                   style: textStyles.h1,
-                  textAlign: TextAlign.center,
+                  textAlign: TextAlign.start,
                 ),
                 const SizedBox(height: AppSpacing.sm),
                 // 3. Supporting copy.
@@ -189,10 +209,13 @@ class _WelcomeContent extends StatelessWidget {
                   'Build confidence with focused practice, clear '
                   'explanations, and progress you can understand.',
                   style: textStyles.body,
-                  textAlign: TextAlign.center,
+                  textAlign: TextAlign.start,
                 ),
                 const SizedBox(height: AppSpacing.xxl),
-                // 4. The one primary CTA.
+                Text('Study offline. No account needed.',
+                    style: textStyles.bodySmall),
+                const SizedBox(height: AppSpacing.xxl),
+                // The one primary CTA.
                 PrimaryButton(
                   label: 'Start Preparing',
                   isLoading: isBusy,

@@ -74,12 +74,12 @@ void main() {
         expect(tester.takeException(), isNull);
 
         expect(currentTab(tester), AppTab.home);
-        expect(find.text('Today'), findsOneWidget);
+        expect(find.text('Small steps.\nSteady progress.'), findsOneWidget);
 
         await tapTab(tester, 'Practice');
         expect(tester.takeException(), isNull);
         expect(currentTab(tester), AppTab.practice);
-        expect(find.text('Exam Info'), findsOneWidget);
+        expect(find.text('Let’s practice.'), findsOneWidget);
 
         await tapTab(tester, 'Mock Exam');
         expect(tester.takeException(), isNull);
@@ -145,7 +145,7 @@ void main() {
         await tapTab(tester, 'Home');
         expect(tester.takeException(), isNull);
         expect(currentTab(tester), AppTab.home);
-        expect(find.text('Today'), findsOneWidget);
+        expect(find.text('Small steps.\nSteady progress.'), findsOneWidget);
       });
 
       testWidgets(
@@ -155,7 +155,7 @@ void main() {
 
         // Settings is reached from Home; select a day first so there's
         // real per-tab state to check survives the round trip.
-        await tester.tap(find.bySemanticsLabel(RegExp('Wed')));
+        expect(find.byType(FloatingActionButton), findsNothing);
         await tester.pumpAndSettle();
 
         await tester.tap(find.byTooltip('Settings'));
@@ -168,7 +168,7 @@ void main() {
         expect(tester.takeException(), isNull);
         expect(find.byType(ProfileSettingsScreen), findsNothing);
         expect(currentTab(tester), AppTab.home);
-        expect(find.text('Today'), findsOneWidget);
+        expect(find.text('Small steps.\nSteady progress.'), findsOneWidget);
       });
 
       testWidgets('inactive tabs are excluded from accessibility semantics',
@@ -177,35 +177,23 @@ void main() {
         await tester.pumpWidget(appAt(tester, viewport));
 
         // Home is active: its content is reachable, Progress's is not.
-        expect(find.bySemanticsLabel('Today'), findsOneWidget);
+        expect(find.bySemanticsLabel('Small steps.\nSteady progress.'),
+            findsOneWidget);
         expect(find.bySemanticsLabel(RegExp('Your Progress')), findsNothing);
 
         await tapTab(tester, 'Progress');
 
         expect(find.bySemanticsLabel(RegExp('Your Progress')), findsOneWidget);
-        expect(find.bySemanticsLabel('Today'), findsNothing);
+        expect(find.bySemanticsLabel('Small steps.\nSteady progress.'),
+            findsNothing);
 
         handle.dispose();
       });
 
-      testWidgets(
-          'a disabled future-feature control looks disabled and has no tap action',
-          (tester) async {
-        final SemanticsHandle handle = tester.ensureSemantics();
+      testWidgets('Home has no dead floating action', (tester) async {
         await tester.pumpWidget(appAt(tester, viewport));
-
-        final FloatingActionButton fab =
-            tester.widget(find.byType(FloatingActionButton));
-        expect(fab.onPressed, isNull);
-        expect(
-          tester
-              .getSemantics(find.byType(FloatingActionButton))
-              .getSemanticsData()
-              .hasAction(SemanticsAction.tap),
-          isFalse,
-        );
-
-        handle.dispose();
+        await tester.pumpAndSettle();
+        expect(find.byType(FloatingActionButton), findsNothing);
       });
     });
   }
@@ -230,7 +218,9 @@ void main() {
             expect(tester.takeException(), isNull);
 
             expect(
-                Theme.of(tester.element(find.text('Today'))).brightness,
+                Theme.of(tester
+                        .element(find.text('Small steps.\nSteady progress.')))
+                    .brightness,
                 themeMode == ThemeMode.dark
                     ? Brightness.dark
                     : Brightness.light);
@@ -246,9 +236,7 @@ void main() {
             // Selected/disabled states stay distinguishable regardless of
             // theme or text scale.
             expect(currentTab(tester), AppTab.home);
-            final FloatingActionButton fab =
-                tester.widget(find.byType(FloatingActionButton));
-            expect(fab.onPressed, isNull);
+            expect(find.byType(FloatingActionButton), findsNothing);
           });
         }
       }

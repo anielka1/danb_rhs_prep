@@ -143,7 +143,7 @@ void main() {
         MaterialApp(theme: AppTheme.lightTheme, home: home);
 
     final titledScreens = <String, Widget Function()>{
-      'Exam Info': () => const ExamOverviewScreen(),
+      'Let’s practice.': () => const ExamOverviewScreen(),
       'Review Question': () => const AnswerExplanationScreen(),
       'Exam Results': () => const MockExamResultsScreen(),
       'Settings': () =>

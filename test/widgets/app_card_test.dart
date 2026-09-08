@@ -188,11 +188,13 @@ void main() {
     }
 
     await tester.pumpWidget(wrap(const AppCard(child: Text('x'))));
-    expect(borderOf(tester), isNull);
+    expect(borderOf(tester)?.top.color,
+        AppTheme.lightTheme.colorScheme.outlineVariant);
 
     await tester
         .pumpWidget(wrap(const AppCard(selected: false, child: Text('x'))));
-    expect(borderOf(tester), isNull);
+    expect(borderOf(tester)?.top.color,
+        AppTheme.lightTheme.colorScheme.outlineVariant);
 
     await tester
         .pumpWidget(wrap(const AppCard(selected: true, child: Text('x'))));

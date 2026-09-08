@@ -197,6 +197,8 @@ class _MockExamInstructionsScreenState
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
                         const SizedBox(height: AppSpacing.lg),
+                        Text('A focused practice exam.', style: text.h1),
+                        const SizedBox(height: AppSpacing.xxl),
                         if (blueprint.isDemo)
                           Text('Demo exam · synthetic questions',
                               style: text.h3),

@@ -134,7 +134,7 @@ void main() {
     testWidgets('shows the exact headline', (tester) async {
       await tester.pumpWidget(wrap());
 
-      expect(find.text("Know when you're ready to pass."), findsOneWidget);
+      expect(find.text('A little practice.\nMore confidence.'), findsOneWidget);
     });
 
     testWidgets('shows the exact supporting copy', (tester) async {
@@ -203,7 +203,7 @@ void main() {
 
       expect(tester.takeException(), isNull);
       expect(find.text('Start Preparing'), findsOneWidget);
-      expect(find.text("Know when you're ready to pass."), findsOneWidget);
+      expect(find.text('A little practice.\nMore confidence.'), findsOneWidget);
     });
   });
 

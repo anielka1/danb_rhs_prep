@@ -31,20 +31,8 @@ void main() {
       await tester.pumpWidget(wrap(
           ProfileSettingsScreen(themeModeController: ThemeModeController())));
 
-      expect(
-          _hasTapAction(
-              tester.getSemantics(find.bySemanticsLabel('Push Notifications'))),
-          isFalse);
-      expect(
-          _hasTapAction(
-              tester.getSemantics(find.bySemanticsLabel('Sound Effects'))),
-          isFalse);
-      // "Edit Profile"/"Change Password" no longer exist at all (PREP-459)
-      // — this app is accountless with no sign-in and no plan to add one,
-      // so there's no account row left to check for a disabled tap
-      // action; see test/screens/accountless_no_login_test.dart for the
-      // test guarding their absence.
-
+      expect(find.text('Push Notifications'), findsNothing);
+      expect(find.text('Sound Effects'), findsNothing);
       handle.dispose();
     });
 
@@ -54,7 +42,7 @@ void main() {
           ProfileSettingsScreen(themeModeController: ThemeModeController())));
 
       final switches = tester.widgetList<Switch>(find.byType(Switch));
-      expect(switches, hasLength(2));
+      expect(switches, isEmpty);
       for (final s in switches) {
         expect(s.onChanged, isNull);
       }
@@ -70,9 +58,7 @@ void main() {
       final SemanticsHandle handle = tester.ensureSemantics();
       await tester.pumpWidget(wrap(const HomeScreen()));
 
-      expect(
-          _hasTapAction(tester.getSemantics(find.byType(FloatingActionButton))),
-          isFalse);
+      expect(find.byType(FloatingActionButton), findsNothing);
 
       handle.dispose();
     });

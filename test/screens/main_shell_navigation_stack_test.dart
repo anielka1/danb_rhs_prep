@@ -97,7 +97,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(currentTab(tester), AppTab.home);
-      expect(find.text('Today'), findsOneWidget);
+      expect(find.text('Small steps.\nSteady progress.'), findsOneWidget);
     });
 
     testWidgets(

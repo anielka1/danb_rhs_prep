@@ -10,6 +10,7 @@ import '../features/questions/domain/question.dart';
 import '../mock_exam/mock_exam_blueprint.dart';
 import '../theme/app_theme.dart';
 import '../widgets/app_scaffold.dart';
+import '../widgets/app_card.dart';
 import '../widgets/domain_progress_row.dart';
 import '../widgets/empty_state.dart';
 import '../widgets/error_state.dart';
@@ -265,9 +266,13 @@ class _ProgressScreenState extends State<ProgressScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const SizedBox(height: 12),
+            Text('YOUR LEARNING', style: textStyles.label),
+            const SizedBox(height: AppSpacing.sm),
             Text('Your Progress', style: textStyles.h1),
+            const SizedBox(height: AppSpacing.sm),
+            Text('Progress you can see.', style: textStyles.body),
             const SizedBox(height: AppSpacing.xxl + 2),
-            body,
+            AppCard(padding: const EdgeInsets.all(AppSpacing.xl), child: body),
             const SizedBox(height: 90),
           ],
         ),

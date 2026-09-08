@@ -209,7 +209,7 @@ void main() {
       expect(find.text('When is your exam?'), findsOneWidget);
       expect(
         find.text(
-          'This helps us shape your study plan. You can change it later.',
+          'A rough idea is enough. You can change this anytime.',
         ),
         findsOneWidget,
       );
@@ -219,7 +219,7 @@ void main() {
       await tester.pumpWidget(wrap(localStore: InMemoryBootstrapLocalStore()));
 
       expect(find.text('I know the exact date'), findsOneWidget);
-      expect(find.text('I have an approximate date'), findsOneWidget);
+      expect(find.text('Within a month'), findsOneWidget);
       expect(find.text("I haven't scheduled it yet"), findsOneWidget);
     });
 
@@ -233,7 +233,7 @@ void main() {
 
       expect(find.bySemanticsLabel('I know the exact date, selected'),
           findsOneWidget);
-      expect(find.bySemanticsLabel('I have an approximate date, not selected'),
+      expect(find.bySemanticsLabel('Within a month, not selected'),
           findsOneWidget);
     });
   });
@@ -249,14 +249,14 @@ void main() {
       expect(find.text('Choose a date'), findsOneWidget);
     });
 
-    testWidgets('selecting approximate also reveals a date selector',
+    testWidgets('selecting a broad timeframe does not require a calendar',
         (tester) async {
       await tester.pumpWidget(wrap(localStore: InMemoryBootstrapLocalStore()));
 
-      await tester.tap(find.text('I have an approximate date'));
+      await tester.tap(find.text('Within a month'));
       await tester.pump();
 
-      expect(find.text('Choose a date'), findsOneWidget);
+      expect(find.text('Choose a date'), findsNothing);
     });
 
     testWidgets('selecting unscheduled shows no date selector', (tester) async {
@@ -301,9 +301,8 @@ void main() {
               'switch, not merely hidden');
     });
 
-    testWidgets(
-        'switching between exact and approximate preserves the chosen '
-        'date', (tester) async {
+    testWidgets('switching from exact to a broad timeframe clears the date',
+        (tester) async {
       await tester.pumpWidget(wrap(localStore: InMemoryBootstrapLocalStore()));
       await tester.tap(find.text('I know the exact date'));
       await tester.pump();
@@ -313,10 +312,10 @@ void main() {
       final String expected =
           MaterialLocalizations.of(context).formatMediumDate(fixedToday);
 
-      await tester.tap(find.text('I have an approximate date'));
+      await tester.tap(find.text('Within a month'));
       await tester.pump();
 
-      expect(find.text(expected), findsOneWidget);
+      expect(find.text(expected), findsNothing);
       expect(find.text('Choose a date'), findsNothing);
     });
   });
@@ -424,6 +423,7 @@ void main() {
       await tester.tap(find.text("I haven't scheduled it yet"));
       await tester.pump();
 
+      await tester.ensureVisible(find.text('Continue'));
       await tester.tap(find.text('Continue'));
       await tester.pumpAndSettle();
 
@@ -446,6 +446,7 @@ void main() {
       await tester.pump();
       await pickDay(tester, fixedToday.day);
 
+      await tester.ensureVisible(find.text('Continue'));
       await tester.tap(find.text('Continue'));
       await tester.pumpAndSettle();
 
@@ -468,6 +469,7 @@ void main() {
       await tester.tap(find.text("I haven't scheduled it yet"));
       await tester.pump();
 
+      await tester.ensureVisible(find.text('Continue'));
       await tester.tap(find.text('Continue'));
       await tester.pumpAndSettle();
 
@@ -486,6 +488,7 @@ void main() {
       await tester.pumpWidget(wrap(localStore: localStore));
       await tester.tap(find.text("I haven't scheduled it yet"));
       await tester.pump();
+      await tester.ensureVisible(find.text('Continue'));
       await tester.tap(find.text('Continue'));
       await tester.pumpAndSettle();
       expect(find.text('Retry'), findsOneWidget);
@@ -510,6 +513,7 @@ void main() {
       await tester.tap(find.text("I haven't scheduled it yet"));
       await tester.pump();
 
+      await tester.ensureVisible(find.text('Continue'));
       await tester.tap(find.text('Continue'));
       await tester.pump();
       await tester.tap(find.byType(PrimaryButton), warnIfMissed: false);
@@ -620,12 +624,11 @@ void main() {
       final double headingY =
           tester.getTopLeft(find.text('When is your exam?')).dy;
       final double copyY = tester
-          .getTopLeft(find
-              .text('This helps us shape your study plan. You can change it '
-                  'later.'))
+          .getTopLeft(
+              find.text('A rough idea is enough. You can change this anytime.'))
           .dy;
       final double firstChoiceY =
-          tester.getTopLeft(find.text('I know the exact date')).dy;
+          tester.getTopLeft(find.text('Within a month')).dy;
       final double lastChoiceY =
           tester.getTopLeft(find.text("I haven't scheduled it yet")).dy;
       final double continueY = tester.getTopLeft(find.byType(PrimaryButton)).dy;

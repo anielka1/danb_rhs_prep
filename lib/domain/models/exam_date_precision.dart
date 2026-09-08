@@ -4,4 +4,13 @@
 /// existing pattern) so that both `UserProfile` and `ExamDateSelection` can
 /// depend on this enum without either depending on the other, or on the
 /// `UserProfile` aggregate, merely to share it.
-enum ExamDatePrecision { exact, approximate, notScheduled }
+enum ExamDatePrecision {
+  exact,
+  approximate,
+  notScheduled,
+  withinMonth,
+  oneToThreeMonths,
+  later;
+
+  bool get requiresDate => this == exact || this == approximate;
+}
