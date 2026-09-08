@@ -303,4 +303,54 @@ void main() {
               '(as AnswerExplanationScreen would) must still show');
     });
   });
+
+  group('elapsed timer (PREP-457)', () {
+    testWidgets(
+        'the displayed elapsed time updates on its own as time passes, '
+        'with no answer/navigation action in between', (tester) async {
+      // A plain mutable value under this test's own control, standing in
+      // for the passage of real time — isolates "does the screen rebuild
+      // on its own" from PracticeSessionController's own now-injection
+      // (covered separately in exam_overview_screen_test.dart). Before
+      // this fix, PracticeQuestionScreen had no periodic timer of its own
+      // (unlike MockExamQuestionScreen's identical one) — elapsed only
+      // ever changed on the next unrelated setState (selecting an answer,
+      // Submit, bookmark), so it looked frozen between those.
+      DateTime fakeNow = DateTime.utc(2026, 1, 1, 9, 0, 0);
+      final session = PracticeSession(
+        id: 'elapsed-ticker-test-session',
+        examId: DebugDemoEnvironment.demoExamId,
+        mode: PracticeMode.quickPractice,
+        questionIds:
+            DebugDemoEnvironment.demoQuestions.map((q) => q.id).toList(),
+        status: SessionStatus.inProgress,
+        startedAt: DateTime.utc(2026, 1, 1, 9, 0, 0),
+      );
+      final controller = PracticeSessionController(
+        session: session,
+        questions: DebugDemoEnvironment.demoQuestions,
+        now: () => fakeNow,
+      );
+
+      await tester.pumpWidget(wrap(PracticeSessionScope(
+        controller: controller,
+        child: const PracticeQuestionScreen(),
+      )));
+      // Lets the screen's own one-time bookmark-load rebuild (unrelated
+      // to this test) settle first, so the only thing that can explain a
+      // rebuild after the next, deliberately time-only pump below is the
+      // elapsed-time ticker under test — not a coincidental dirty flag
+      // left over from something else.
+      await tester.pump();
+
+      expect(find.text('00:00'), findsOneWidget);
+
+      fakeNow = fakeNow.add(const Duration(seconds: 5));
+      await tester.pump(const Duration(seconds: 1));
+
+      expect(find.text('00:05'), findsOneWidget,
+          reason: 'the screen must rebuild on its own tick and re-read '
+              "controller.elapsed — no tap or navigation happened here");
+    });
+  });
 }

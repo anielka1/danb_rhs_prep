@@ -164,6 +164,13 @@ class _ExamOverviewScreenState extends State<ExamOverviewScreen> {
     final ContentPackage package = widget.contentPackage!;
     final ProgressRepository? repository = widget.progressRepository;
     final String examId = package.exam.id;
+    // Threaded into everything below that stamps or measures time —
+    // PracticeSession.startedAt, PracticeSessionController's elapsed-time
+    // clock, and the daily free-practice-limit check — so a caller
+    // injecting a fixed clock (the demo entrypoint; any future test) gets
+    // a session whose elapsed timer actually agrees with it, instead of
+    // silently falling back to the real device clock partway through.
+    final DateTime Function() nowFn = widget.now ?? DateTime.now;
 
     PracticeSession? existing;
     if (repository != null) {
@@ -184,7 +191,7 @@ class _ExamOverviewScreenState extends State<ExamOverviewScreen> {
       // QuestionState history before calling this.
       int? maxCount;
       if (widget.entitlement != null && repository != null) {
-        final DateTime nowValue = (widget.now ?? DateTime.now)();
+        final DateTime nowValue = nowFn();
         if (widget.entitlement!.isActiveAt(nowValue)) {
           // Premium: no cap, and deliberately no attempt-history read at
           // all — an active entitlement never needs to know "how many
@@ -240,12 +247,12 @@ class _ExamOverviewScreenState extends State<ExamOverviewScreen> {
         return;
       }
       session = PracticeSession(
-        id: 'practice-$examId-${DateTime.now().toUtc().microsecondsSinceEpoch}',
+        id: 'practice-$examId-${nowFn().toUtc().microsecondsSinceEpoch}',
         examId: examId,
         mode: PracticeMode.quickPractice,
         questionIds: generator.questions.map((q) => q.id).toList(),
         status: SessionStatus.inProgress,
-        startedAt: DateTime.now().toUtc(),
+        startedAt: nowFn().toUtc(),
         contentVersion: package.contentVersion,
       );
     }
@@ -302,11 +309,13 @@ class _ExamOverviewScreenState extends State<ExamOverviewScreen> {
                 session: session,
                 questions: questions,
                 progressRepository: repository,
+                now: nowFn,
               )
             : PracticeSessionController(
                 session: session,
                 questions: questions,
                 progressRepository: repository,
+                now: nowFn,
               );
 
     if (!mounted) return;

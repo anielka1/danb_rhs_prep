@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import '../domain/models/answer_feedback.dart';
 import '../features/questions/domain/question.dart';
@@ -26,6 +27,28 @@ class _PracticeQuestionScreenState extends State<PracticeQuestionScreen> {
   /// survives navigating away and back via Previous/Next.
   String? _pendingSelection;
   bool _submitting = false;
+
+  /// Rebuilds once a second purely so the elapsed-time display
+  /// (`controller.elapsed`) actually counts up on screen — this
+  /// controller is a plain mutable holder, not a `ChangeNotifier` (see
+  /// its own doc comment), so nothing else here triggers a rebuild
+  /// between question transitions. Mirrors `MockExamQuestionScreen`'s
+  /// identical timer.
+  Timer? _elapsedTicker;
+
+  @override
+  void initState() {
+    super.initState();
+    _elapsedTicker = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (mounted) setState(() {});
+    });
+  }
+
+  @override
+  void dispose() {
+    _elapsedTicker?.cancel();
+    super.dispose();
+  }
 
   /// Which question's bookmark state has already been requested from
   /// [PracticeSessionController.loadBookmark] (PREP-460) — unlike

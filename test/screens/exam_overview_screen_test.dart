@@ -190,6 +190,34 @@ void main() {
     });
   });
 
+  group('a freshly-started session', () {
+    testWidgets(
+        "is stamped with this screen's injected clock, not the real "
+        'device clock (PREP-457)', (tester) async {
+      final DateTime fixedNow = DateTime.utc(2026, 1, 1, 9);
+
+      await tester.pumpWidget(wrap(ExamOverviewScreen(
+        contentPackage: DebugDemoEnvironment.demoContentPackage,
+        now: () => fixedNow,
+      )));
+
+      await tester.ensureVisible(find.text('Start Practice Exam'));
+      await tester.tap(find.text('Start Practice Exam'));
+      await tester.pumpAndSettle();
+
+      final PracticeSessionController controller = PracticeSessionScope.of(
+          tester.element(find.byType(PracticeQuestionScreen)));
+      expect(controller.session.startedAt, fixedNow,
+          reason: 'a session created here must be stamped with the '
+              'injected clock so its own elapsed timer stays consistent '
+              'with it for the rest of this session, exactly like a '
+              'resumed session (see the sibling test above)');
+      expect(controller.elapsed, Duration.zero,
+          reason: 'no real time has passed between the injected startedAt '
+              'and this same injected now');
+    });
+  });
+
   group('real exam stats and topic coverage (PREP-460)', () {
     ContentPackage realPackage() => const ExamContentCodec().decode(
         File('assets/content/danb_rhs/content.json').readAsStringSync());
@@ -340,6 +368,45 @@ void main() {
           .inProgressPracticeSession(DebugDemoEnvironment.demoExamId);
       expect(stillOnlyOneInProgress?.id,
           DebugDemoEnvironment.demoInProgressPracticeSession.id);
+    });
+
+    testWidgets(
+        "a resumed session's elapsed timer is measured against this "
+        'screen\'s injected clock, not the real device clock (PREP-457)',
+        (tester) async {
+      // demoInProgressPracticeSession.startedAt is a fixed fictional date
+      // (2026-01-01 13:00 UTC) — exactly the kind of fixture the demo
+      // entrypoint's own fixed `now` (also 2026-01-01) is meant to agree
+      // with. Before this fix, `_startOrResumePractice` never passed its
+      // `now` through to `PracticeSessionController.resume`, so `elapsed`
+      // was silently measured against the real device clock instead —
+      // many months of real elapsed time for this fixture, immediately
+      // clamped to `_formatElapsed`'s display ceiling and making the
+      // on-screen timer look permanently frozen there.
+      final repository = DebugDemoEnvironment.buildProgressRepository();
+      final DateTime fixedNow = DateTime.utc(2026, 1, 1, 14, 30);
+
+      await tester.pumpWidget(wrap(ExamOverviewScreen(
+        contentPackage: DebugDemoEnvironment.demoContentPackage,
+        progressRepository: repository,
+        now: () => fixedNow,
+      )));
+
+      await tester.ensureVisible(find.text('Start Practice Exam'));
+      await tester.tap(find.text('Start Practice Exam'));
+      await tester.pumpAndSettle();
+
+      final PracticeSessionController controller = PracticeSessionScope.of(
+          tester.element(find.byType(PracticeQuestionScreen)));
+      expect(
+        controller.elapsed,
+        fixedNow.difference(
+            DebugDemoEnvironment.demoInProgressPracticeSession.startedAt),
+        reason: 'must equal exactly the injected now minus the session\'s '
+            'real startedAt — any dependency on the real device clock '
+            'would make this assertion flaky at best, wildly wrong (and '
+            'silently clamped) at worst',
+      );
     });
 
     testWidgets(
