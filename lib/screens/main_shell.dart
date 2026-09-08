@@ -87,10 +87,18 @@ class MainShellScope extends InheritedWidget {
   const MainShellScope({
     super.key,
     required this.controller,
+    this.activeTab,
     required super.child,
   });
 
   final MainShellController controller;
+
+  /// Captured separately from the mutable controller so tab changes notify
+  /// preserved routes that need to refresh their repository data.
+  final AppTab? activeTab;
+
+  static AppTab? activeTabOf(BuildContext context) =>
+      context.dependOnInheritedWidgetOfExactType<MainShellScope>()?.activeTab;
 
   static MainShellController? maybeOf(BuildContext context) {
     return context
@@ -100,7 +108,8 @@ class MainShellScope extends InheritedWidget {
 
   @override
   bool updateShouldNotify(MainShellScope oldWidget) =>
-      !identical(controller, oldWidget.controller);
+      !identical(controller, oldWidget.controller) ||
+      activeTab != oldWidget.activeTab;
 }
 
 class _MainShellState extends State<MainShell>
@@ -222,6 +231,7 @@ class _MainShellState extends State<MainShell>
 
     return MainShellScope(
       controller: this,
+      activeTab: _currentTab,
       child: NavigatorPopHandler(
         onPopWithResult: (Object? result) {
           _tabNavigatorKeys[_currentTab.index].currentState?.pop(result);

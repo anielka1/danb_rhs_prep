@@ -17,6 +17,8 @@ import '../widgets/error_state.dart';
 import '../widgets/loading_state.dart';
 import '../widgets/primary_button.dart';
 import 'exam_overview_screen.dart';
+import 'main_shell.dart';
+import '../widgets/app_bottom_navigation.dart';
 
 class _ProgressData {
   const _ProgressData({
@@ -153,12 +155,30 @@ class _ProgressScreenState extends State<ProgressScreen> {
   /// the in-flight request's own `LoadingState` (via `FutureBuilder`)
   /// already covers that.
   bool _loading = false;
+  bool _wasActive = false;
+  bool _refreshAfterLoad = false;
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    if (_future != null) return;
-    _startLoad();
+    final active = MainShellScope.activeTabOf(context) == AppTab.progress;
+    final entering = active && !_wasActive;
+    _wasActive = active;
+    if (_future == null || entering) {
+      if (_loading) {
+        _refreshAfterLoad = true;
+      } else {
+        _startLoad();
+      }
+    }
+  }
+
+  void _loadFinished() {
+    _loading = false;
+    if (_refreshAfterLoad && mounted) {
+      _refreshAfterLoad = false;
+      _startLoad();
+    }
   }
 
   void _startLoad() {
@@ -179,8 +199,8 @@ class _ProgressScreenState extends State<ProgressScreen> {
     // separate listener) keeps this the single place that "this load has
     // finished, one way or another" is recorded.
     future.then(
-      (_) => _loading = false,
-      onError: (Object _, StackTrace __) => _loading = false,
+      (_) => _loadFinished(),
+      onError: (Object _, StackTrace __) => _loadFinished(),
     );
     setState(() {
       _future = future;
@@ -298,11 +318,11 @@ class _ProgressScreenState extends State<ProgressScreen> {
   // `widget.contentPackage` is itself null — so this action stays safe to
   // reach in a test/context that never supplied a `BootstrapSessionScope`
   // ancestor at all, exactly like `MainShell`'s own contentPackage lookup.
-  void _openExamOverview(BuildContext context) {
+  Future<void> _openExamOverview(BuildContext context) async {
     final session = BootstrapSessionScope.maybeControllerOf(context);
     final ContentPackage? package =
         widget.contentPackage ?? session?.snapshot.contentPackage;
-    Navigator.of(context).push(
+    await Navigator.of(context).push(
       MaterialPageRoute(
         settings: const RouteSettings(name: ExamOverviewScreen.route),
         builder: (_) => ExamOverviewScreen(
@@ -312,6 +332,7 @@ class _ProgressScreenState extends State<ProgressScreen> {
         ),
       ),
     );
+    if (mounted) _startLoad();
   }
 }
 

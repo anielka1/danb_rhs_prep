@@ -34,17 +34,20 @@ DanbRhsPrepApp createDebugDemoApp() {
     onboardingComplete: false,
     readinessSnapshot: DebugDemoEnvironment.demoReadinessSnapshot,
   );
+  final userSettingsRepository =
+      DebugDemoEnvironment.buildUserSettingsRepository();
   final bootstrapService = AppBootstrapService(
     contentRepository: DebugDemoEnvironment.buildContentRepository(),
     defaultExamId: DebugDemoEnvironment.demoExamId,
     now: () => DateTime.utc(2026, 1, 1, 12),
     localStore: localStore,
-    userSettingsRepository: DebugDemoEnvironment.buildUserSettingsRepository(),
+    userSettingsRepository: userSettingsRepository,
   );
 
   return DanbRhsPrepApp(
     bootstrapService: bootstrapService,
     localStore: localStore,
+    userSettingsRepository: userSettingsRepository,
     // Real device clock, not the fixed bootstrap `now` above — matches
     // HomeScreen's own "Today" header, which is deliberately real too
     // (see docs/PROTOTYPE_CONTENT_AUDIT.md's HomeScreen row), so the

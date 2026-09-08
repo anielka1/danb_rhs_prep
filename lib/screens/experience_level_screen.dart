@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../bootstrap/app_bootstrap_service.dart';
 import '../bootstrap/bootstrap_session_controller.dart';
 import '../bootstrap/bootstrap_session_scope.dart';
+import '../bootstrap/sync_study_profile.dart';
 import '../domain/models/exam_date_selection.dart';
 import '../domain/models/experience_level.dart';
 import '../domain/models/user_profile.dart';
@@ -36,9 +37,13 @@ class ExperienceLevelScreen extends StatefulWidget {
     this.analytics = const NoOpAnalyticsService(),
     this.userSettingsRepository,
     this.now,
+    this.editing = false,
   });
 
   final BootstrapLocalStore localStore;
+
+  /// Saves back to settings without changing onboarding completion.
+  final bool editing;
   final AnalyticsService analytics;
 
   /// A real `DriftUserSettingsRepository` in production (`main.dart`'s
@@ -142,6 +147,21 @@ class _ExperienceLevelScreenState extends State<ExperienceLevelScreen> {
     // returns before reaching this line, so the controller is never
     // updated with a value that failed to persist.
     controller.update(controller.snapshot.copyWith(experienceLevel: selection));
+
+    if (widget.editing) {
+      try {
+        await syncStudyProfile(controller, widget.userSettingsRepository);
+      } on Object {
+        if (!mounted) return;
+        setState(() {
+          _busy = false;
+          _selectionSaveFailed = true;
+        });
+        return;
+      }
+      if (mounted) Navigator.of(context).pop();
+      return;
+    }
 
     bool completed = true;
     try {
@@ -254,7 +274,9 @@ class _ExperienceLevelScreenState extends State<ExperienceLevelScreen> {
 
     final bool hasFailure = _selectionSaveFailed || _completionSaveFailed;
     final String? errorMessage = _selectionSaveFailed
-        ? "We couldn't save this. Please try again."
+        ? widget.editing
+            ? "We couldn't finish saving your changes. Please try again."
+            : "We couldn't save this. Please try again."
         : _completionSaveFailed
             ? "We couldn't finish setting up. Check your storage and "
                 'try again.'
@@ -324,7 +346,11 @@ class _ExperienceLevelScreenState extends State<ExperienceLevelScreen> {
             ],
             const SizedBox(height: AppSpacing.xxl),
             PrimaryButton(
-              label: hasFailure ? 'Retry' : 'Continue',
+              label: hasFailure
+                  ? 'Retry'
+                  : widget.editing
+                      ? 'Save changes'
+                      : 'Continue',
               isLoading: _busy,
               onPressed: (_busy || _selection == null) ? null : _continue,
             ),

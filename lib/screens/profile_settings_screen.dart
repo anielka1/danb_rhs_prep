@@ -1,15 +1,69 @@
 import 'package:flutter/material.dart';
+import '../bootstrap/bootstrap_session_controller.dart';
+import '../bootstrap/bootstrap_session_scope.dart';
+import '../domain/models/exam_date_precision.dart';
+import '../domain/models/experience_level.dart';
+import '../domain/repositories/bootstrap_local_store.dart';
+import '../domain/repositories/user_settings_repository.dart';
 import '../services/theme_mode_controller.dart';
 import '../theme/app_theme.dart';
 import '../widgets/app_card.dart';
 import '../widgets/app_scaffold.dart';
 import '../widgets/primary_button.dart';
+import 'exam_date_screen.dart';
+import 'experience_level_screen.dart';
 
 /// Accountless settings. Only controls backed by working behavior are shown.
-class ProfileSettingsScreen extends StatelessWidget {
+class ProfileSettingsScreen extends StatefulWidget {
   static const String route = 'settings';
-  const ProfileSettingsScreen({super.key, required this.themeModeController});
+  const ProfileSettingsScreen(
+      {super.key,
+      required this.themeModeController,
+      this.session,
+      this.localStore,
+      this.userSettingsRepository});
   final ThemeModeController themeModeController;
+  final BootstrapSessionController? session;
+  final BootstrapLocalStore? localStore;
+  final UserSettingsRepository? userSettingsRepository;
+
+  @override
+  State<ProfileSettingsScreen> createState() => _ProfileSettingsScreenState();
+}
+
+class _ProfileSettingsScreenState extends State<ProfileSettingsScreen> {
+  Future<void> _edit(bool date) async {
+    final session = widget.session!;
+    await Navigator.of(context).push(MaterialPageRoute<void>(
+      builder: (_) => BootstrapSessionScope(
+        controller: session,
+        child: date
+            ? ExamDateScreen(
+                localStore: widget.localStore!,
+                editing: true,
+                userSettingsRepository: widget.userSettingsRepository)
+            : ExperienceLevelScreen(
+                localStore: widget.localStore!,
+                editing: true,
+                userSettingsRepository: widget.userSettingsRepository),
+      ),
+    ));
+    if (mounted) setState(() {});
+  }
+
+  String _dateLabel(BuildContext context) {
+    final selection = widget.session?.snapshot.examDateSelection;
+    if (selection == null) return 'Choose your timeframe';
+    return switch (selection.precision) {
+      ExamDatePrecision.withinMonth => 'Within a month',
+      ExamDatePrecision.oneToThreeMonths => 'In 1–3 months',
+      ExamDatePrecision.later => 'Later',
+      ExamDatePrecision.notScheduled => 'Not scheduled yet',
+      ExamDatePrecision.exact ||
+      ExamDatePrecision.approximate =>
+        MaterialLocalizations.of(context).formatMediumDate(selection.date!),
+    };
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -29,6 +83,37 @@ class ProfileSettingsScreen extends StatelessWidget {
             Text('Make it yours.', style: styles.h1),
             const SizedBox(height: AppSpacing.sm),
             Text('Your study plan. Your pace.', style: styles.body),
+            if (widget.session != null && widget.localStore != null) ...[
+              const SizedBox(height: AppSpacing.xxxl),
+              Text('YOUR STUDY PLAN', style: styles.label),
+              const SizedBox(height: AppSpacing.md),
+              AppCard(
+                padding: EdgeInsets.zero,
+                child: Column(children: [
+                  ListTile(
+                    leading: const Icon(Icons.event_outlined),
+                    title: const Text('Exam timeframe'),
+                    subtitle: Text(_dateLabel(context)),
+                    trailing: const Icon(Icons.chevron_right_rounded),
+                    onTap: () => _edit(true),
+                  ),
+                  Divider(color: context.colors.outlineVariant),
+                  ListTile(
+                    leading: const Icon(Icons.school_outlined),
+                    title: const Text('Study experience'),
+                    subtitle:
+                        Text(switch (widget.session!.snapshot.experienceLevel) {
+                      ExperienceLevel.justStarting => 'Just starting',
+                      ExperienceLevel.studyingAlready => 'Studying already',
+                      ExperienceLevel.retakingExam => 'Taking the exam again',
+                      null => 'Choose your experience',
+                    }),
+                    trailing: const Icon(Icons.chevron_right_rounded),
+                    onTap: () => _edit(false),
+                  ),
+                ]),
+              ),
+            ],
             const SizedBox(height: AppSpacing.xxxl),
             Text('LOOK & FEEL', style: styles.label),
             const SizedBox(height: AppSpacing.md),
@@ -43,7 +128,7 @@ class ProfileSettingsScreen extends StatelessWidget {
                   ),
                   const SizedBox(height: AppSpacing.lg),
                   ValueListenableBuilder<ThemeMode>(
-                    valueListenable: themeModeController,
+                    valueListenable: widget.themeModeController,
                     builder: (context, mode, _) => Wrap(
                       spacing: AppSpacing.sm,
                       runSpacing: AppSpacing.sm,
@@ -57,7 +142,7 @@ class ProfileSettingsScreen extends StatelessWidget {
                             label: Text(entry.value),
                             selected: mode == entry.key,
                             onSelected: (_) =>
-                                themeModeController.value = entry.key,
+                                widget.themeModeController.value = entry.key,
                           ),
                       ],
                     ),

@@ -3,12 +3,14 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'theme/app_theme.dart';
 import 'bootstrap/app_bootstrap_service.dart';
+import 'bootstrap/bootstrap_session_controller.dart';
 import 'bootstrap/shared_preferences_bootstrap_local_store.dart';
 import 'data/local/app_database.dart';
 import 'data/repositories/drift_progress_repository.dart';
 import 'data/repositories/drift_user_settings_repository.dart';
 import 'domain/models/user_profile.dart';
 import 'domain/repositories/bootstrap_local_store.dart';
+import 'domain/repositories/user_settings_repository.dart';
 import 'domain/repositories/progress_repository.dart';
 import 'features/content/data/bundled_content_repository.dart';
 import 'services/analytics_service.dart';
@@ -40,12 +42,14 @@ class DanbRhsPrepApp extends StatefulWidget {
     AppBootstrapService? bootstrapService,
     AppDatabase? database,
     this.progressRepository,
+    this.userSettingsRepository,
   })  : _injectedThemeModeController = themeModeController,
         _injectedLocalStore = localStore,
         _injectedBootstrapService = bootstrapService,
         _injectedDatabase = database;
 
   final AnalyticsService analytics;
+  final UserSettingsRepository? userSettingsRepository;
 
   /// Test and demo-entrypoint injection points, mirroring [analytics]'s
   /// pattern — let a test observe/drive these directly, or supply
@@ -101,8 +105,8 @@ class _DanbRhsPrepAppState extends State<DanbRhsPrepApp> {
   AppDatabase get _database =>
       widget._injectedDatabase ?? (_ownedDatabase ??= AppDatabase());
 
-  late final DriftUserSettingsRepository _userSettingsRepository =
-      DriftUserSettingsRepository(_database);
+  late final UserSettingsRepository _userSettingsRepository =
+      widget.userSettingsRepository ?? DriftUserSettingsRepository(_database);
 
   /// The repository actually threaded to [MainShell]/[HomeScreen]/
   /// [SplashScreen]: [widget.progressRepository] when a caller explicitly
@@ -210,8 +214,15 @@ class _DanbRhsPrepAppState extends State<DanbRhsPrepApp> {
             PracticeSummaryScreen.route: (_) => const PracticeSummaryScreen(),
             MockExamResultsScreen.route: (_) => const MockExamResultsScreen(),
             MockExamScreen.route: (_) => const MockExamScreen(),
-            ProfileSettingsScreen.route: (_) => ProfileSettingsScreen(
-                themeModeController: _themeModeController),
+            ProfileSettingsScreen.route: (context) => ProfileSettingsScreen(
+                themeModeController: _themeModeController,
+                session: ModalRoute.of(context)?.settings.arguments
+                        is BootstrapSessionController
+                    ? ModalRoute.of(context)!.settings.arguments
+                        as BootstrapSessionController
+                    : null,
+                localStore: _localStore,
+                userSettingsRepository: _userSettingsRepository),
           },
         );
       },
