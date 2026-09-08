@@ -437,14 +437,37 @@ class DebugDemoEnvironment {
     return InMemoryUserSettingsRepository(seedProfile: demoProfile);
   }
 
-  static ProgressRepository buildProgressRepository() {
+  /// [now], when given, is used once — at call time, not stored — to
+  /// stamp [demoInProgressPracticeSession] with a `startedAt` a few
+  /// minutes before it, instead of that fixture's own fixed calendar
+  /// literal (2026-01-01). `demoInProgressPracticeSession` itself stays
+  /// exactly the deterministic literal this class always promises (see
+  /// this class's own doc comment; every other caller, and every
+  /// existing test, keeps getting that exact fixture unchanged) — only
+  /// this factory's own returned copy of it differs, and only when a
+  /// caller opts in.
+  ///
+  /// Without this, whoever launches `main_demo.dart` on a date far from
+  /// 2026-01-01 would resume a session whose elapsed time (measured
+  /// against the real device clock, exactly as a real session's elapsed
+  /// time always is) is however many months have passed since — clamped
+  /// to the practice screen's own display ceiling and looking
+  /// permanently frozen there, rather than a normal, ticking few-minute
+  /// timer.
+  static ProgressRepository buildProgressRepository(
+      {DateTime Function()? now}) {
     if (!_enabled) _unavailable();
+    final PracticeSession inProgressSession = now == null
+        ? demoInProgressPracticeSession
+        : demoInProgressPracticeSession.copyWith(
+            startedAt: now().toUtc().subtract(const Duration(minutes: 12)),
+          );
     return InMemoryProgressRepository(
       seedAnswerAttempts: demoAnswerAttempts,
       seedQuestionStates: demoQuestionStates,
       seedPracticeSessions: [
         demoPracticeSession,
-        demoInProgressPracticeSession,
+        inProgressSession,
       ],
       seedMockAttempts: [demoMockAttemptEarlier, demoMockAttempt],
       seedReadinessSnapshots: [

@@ -179,6 +179,41 @@ void main() {
       expect(DebugDemoEnvironment.demoInProgressPracticeSession.status,
           SessionStatus.inProgress);
     });
+
+    test(
+        "buildProgressRepository's optional now freshens only the "
+        "in-progress session's startedAt (PREP-457), never the exact "
+        'fixture the no-args overload above still returns unchanged', () async {
+      final DateTime fixedNow = DateTime.utc(2026, 9, 8, 12);
+      final repo =
+          DebugDemoEnvironment.buildProgressRepository(now: () => fixedNow);
+
+      final PracticeSession? inProgress =
+          await repo.inProgressPracticeSession(DebugDemoEnvironment.demoExamId);
+      expect(inProgress, isNotNull);
+      expect(
+          inProgress!.startedAt, fixedNow.subtract(const Duration(minutes: 12)),
+          reason: 'freshened relative to the given now, not the fixture\'s '
+              'own 2026-01-01 literal — this is what keeps the demo\'s '
+              "practice timer from reading as many months old however "
+              'long after that date the demo is actually launched');
+      expect(
+          inProgress.id, DebugDemoEnvironment.demoInProgressPracticeSession.id,
+          reason: 'every other field, including identity, is unchanged — '
+              'only startedAt differs');
+      expect(inProgress.questionIds,
+          DebugDemoEnvironment.demoInProgressPracticeSession.questionIds);
+
+      // The underlying fixture accessor itself is untouched — still the
+      // exact deterministic literal this class always promises.
+      expect(DebugDemoEnvironment.demoInProgressPracticeSession.startedAt,
+          DateTime.utc(2026, 1, 1, 13));
+
+      final mockAttempt =
+          await repo.mockAttempt(DebugDemoEnvironment.demoMockAttempt.id);
+      expect(mockAttempt, DebugDemoEnvironment.demoMockAttempt,
+          reason: 'nothing else this factory seeds is affected by now');
+    });
   });
 
   group('ContentRepository fixture', () {
