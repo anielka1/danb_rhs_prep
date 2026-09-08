@@ -185,4 +185,60 @@ void main() {
               'review state');
     });
   });
+
+  group('bookmark (PREP-460)', () {
+    testWidgets(
+        'is available and works while looking at the question itself, '
+        'not only afterward on AnswerExplanationScreen', (tester) async {
+      final controller = buildDemoPracticeSessionController();
+      final String questionId = controller.currentQuestion.id;
+
+      await tester.pumpWidget(wrap(PracticeSessionScope(
+        controller: controller,
+        child: const PracticeQuestionScreen(),
+      )));
+      await tester.pumpAndSettle();
+
+      expect(find.bySemanticsLabel('Bookmark question'), findsOneWidget);
+
+      await tester.tap(find.bySemanticsLabel('Bookmark question'));
+      await tester.pumpAndSettle();
+
+      expect(find.bySemanticsLabel('Remove bookmark'), findsOneWidget);
+      expect(find.byIcon(Icons.bookmark_rounded), findsOneWidget);
+      expect(controller.isBookmarked(questionId), isTrue,
+          reason: 'the same PracticeSessionController state '
+              'AnswerExplanationScreen reads must reflect the toggle '
+              'made here');
+    });
+
+    testWidgets(
+        'reflects a bookmark made on AnswerExplanationScreen when '
+        'returning to the same question via Previous', (tester) async {
+      final controller = buildDemoPracticeSessionController();
+      final String firstQuestionId = controller.currentQuestion.id;
+      await controller.submitAnswer(controller.currentQuestion.correctAnswerId);
+      // Bookmark from the explanation screen's own controller methods —
+      // exercising the same shared state without needing to pump that
+      // screen too.
+      final bool newValue = controller.toggleBookmarkLocally(firstQuestionId);
+      await controller.persistBookmark(firstQuestionId, newValue);
+      controller.moveTo(1);
+
+      await tester.pumpWidget(wrap(PracticeSessionScope(
+        controller: controller,
+        child: const PracticeQuestionScreen(),
+      )));
+      await tester.pumpAndSettle();
+      expect(find.bySemanticsLabel('Bookmark question'), findsOneWidget,
+          reason: 'Q2 was never bookmarked');
+
+      await tester.tap(find.text('Previous'));
+      await tester.pumpAndSettle();
+
+      expect(find.bySemanticsLabel('Remove bookmark'), findsOneWidget,
+          reason: 'back on Q1, the bookmark made through the controller '
+              '(as AnswerExplanationScreen would) must still show');
+    });
+  });
 }
