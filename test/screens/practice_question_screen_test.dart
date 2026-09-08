@@ -10,6 +10,7 @@ import 'package:danb_rhs_prep/practice_session/practice_session_scope.dart';
 import 'package:danb_rhs_prep/screens/answer_explanation_screen.dart';
 import 'package:danb_rhs_prep/screens/practice_question_screen.dart';
 import 'package:danb_rhs_prep/theme/app_theme.dart';
+import 'package:danb_rhs_prep/widgets/answer_option_tile.dart';
 
 import '../support/practice_session_test_support.dart';
 
@@ -106,6 +107,54 @@ void main() {
       expect(controller.isAnswered(firstQuestion.id), isTrue);
       expect(find.byType(AnswerExplanationScreen), findsOneWidget);
       expect(find.text(firstQuestion.explanation), findsOneWidget);
+    });
+
+    testWidgets(
+        'the wrong option tapped (not the first/correct one) is what '
+        'actually determines the resulting correct/incorrect feedback '
+        '(PREP-462)', (tester) async {
+      final controller = buildDemoPracticeSessionController();
+      await tester.pumpWidget(wrap(PracticeSessionScope(
+        controller: controller,
+        child: const PracticeQuestionScreen(),
+      )));
+
+      final firstQuestion = DebugDemoEnvironment.demoQuestions.first;
+      // Deliberately the *wrong* answer, tapped through the real option
+      // tile — every other PracticeQuestionScreen test in this file taps
+      // answers.first, which happens to always be the correct demo
+      // answer, so none of them can tell a screen that genuinely reads
+      // the user's tap apart from one that always evaluates against a
+      // fixed/first option regardless of what was actually selected.
+      final wrongAnswerId = firstQuestion.answers[1].id;
+      expect(wrongAnswerId, isNot(firstQuestion.correctAnswerId));
+      await tester.tap(find.text(firstQuestion.answers[1].text));
+      await tester.pump();
+      await tester.tap(find.text('Submit Answer'));
+      await tester.pumpAndSettle();
+
+      expect(controller.isCorrectFor(firstQuestion.id), isFalse,
+          reason: 'the session engine\'s own evaluation must reflect the '
+              'exact option tapped, not the first/correct option');
+
+      // Scoped to AnswerExplanationScreen specifically — the
+      // PracticeQuestionScreen route pushed this on top of is still in
+      // the Navigator stack underneath, with its own AnswerOptionTiles.
+      final tiles = tester.widgetList<AnswerOptionTile>(find.descendant(
+        of: find.byType(AnswerExplanationScreen),
+        matching: find.byType(AnswerOptionTile),
+      ));
+      final wrongTile =
+          tiles.firstWhere((t) => t.text == firstQuestion.answers[1].text);
+      final correctTile =
+          tiles.firstWhere((t) => t.text == firstQuestion.answers.first.text);
+      expect(wrongTile.state, AnswerOptionState.incorrect,
+          reason: 'the option the user actually tapped and submitted, '
+              'which was wrong, must render as incorrect — not whichever '
+              'option happens to be first or correct');
+      expect(correctTile.state, AnswerOptionState.correct,
+          reason: 'the real correct option must still be indicated even '
+              'though the user did not pick it');
     });
 
     testWidgets(

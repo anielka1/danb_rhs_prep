@@ -65,6 +65,40 @@ roadmap at all, which makes "disabled and waiting" dishonest rather than
 merely premature. See `test/screens/accountless_no_login_test.dart` for
 the test guarding their absence.
 
+## PREP-462 changes
+
+Re-verified `PracticeQuestionScreen`'s "Submit Answer" / "View
+Explanation" row below against a REWORK ticket claiming Submit Answer
+"opens a fixed AnswerExplanationScreen regardless of choice" — that
+description matches the pre-PREP-649 state, already corrected and
+already documented as such in the row below; no code defect survived.
+Closed the one real gap: no existing test drove the *actual* Submit
+Answer button through a **wrong** answer tile tap (every prior
+`PracticeQuestionScreen`-level test happened to tap `answers.first`,
+which is always the correct demo answer) and checked the resulting
+`AnswerOptionTile` states on `AnswerExplanationScreen`. Added to
+`test/screens/practice_question_screen_test.dart`, confirmed failing
+against a simulated "evaluates a fixed answer regardless of the tap"
+regression before passing against the real code.
+
+## PREP-457 changes
+
+`AnswerExplanationScreen`'s "Next Question" no longer pushes a fresh
+`PracticeQuestionScreen` instance (row below corrected to match) — it
+pops back to the real, already-live one instead, since a fresh push
+per question left the real one orphaned underneath, one dead layer
+per question answered. Before this fix, Close (X) mid-session only
+unwound one dead layer at a time, so exiting after answering N
+questions took N taps instead of one. Also added: a periodic ticker so
+`PracticeQuestionScreen`'s elapsed-time display actually counts up on
+its own (previously only redrew on an unrelated tap), and
+`ExamOverviewScreen`/`DebugDemoEnvironment` now thread a real/injected
+clock through session creation so a resumed session's elapsed time is
+never computed against a stale fixture's fixed calendar literal. See
+`test/screens/answer_explanation_screen_test.dart`'s "Next Question"
+group and `test/screens/practice_question_screen_test.dart`'s
+"elapsed timer (PREP-457)" group.
+
 ## PREP-460 changes
 
 Two real, confirmed defects, both reproduced with a failing test before
@@ -141,12 +175,12 @@ Sound Effects switch.
 | ExamOverviewScreen | "Start Practice Exam" | Creates or resumes a real `PracticeSession` via the injected `ProgressRepository`/content package, pushes `PracticeQuestionScreen` scoped to a real `PracticeSessionController` | Working (tested) | — | Fixed by PREP-649 |
 | PracticeQuestionScreen | Close icon | `Navigator.maybePop()` | Working | — | 2.3 (done) |
 | PracticeQuestionScreen | Answer option tiles | `setState` tracks the pending selection before submit; disabled/read-only for an already-answered question reached via Previous | Working | — | 2.3 (done) |
-| PracticeQuestionScreen | "Submit Answer" / "View Explanation" | Calls `PracticeSessionController.submitAnswer`, which evaluates the tapped option against the real correct answer, before navigating to a scoped `AnswerExplanationScreen` | **Fixed → Working** (tested) | — | Fixed by PREP-649 (previously **Partially working**: navigated but never evaluated the answer) |
+| PracticeQuestionScreen | "Submit Answer" / "View Explanation" | Calls `PracticeSessionController.submitAnswer`, which evaluates the *actual tapped* option against the real correct answer, before navigating to a scoped `AnswerExplanationScreen` | **Fixed → Working** (tested) | — | Fixed by PREP-649 (previously **Partially working**: navigated but never evaluated the answer); re-verified by PREP-462 with a widget-level test proving the tapped option (not just the correct one) drives the result |
 | PracticeQuestionScreen | Previous / Next | `controller.moveTo(...)`, gated by `canGoToPrevious`/`canGoToNext` (`canGoToNext` now checks the furthest position ever reached, not `isAnswered`) — real multi-question session navigation | **Fixed → Working** (tested) | — | Fixed by PREP-649 (previously **No-op → Disabled**); a real "Next stays disabled forever after Previous" bug fixed by PREP-460 — see "PREP-460 changes" above |
 | PracticeQuestionScreen | Bookmark icon | Toggles `QuestionState.bookmarked` via `PracticeSessionController`/`ProgressRepository`, same shared state as the identical control on `AnswerExplanationScreen` | Working (tested) | — | Added by PREP-460, alongside the `AnswerExplanationScreen` control below, at the reporter's explicit request ("czemu bookmark zniknął przy pytaniach" — it had never existed on this screen before, only on the review screen) |
 | AnswerExplanationScreen | Back icon | `Navigator.maybePop()` | Working | — | 2.3 (done) |
 | AnswerExplanationScreen | Bookmark icon | Toggles `QuestionState.bookmarked` via `PracticeSessionController`/`ProgressRepository`, optimistic + best-effort | **Fixed → Working** (tested) | — | Fixed by PREP-460 — see "PREP-460 changes" above |
-| AnswerExplanationScreen | "Next Question" / "Finish" | `controller.moveTo(index+1)` + push a fresh `PracticeQuestionScreen`, or — on the last question — `controller.complete()` + navigate to `PracticeSummaryScreen` | **Fixed → Working** (tested) | — | Fixed by PREP-649 (previously **Partially working**: dismissed rather than advancing) |
+| AnswerExplanationScreen | "Next Question" / "Finish" | `controller.moveTo(index+1)` + pop back to the real, already-live `PracticeQuestionScreen`, or — on the last question — `controller.complete()` + navigate to `PracticeSummaryScreen` | **Fixed → Working** (tested) | — | Fixed by PREP-649 (previously **Partially working**: dismissed rather than advancing); PREP-457 fixed "Next Question" pushing a *fresh* `PracticeQuestionScreen` instead of popping to the real one, which orphaned a route per question and broke Close (X) after the first question |
 | PracticeSummaryScreen | "Review Mistakes" | `onPressed: null`, documented | Disabled | Show missed questions from the completed session | Needs its own review screen/flow — undescoped |
 | PracticeSummaryScreen | "Back to Home" | `Navigator.popUntil` back to the existing `MainShell` route (not `pushNamedAndRemoveUntil`, which would re-enter through the static route table with no `BootstrapSessionScope` ancestor) | Working (tested) | — | Mechanism fixed by PREP-649 (found while wiring real session state) |
 | MockExamScreen | Loading / failed / unavailable states | `MockExamController.load()`; `ErrorState`'s "Try Again" retries; the unavailable state's "View Exam Info" opens a real `ExamOverviewScreen` | Working (tested) | — | Added by PREP-650 |
