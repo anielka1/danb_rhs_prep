@@ -36,9 +36,16 @@ void main() {
     testWidgets('AnswerExplanationScreen renders without error in $label theme',
         (tester) async {
       final SemanticsHandle handle = tester.ensureSemantics();
+      final controller = buildDemoPracticeSessionController();
+      // This screen is only ever reached (via PracticeQuestionScreen's
+      // Submit/View Explanation wiring) for a question that's already
+      // been answered — feedbackFor(currentQuestion.id) must be
+      // populated for it to render its real content rather than the
+      // "result unavailable" fallback (PREP-668).
+      await controller.submitAnswer(controller.currentQuestion.correctAnswerId);
       await tester.pumpWidget(wrap(
         PracticeSessionScope(
-          controller: buildDemoPracticeSessionController(),
+          controller: controller,
           child: const AnswerExplanationScreen(),
         ),
         theme,

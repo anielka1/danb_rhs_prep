@@ -121,12 +121,17 @@ void main() {
   });
 
   test(
-      'a fresh install still lands directly on schema 2, never running '
+      'a fresh install still lands directly on schema 3, never running '
       'onUpgrade at all', () async {
     final AppDatabase db = AppDatabase.forTesting(NativeDatabase(dbFile));
     addTearDown(db.close);
 
-    expect(db.schemaVersion, 2);
+    // Updated from 2 to 3 by PREP-668 — this test only ever meant "a
+    // fresh install skips onUpgrade entirely"; the literal here tracks
+    // whatever `AppDatabase.schemaVersion` currently is, the same way
+    // `app_database_test.dart`'s own "fresh install schema version is
+    // N" test does, and needs the same one-line update on a future bump.
+    expect(db.schemaVersion, 3);
     final rows = await db.select(db.answerAttempts).get();
     expect(rows, isEmpty);
   });

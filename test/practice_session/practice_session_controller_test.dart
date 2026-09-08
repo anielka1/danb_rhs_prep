@@ -2,6 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:danb_rhs_prep/debug/debug_demo_environment.dart';
 import 'package:danb_rhs_prep/domain/models/answer_attempt.dart';
+import 'package:danb_rhs_prep/domain/models/answer_feedback.dart';
 import 'package:danb_rhs_prep/domain/models/mock_attempt.dart';
 import 'package:danb_rhs_prep/domain/models/practice_session.dart';
 import 'package:danb_rhs_prep/domain/models/question_state.dart';
@@ -55,15 +56,23 @@ void main() {
     expect(forThisQuestion[0].id, isNotEmpty);
   });
 
-  test('submitAnswer returns whether the selected answer was correct',
-      () async {
+  test(
+      'submitAnswer returns an immutable AnswerFeedback carrying whether '
+      'the selected answer was correct (PREP-668)', () async {
     final controller = buildController(InMemoryProgressRepository());
-    final String correctId = controller.currentQuestion.correctAnswerId;
-    final String wrongId = controller.currentQuestion.answers
-        .firstWhere((a) => a.id != correctId)
-        .id;
+    final Question question = controller.currentQuestion;
+    final String correctId = question.correctAnswerId;
+    final String wrongId =
+        question.answers.firstWhere((a) => a.id != correctId).id;
 
-    expect(await controller.submitAnswer(wrongId), isFalse);
+    final AnswerFeedback feedback = await controller.submitAnswer(wrongId);
+
+    expect(feedback.isCorrect, isFalse);
+    expect(feedback.questionId, question.id);
+    expect(feedback.questionVersion, question.version);
+    expect(feedback.selectedAnswerId, wrongId);
+    expect(feedback.correctAnswerId, correctId);
+    expect(feedback.explanation, question.explanation);
   });
 
   test(
@@ -76,17 +85,73 @@ void main() {
     final String questionId = controller.currentQuestion.id;
     final String correctId = controller.currentQuestion.correctAnswerId;
 
-    final Future<bool> first = controller.submitAnswer(correctId);
-    final Future<bool> second = controller.submitAnswer(correctId);
-    final List<bool> results = await Future.wait([first, second]);
+    final Future<AnswerFeedback> first = controller.submitAnswer(correctId);
+    final Future<AnswerFeedback> second = controller.submitAnswer(correctId);
+    final List<AnswerFeedback> results = await Future.wait([first, second]);
 
-    expect(results, [true, true]);
+    expect(results.map((f) => f.isCorrect), [true, true]);
+    expect(identical(results[0], results[1]), isTrue,
+        reason: 'both calls must resolve to the exact same in-flight '
+            'result, not two separately-built (even if equal) objects');
     final List<AnswerAttempt> attempts =
         await repo.answerAttemptsForExam(DebugDemoEnvironment.demoExamId);
     expect(attempts.where((a) => a.questionId == questionId), hasLength(1),
         reason: 'the second, concurrent call must reuse the first\'s '
             'in-flight result rather than recording a second attempt for '
             'one logical submission');
+  });
+
+  group('AnswerFeedback snapshot (PREP-668)', () {
+    test('feedbackFor is null before a question is answered', () {
+      final controller = buildController(InMemoryProgressRepository());
+      expect(controller.feedbackFor(controller.currentQuestion.id), isNull);
+    });
+
+    test(
+        'feedbackFor returns the exact object submitAnswer returned, and '
+        'every field comes from the same question snapshot that was '
+        'actually evaluated', () async {
+      final questions = DebugDemoEnvironment.demoQuestions;
+      final session = PracticeSession(
+        id: 'session-with-version',
+        examId: DebugDemoEnvironment.demoExamId,
+        mode: PracticeMode.quickPractice,
+        questionIds: questions.map((q) => q.id).toList(),
+        status: SessionStatus.inProgress,
+        startedAt: DateTime.utc(2026, 1, 1),
+        contentVersion: 'content-v7',
+      );
+      final controller = PracticeSessionController(
+        session: session,
+        questions: questions,
+        progressRepository: InMemoryProgressRepository(),
+        now: () => DateTime.utc(2026, 1, 1, 0, 5),
+      );
+      final Question question = controller.currentQuestion;
+      final String wrongAnswer = question.answers
+          .firstWhere((a) => a.id != question.correctAnswerId)
+          .id;
+
+      final AnswerFeedback returned = await controller.submitAnswer(
+        wrongAnswer,
+      );
+      final AnswerFeedback? cached = controller.feedbackFor(question.id);
+
+      expect(cached, same(returned),
+          reason: 'the UI must be able to read the exact same immutable '
+              'result later (e.g. Previous back into this question) that '
+              'submitAnswer originally returned, not a re-derived copy');
+      expect(returned.questionId, question.id);
+      expect(returned.questionVersion, question.version);
+      expect(returned.selectedAnswerId, wrongAnswer);
+      expect(returned.correctAnswerId, question.correctAnswerId);
+      expect(returned.isCorrect, isFalse);
+      expect(returned.explanation, question.explanation);
+      expect(returned.contentVersion, 'content-v7',
+          reason: 'the returned feedback and the persisted AnswerAttempt '
+              'must share the same contentVersion snapshot');
+      expect(returned.answeredAt, DateTime.utc(2026, 1, 1, 0, 5));
+    });
   });
 
   group('resume (PREP-665)', () {
@@ -192,6 +257,179 @@ void main() {
     });
 
     test(
+        'reconstructs feedbackFor from persisted attempts, so a resumed '
+        'session can show View Explanation for an already-answered '
+        'question without re-evaluating it (PREP-668)', () async {
+      final repo = InMemoryProgressRepository();
+      final firstController = buildController(repo);
+      final Question q0 = firstController.questions[0];
+      final String wrongAnswer =
+          q0.answers.firstWhere((a) => a.id != q0.correctAnswerId).id;
+      await firstController.submitAnswer(wrongAnswer);
+
+      final resumed = await PracticeSessionController.resume(
+        session: firstController.session,
+        questions: firstController.questions,
+        progressRepository: repo,
+      );
+
+      final AnswerFeedback? feedback = resumed.feedbackFor(q0.id);
+      expect(feedback, isNotNull);
+      expect(feedback!.questionId, q0.id);
+      expect(feedback.questionVersion, q0.version);
+      expect(feedback.selectedAnswerId, wrongAnswer);
+      expect(feedback.correctAnswerId, q0.correctAnswerId);
+      expect(feedback.isCorrect, isFalse,
+          reason: 'the persisted verdict is trusted as-is, never '
+              're-evaluated on resume');
+      expect(feedback.explanation, q0.explanation);
+    });
+
+    // Deliberately NOT a test of "a question retired from the active
+    // content package while session.questionIds still names it" — that
+    // different, real product scenario is handled (as a crash guard,
+    // not a full resolution) at
+    // ExamOverviewScreen._startOrResumePractice's own questionsById
+    // lookup, not here. This test is purely a controller-level
+    // data-integrity check: a record sharing this session's id but
+    // naming a questionId that was never actually part of
+    // session.questionIds (a foreign or corrupted row) must be ignored,
+    // never counted.
+    test(
+        "ignores an attempt whose questionId isn't part of this "
+        "session's own questionIds, even though it shares the "
+        "session's id — and doesn't let it inflate answeredCount/"
+        'correctCount either (PREP-668)', () async {
+      final repo = InMemoryProgressRepository();
+      final firstController = buildController(repo);
+      final Question q0 = firstController.questions[0];
+      await firstController.submitAnswer(q0.correctAnswerId);
+
+      const String foreignQuestionId = 'not-actually-in-this-session';
+      await repo.recordAnswerAttempt(AnswerAttempt(
+        id: 'foreign-attempt',
+        examId: firstController.session.examId,
+        questionId: foreignQuestionId,
+        domainId: q0.domainId,
+        topicId: q0.topicId,
+        difficulty: q0.difficulty,
+        sessionId: firstController.session.id,
+        sessionType: AttemptSessionType.practice,
+        selectedAnswerId: 'x',
+        isCorrect: true,
+        answeredAt: DateTime.utc(2026, 1, 1, 0, 6),
+        questionVersion: 1,
+        correctAnswerId: 'x',
+        explanation: 'n/a',
+      ));
+
+      final resumed = await PracticeSessionController.resume(
+        session: firstController.session,
+        questions: firstController.questions,
+        progressRepository: repo,
+      );
+
+      expect(resumed.feedbackFor(foreignQuestionId), isNull);
+      expect(resumed.answeredCount, 1,
+          reason: 'only q0 is genuinely part of this session; the '
+              "foreign record must not inflate the count");
+      expect(resumed.correctCount, 1);
+    });
+
+    test(
+        'skips reconstructing feedback for a legacy attempt recorded '
+        'before schema 3 (no persisted questionVersion/correctAnswerId/'
+        'explanation), rather than fabricating one from today\'s '
+        'Question (PREP-668)', () async {
+      final repo = InMemoryProgressRepository();
+      final firstController = buildController(repo);
+      final Question q0 = firstController.questions[0];
+      // Simulates a pre-PREP-668 row: recorded directly, bypassing
+      // submitAnswer, with none of the three new columns set.
+      await repo.recordAnswerAttempt(AnswerAttempt(
+        id: 'legacy-attempt',
+        examId: firstController.session.examId,
+        questionId: q0.id,
+        domainId: q0.domainId,
+        topicId: q0.topicId,
+        difficulty: q0.difficulty,
+        sessionId: firstController.session.id,
+        sessionType: AttemptSessionType.practice,
+        selectedAnswerId: q0.correctAnswerId,
+        isCorrect: true,
+        answeredAt: DateTime.utc(2025, 1, 1),
+      ));
+
+      final resumed = await PracticeSessionController.resume(
+        session: firstController.session,
+        questions: firstController.questions,
+        progressRepository: repo,
+      );
+
+      expect(resumed.feedbackFor(q0.id), isNull,
+          reason: 'no genuine snapshot exists for this legacy row — it '
+              'must not be silently filled in from the current Question');
+    });
+
+    test(
+        'resuming with a changed Question (different correctAnswerId, '
+        'explanation, and version, same id) still restores the exact '
+        'feedback the original answer was evaluated against, not the '
+        'new content — the immutable-snapshot guarantee holds across a '
+        'restart, not just within one live session (PREP-668 regression)',
+        () async {
+      final repo = InMemoryProgressRepository();
+      final firstController = buildController(repo);
+      final Question v1 = firstController.questions[0];
+
+      await firstController.submitAnswer(v1.correctAnswerId);
+
+      final Question v2 = Question(
+        id: v1.id,
+        examId: v1.examId,
+        domainId: v1.domainId,
+        topicId: v1.topicId,
+        questionText: v1.questionText,
+        answers: v1.answers,
+        // A different correct answer than v1 had.
+        correctAnswerId:
+            v1.answers.firstWhere((a) => a.id != v1.correctAnswerId).id,
+        explanation: 'A revised explanation, written after v1 was answered.',
+        references: v1.references,
+        difficulty: v1.difficulty,
+        status: v1.status,
+        version: v1.version + 1,
+        updatedAt: DateTime.utc(2026, 6, 1),
+        sourceVersion: v1.sourceVersion,
+        tags: v1.tags,
+      );
+      final List<Question> questionsWithV2 = [
+        v2,
+        ...firstController.questions.skip(1),
+      ];
+
+      final resumed = await PracticeSessionController.resume(
+        session: firstController.session,
+        questions: questionsWithV2,
+        progressRepository: repo,
+      );
+
+      final AnswerFeedback? feedback = resumed.feedbackFor(v1.id);
+      expect(feedback, isNotNull);
+      expect(feedback!.questionVersion, v1.version,
+          reason: 'must reflect the version actually evaluated, not v2\'s');
+      expect(feedback.correctAnswerId, v1.correctAnswerId,
+          reason: 'must reflect what was actually correct when answered, '
+              'not the (different) answer v2 now considers correct');
+      expect(feedback.explanation, v1.explanation,
+          reason: 'must reflect the explanation actually shown, not the '
+              'revised one v2 now carries');
+      expect(feedback.isCorrect, isTrue,
+          reason: 'the original verdict — answered v1\'s real correct '
+              'answer — must not be re-judged against v2');
+    });
+
+    test(
         'ignores attempts from a different session for the same exam — '
         'only this session\'s own history is restored', () async {
       final repo = InMemoryProgressRepository();
@@ -233,9 +471,9 @@ void main() {
 
       expect(resumed.answeredCount, 0);
       expect(resumed.currentIndex, 0);
-      expect(
-          await resumed.submitAnswer(resumed.currentQuestion.correctAnswerId),
-          isTrue);
+      final AnswerFeedback feedback =
+          await resumed.submitAnswer(resumed.currentQuestion.correctAnswerId);
+      expect(feedback.isCorrect, isTrue);
     });
   });
 }

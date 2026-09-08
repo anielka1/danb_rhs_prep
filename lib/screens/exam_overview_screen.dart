@@ -253,10 +253,38 @@ class _ExamOverviewScreenState extends State<ExamOverviewScreen> {
       }
     }
 
-    final List<Question> byId = package.questions;
-    final List<Question> questions = [
-      for (final id in session.questionIds) byId.firstWhere((q) => q.id == id),
-    ];
+    // A resumed (`existing != null`) session's questionIds were recorded
+    // against whatever content existed when it was first created; a
+    // freshly-generated one's ids always resolve, since they were just
+    // read from this exact `package`. If content has changed since a
+    // resumed session was created — a question retired from the current
+    // package — this is a real, reachable gap: `firstWhere` would throw
+    // and crash the interactive flow rather than something recoverable.
+    //
+    // This guard only stops that crash with an honest error state; it
+    // does not resolve the underlying stuck session (there's still no
+    // way to start a fresh one while a broken in-progress session keeps
+    // being returned by `inProgressPracticeSession`) — deciding how to
+    // do that (abandon and replace? drop just the missing question and
+    // keep going?) is a real product decision, tracked as separate,
+    // later work, not silently absorbed into this fix.
+    final Map<String, Question> questionsById = {
+      for (final q in package.questions) q.id: q,
+    };
+    final List<Question> questions = [];
+    for (final id in session.questionIds) {
+      final Question? question = questionsById[id];
+      if (question == null) {
+        if (!mounted) return;
+        setState(() {
+          _starting = false;
+          _unavailableReason = "This session's content has changed and "
+              "can't be resumed right now.";
+        });
+        return;
+      }
+      questions.add(question);
+    }
 
     // A resumed session (PREP-665) needs its per-question answered state
     // restored from repository history — the plain constructor always

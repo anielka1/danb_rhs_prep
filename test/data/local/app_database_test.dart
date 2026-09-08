@@ -23,10 +23,12 @@ void main() {
       expect(await db.select(db.userProfiles).get(), isEmpty);
     });
 
-    test('schema version is 2 (PREP-664 added contentVersion)', () async {
+    test(
+        'schema version is 3 (PREP-668 added questionVersion/'
+        'correctAnswerId/explanation)', () async {
       final AppDatabase db = AppDatabase.forTesting(NativeDatabase.memory());
       addTearDown(db.close);
-      expect(db.schemaVersion, 2);
+      expect(db.schemaVersion, 3);
     });
   });
 
@@ -268,15 +270,15 @@ void main() {
 
   group('migration safety net', () {
     test(
-        'onUpgrade throws for any undefined version jump (1->2 is now '
-        'defined by PREP-664; 2->3 is not), so a future schema bump must '
-        'add its own branch deliberately, never fall through to a silent '
-        'no-op', () async {
+        'onUpgrade throws for any undefined version jump (1->2 and 2->3 '
+        'are now defined, by PREP-664 and PREP-668 respectively; 3->4 is '
+        'not), so a future schema bump must add its own branch '
+        'deliberately, never fall through to a silent no-op', () async {
       final AppDatabase db = AppDatabase.forTesting(NativeDatabase.memory());
       addTearDown(db.close);
 
       await expectLater(
-        () => db.migration.onUpgrade(db.createMigrator(), 2, 3),
+        () => db.migration.onUpgrade(db.createMigrator(), 3, 4),
         throwsStateError,
       );
     });

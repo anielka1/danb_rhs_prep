@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../domain/models/answer_feedback.dart';
 import '../features/questions/domain/question.dart';
 import '../practice_session/practice_session_controller.dart';
 import '../practice_session/practice_session_scope.dart';
@@ -84,8 +85,8 @@ class _PracticeQuestionScreenState extends State<PracticeQuestionScreen> {
     final colors = context.colors;
     final textStyles = context.textStyles;
     final Question question = controller.currentQuestion;
-    final bool alreadyAnswered = controller.isAnswered(question.id);
-    final String? recordedSelection = controller.selectedAnswerFor(question.id);
+    final AnswerFeedback? feedback = controller.feedbackFor(question.id);
+    final bool alreadyAnswered = feedback != null;
 
     return AppScaffold(
       body: SingleChildScrollView(
@@ -153,9 +154,7 @@ class _PracticeQuestionScreenState extends State<PracticeQuestionScreen> {
                       text: question.answers[i].text,
                       state: _optionState(
                         answerId: question.answers[i].id,
-                        question: question,
-                        alreadyAnswered: alreadyAnswered,
-                        recordedSelection: recordedSelection,
+                        feedback: feedback,
                       ),
                       onTap: alreadyAnswered
                           ? null
@@ -233,17 +232,19 @@ class _PracticeQuestionScreenState extends State<PracticeQuestionScreen> {
 
   AnswerOptionState _optionState({
     required String answerId,
-    required Question question,
-    required bool alreadyAnswered,
-    required String? recordedSelection,
+    required AnswerFeedback? feedback,
   }) {
-    if (!alreadyAnswered) {
+    if (feedback == null) {
       return answerId == _pendingSelection
           ? AnswerOptionState.selected
           : AnswerOptionState.unselected;
     }
-    if (answerId == question.correctAnswerId) return AnswerOptionState.correct;
-    if (answerId == recordedSelection) return AnswerOptionState.incorrect;
+    if (answerId == feedback.correctAnswerId) {
+      return AnswerOptionState.correct;
+    }
+    if (answerId == feedback.selectedAnswerId) {
+      return AnswerOptionState.incorrect;
+    }
     return AnswerOptionState.disabled;
   }
 }

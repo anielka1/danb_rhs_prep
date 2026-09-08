@@ -19,6 +19,9 @@ class AnswerAttempt {
     required this.isCorrect,
     required this.answeredAt,
     this.contentVersion,
+    this.questionVersion,
+    this.correctAnswerId,
+    this.explanation,
   });
 
   final String id;
@@ -47,6 +50,29 @@ class AnswerAttempt {
   /// historical attempts to stay honest.
   final String? contentVersion;
 
+  /// [Question.version] at the moment this attempt was evaluated. Null
+  /// for an attempt recorded before this field existed (schema < 3,
+  /// PREP-668), or a caller with no version to give (e.g. a test).
+  ///
+  /// This, [correctAnswerId], and [explanation] together are what let a
+  /// later [PracticeSessionController.resume] rebuild the exact
+  /// [AnswerFeedback] this attempt was originally evaluated against —
+  /// without them, resuming a session after a restart could only ever
+  /// reconstruct feedback from *today's* `Question` content, which can
+  /// silently disagree with what was actually shown/graded if the
+  /// question's content changed in between. See [AnswerFeedback]'s own
+  /// doc comment.
+  final int? questionVersion;
+
+  /// [Question.correctAnswerId] at the moment this attempt was
+  /// evaluated — see [questionVersion]'s doc comment for why this is
+  /// persisted redundantly here rather than looked up later.
+  final String? correctAnswerId;
+
+  /// [Question.explanation] at the moment this attempt was evaluated —
+  /// see [questionVersion]'s doc comment.
+  final String? explanation;
+
   @override
   bool operator ==(Object other) {
     if (identical(this, other)) return true;
@@ -62,7 +88,10 @@ class AnswerAttempt {
         other.selectedAnswerId == selectedAnswerId &&
         other.isCorrect == isCorrect &&
         other.answeredAt == answeredAt &&
-        other.contentVersion == contentVersion;
+        other.contentVersion == contentVersion &&
+        other.questionVersion == questionVersion &&
+        other.correctAnswerId == correctAnswerId &&
+        other.explanation == explanation;
   }
 
   @override
@@ -79,5 +108,8 @@ class AnswerAttempt {
         isCorrect,
         answeredAt,
         contentVersion,
+        questionVersion,
+        correctAnswerId,
+        explanation,
       );
 }
