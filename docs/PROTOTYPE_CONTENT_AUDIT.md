@@ -21,6 +21,17 @@ label is removed outright — no field for it exists anywhere in
 `ExamConfig` to back one. See `test/screens/exam_overview_screen_test.dart`'s
 "real exam stats and topic coverage (PREP-460)" group.
 
+**Same ticket also fixes two unrelated, real defects reported directly
+against the practice flow** (combined into PREP-460 at the reporter's
+explicit request, not because they share a root cause with the above):
+`AnswerExplanationScreen`'s bookmark control (previously disabled,
+row below) is now a real, working toggle, and `PracticeQuestionScreen`'s
+Next button no longer stays permanently disabled after using Previous
+to browse back from a not-yet-answered question — both reproduced with
+a failing test before being fixed. See
+`docs/INTERACTION_CONTROL_AUDIT.md`'s own "PREP-460 changes" section
+for the full detail on both.
+
 ## PREP-652 update (2026-09-06)
 
 `LoginScreen` (referenced throughout the rows below) no longer exists —
@@ -83,7 +94,7 @@ content must be revisited.
 | PracticeQuestionScreen | Timer ("24:18") | Hardcoded, static (does not run) | No | Yes | Real timed-session engine | Phase 6/8 | **Deferred**, same reasoning |
 | PracticeQuestionScreen | Previous / Next question controls | No-op controls | — | — | Multi-question session engine | Phase 6 | Already disabled (Task 2) |
 | AnswerExplanationScreen | Question text, answer options, "Correct Explanation" body text | Hardcoded, matches the same fake question as `PracticeQuestionScreen` | No | Yes | Real content package | Phase 6 | **Deferred**, same reasoning as `PracticeQuestionScreen` |
-| AnswerExplanationScreen | Bookmark action | No-op control | — | — | Real `examId`/`questionId` to bookmark against | Phase 6 | Already disabled (Task 2); `ProgressRepository`/`QuestionState.bookmarked` exist at the repository layer but this screen has no real question identity to attach to |
+| AnswerExplanationScreen | Bookmark action | Real toggle via `PracticeSessionController`/`ProgressRepository`/`QuestionState.bookmarked` | Yes — real, working feature | No | n/a | n/a | Was disabled (Task 2); **fixed by PREP-460** |
 | MockExamScreen | "Mock Exam" / "coming soon" empty state | Real `EmptyState` component, no fabricated data | Yes — an honest unavailable state | No | n/a | n/a | Already fixed (earlier accessibility session); re-verified in this task |
 | ProgressScreen | "Your Progress" header | Hardcoded string | Yes | No | n/a | n/a | None needed |
 | ProgressScreen | Weekly activity chart, accuracy/streak stats, weekly goal, subject-mastery rows | Was hardcoded fake numbers presented as the user's real activity | No | Yes | Progress-tracking repository (only an in-memory fake exists today, meant for tests) | Phase 5/6 | **Fixed in this task**: entire body replaced with an honest `EmptyState` ("No progress yet") with a working "Start Practicing" action |

@@ -476,6 +476,104 @@ void main() {
       expect(feedback.isCorrect, isTrue);
     });
   });
+
+  group('Previous/Next navigation (PREP-460 regression)', () {
+    test(
+        'after answering Q1 and advancing to Q2, using Previous to browse '
+        'back to Q1 does not permanently disable Next — it must still be '
+        'able to return to Q2, the not-yet-answered question you came '
+        'from', () async {
+      final controller = buildController(InMemoryProgressRepository());
+
+      // The real forward path: answer Q1, then advance — exactly what
+      // AnswerExplanationScreen's "Next Question" does
+      // (moveTo(currentIndex + 1)), landing on Q2, unanswered.
+      await controller.submitAnswer(controller.currentQuestion.correctAnswerId);
+      controller.moveTo(controller.currentIndex + 1);
+      expect(controller.currentIndex, 1);
+      expect(controller.isAnswered(controller.currentQuestion.id), isFalse,
+          reason: 'Q2 has not been answered yet — this is the exact '
+              'position the bug left the user stranded from');
+
+      // Previous, from Q2 back to (answered) Q1 — this part already
+      // worked before the fix.
+      expect(controller.canGoToPrevious, isTrue);
+      controller.moveTo(controller.currentIndex - 1);
+      expect(controller.currentIndex, 0);
+
+      // The actual regression: Next, from Q1, must be able to return to
+      // Q2 — before the fix, canGoToNext required Q2 to be *answered*,
+      // which it never was, permanently disabling Next here.
+      expect(controller.canGoToNext, isTrue,
+          reason: 'Q2 was already reached this session (it is where the '
+              'user came from via Previous), so Next must return there '
+              'even though Q2 itself was never answered');
+      controller.moveTo(controller.currentIndex + 1);
+      expect(controller.currentIndex, 1);
+    });
+
+    test(
+        'Next still refuses to skip ahead to genuinely fresh content past '
+        'the furthest point ever reached, even after browsing Previous',
+        () async {
+      final controller = buildController(InMemoryProgressRepository());
+      await controller.submitAnswer(controller.currentQuestion.correctAnswerId);
+      controller.moveTo(controller.currentIndex + 1); // now at Q2 (index 1)
+      controller.moveTo(controller.currentIndex - 1); // back to Q1 (index 0)
+
+      // Q3 (index 2) was never reached at all — Next must not be able to
+      // jump straight there merely because Previous/Next were used.
+      expect(controller.currentIndex, 0);
+      controller.moveTo(1); // legitimate: returns to the furthest point
+      expect(controller.canGoToNext, isFalse,
+          reason: 'Q3 is genuinely fresh content — advancing there still '
+              'requires submitting an answer for Q2 first, never a bare '
+              'navigation tap');
+    });
+
+    test(
+        'Previous/Next are both disabled at the very start of a fresh '
+        'session', () {
+      final controller = buildController(InMemoryProgressRepository());
+      expect(controller.canGoToPrevious, isFalse);
+      expect(controller.canGoToNext, isFalse);
+    });
+
+    test(
+        'a resumed session can immediately browse Next across its already '
+        'genuinely answered questions', () async {
+      final repo = InMemoryProgressRepository();
+      final firstController = buildController(repo);
+      await firstController
+          .submitAnswer(firstController.currentQuestion.correctAnswerId);
+      firstController.moveTo(1);
+      await firstController
+          .submitAnswer(firstController.currentQuestion.correctAnswerId);
+      // Now at index 2 (Q3), unanswered — matches a real resume point.
+
+      final resumed = await PracticeSessionController.resume(
+        session: firstController.session,
+        questions: firstController.questions,
+        progressRepository: repo,
+      );
+
+      expect(resumed.currentIndex, 2);
+      resumed.moveTo(0);
+      expect(resumed.canGoToNext, isTrue,
+          reason: 'Q2 (index 1) was genuinely answered before the '
+              'restart, so a resumed session must still let Next reach '
+              'it from Q1');
+      resumed.moveTo(1);
+      expect(resumed.canGoToNext, isTrue,
+          reason: 'Q3 (index 2) is exactly where the resumed session '
+              'picked back up — the furthest point reached — so Next '
+              'must still be able to reach it from Q2');
+      resumed.moveTo(2);
+      expect(resumed.canGoToNext, isFalse,
+          reason: 'Q4 (index 3) is genuinely fresh, never-reached content '
+              '— Next must not skip past Q3 without a real submission');
+    });
+  });
 }
 
 /// Every read/write throws — proves [PracticeSessionController.resume]'s

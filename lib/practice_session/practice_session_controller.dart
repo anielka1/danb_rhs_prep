@@ -2,6 +2,7 @@ import '../data/local/id_generator.dart';
 import '../domain/models/answer_attempt.dart';
 import '../domain/models/answer_feedback.dart';
 import '../domain/models/practice_session.dart';
+import '../domain/models/question_state.dart';
 import '../domain/repositories/progress_repository.dart';
 import '../features/questions/domain/question.dart';
 
@@ -176,6 +177,7 @@ class PracticeSessionController {
           .indexWhere((question) => !controller.isAnswered(question.id));
       controller._currentIndex =
           firstUnanswered == -1 ? questions.length - 1 : firstUnanswered;
+      controller._furthestIndex = controller._currentIndex;
     } catch (_) {
       // Best-effort: see this method's own doc comment. The controller
       // returned above (with an empty answered map, at question one) is
@@ -195,17 +197,32 @@ class PracticeSessionController {
 
   int _currentIndex = 0;
   int get currentIndex => _currentIndex;
+
+  /// The furthest index ever reached in this session (PREP-460) — either
+  /// by genuinely advancing forward (submitting an answer and moving to
+  /// the next question) or by wherever a resumed session picked back up.
+  /// [canGoToNext] is gated on this, not on [isAnswered]: after using
+  /// Previous to browse back into already-answered history from a
+  /// not-yet-answered "current" question, Next must still be able to
+  /// return you to that exact position — it was never itself answered,
+  /// but you were already there, and gating on [isAnswered] alone left
+  /// Next permanently disabled the moment you stepped back from it (a
+  /// real, confirmed bug, not the intended "never skip ahead to fresh
+  /// content" restriction).
+  int _furthestIndex = 0;
   int get totalQuestions => questions.length;
   Question get currentQuestion => questions[_currentIndex];
   bool get isLastQuestion => _currentIndex == questions.length - 1;
   bool get canGoToPrevious => _currentIndex > 0;
 
-  /// Only lets "Next" browse back into already-answered territory —
-  /// advancing past the current unanswered question requires submitting
-  /// an answer, never a bare navigation tap.
+  /// Lets "Next" return to any position already reached this session
+  /// (browsing back into answered history, or back to the not-yet-
+  /// answered question you most recently came from) — but never skip
+  /// ahead to genuinely fresh content past [_furthestIndex]; that still
+  /// requires submitting an answer, never a bare navigation tap.
   bool get canGoToNext =>
       _currentIndex < questions.length - 1 &&
-      isAnswered(questions[_currentIndex + 1].id);
+      _currentIndex + 1 <= _furthestIndex;
 
   final Map<String, AnswerFeedback> _feedback = {};
 
@@ -225,16 +242,82 @@ class PracticeSessionController {
   int get correctCount =>
       _feedback.values.where((feedback) => feedback.isCorrect).length;
 
+  /// Locally-cached bookmark state (PREP-460), keyed by questionId —
+  /// unlike [_feedback], [QuestionState.bookmarked] is not session-scoped
+  /// (a question stays bookmarked across every future session), so this
+  /// cache exists purely to avoid re-reading [progressRepository] on
+  /// every rebuild; the real, durable value always lives in
+  /// [QuestionState] via [progressRepository].
+  final Map<String, bool> _bookmarked = {};
+
+  /// Whether [questionId] is currently bookmarked. Defaults to `false`
+  /// until [loadBookmark] resolves — never a guess, just the same
+  /// "unseen" default [QuestionState.unseen] itself uses.
+  bool isBookmarked(String questionId) => _bookmarked[questionId] ?? false;
+
+  /// Best-effort loads [questionId]'s persisted bookmark state into the
+  /// cache [isBookmarked] reads, if not already loaded (or toggled) this
+  /// session. A null [progressRepository] or a failing read leaves the
+  /// cache at its default (`false`) rather than blocking the screen —
+  /// matching this controller's established best-effort persistence
+  /// philosophy (see [submitAnswer]'s own doc comment).
+  Future<void> loadBookmark(String questionId) async {
+    if (_bookmarked.containsKey(questionId)) return;
+    final ProgressRepository? repo = progressRepository;
+    if (repo == null) return;
+    try {
+      final QuestionState state =
+          await repo.questionState(session.examId, questionId);
+      _bookmarked[questionId] = state.bookmarked;
+    } catch (_) {
+      // Best-effort — see doc comment above.
+    }
+  }
+
+  /// Flips [questionId]'s bookmark in the local cache and returns the
+  /// new value — synchronous, so a caller can update its UI immediately
+  /// without waiting on persistence. Call [persistBookmark] afterward
+  /// (typically right after, in the same handler) to actually save it.
+  bool toggleBookmarkLocally(String questionId) {
+    final bool newValue = !isBookmarked(questionId);
+    _bookmarked[questionId] = newValue;
+    return newValue;
+  }
+
+  /// Best-effort persists [questionId]'s bookmark as [value] via
+  /// [progressRepository]. A null repository or a failing write leaves
+  /// the local cache (already updated by [toggleBookmarkLocally]) as the
+  /// interactive source of truth for the rest of this session — exactly
+  /// like [submitAnswer]'s own persistence failures never undo its
+  /// already-returned interactive result, though unlike an answer, a
+  /// bookmark that fails to persist here has no other record of ever
+  /// having been toggled once this controller is gone.
+  Future<void> persistBookmark(String questionId, bool value) async {
+    final ProgressRepository? repo = progressRepository;
+    if (repo == null) return;
+    try {
+      final QuestionState current =
+          await repo.questionState(session.examId, questionId);
+      await repo.saveQuestionState(current.copyWith(bookmarked: value));
+    } catch (_) {
+      // Best-effort — see doc comment above.
+    }
+  }
+
   Duration get elapsed =>
       (_session.completedAt ?? _now().toUtc()).difference(_session.startedAt);
 
   /// Moves to [index] without any bounds/sequencing guard — callers
   /// (typically after checking [canGoToPrevious]/[canGoToNext], or right
   /// after [submitAnswer] to reveal the question just answered) own that
-  /// decision.
+  /// decision. Also advances [_furthestIndex] when [index] is further
+  /// than any position reached before — moving backward (Previous) never
+  /// shrinks it, so [canGoToNext] can still return to wherever this
+  /// session has genuinely been.
   void moveTo(int index) {
     assert(index >= 0 && index < questions.length);
     _currentIndex = index;
+    if (index > _furthestIndex) _furthestIndex = index;
   }
 
   /// A submission already in flight, if any — a rapid double-tap on

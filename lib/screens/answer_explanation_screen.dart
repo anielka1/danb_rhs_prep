@@ -11,9 +11,45 @@ import '../widgets/primary_button.dart';
 import 'practice_question_screen.dart';
 import 'practice_summary_screen.dart';
 
-class AnswerExplanationScreen extends StatelessWidget {
+class AnswerExplanationScreen extends StatefulWidget {
   static const String route = '/answer-explanation';
   const AnswerExplanationScreen({super.key});
+
+  @override
+  State<AnswerExplanationScreen> createState() =>
+      _AnswerExplanationScreenState();
+}
+
+class _AnswerExplanationScreenState extends State<AnswerExplanationScreen> {
+  /// Guards a single [PracticeSessionController.loadBookmark] call per
+  /// screen instance — `didChangeDependencies` can otherwise run more
+  /// than once (e.g. a theme/locale change), and re-issuing the read
+  /// every time would be wasteful, not incorrect (PREP-460).
+  bool _bookmarkLoadStarted = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_bookmarkLoadStarted) return;
+    _bookmarkLoadStarted = true;
+    final PracticeSessionController? controller =
+        PracticeSessionScope.maybeOf(context);
+    if (controller == null) return;
+    controller.loadBookmark(controller.currentQuestion.id).then((_) {
+      if (mounted) setState(() {});
+    });
+  }
+
+  Future<void> _toggleBookmark(
+      PracticeSessionController controller, String questionId) async {
+    // Optimistic: the local cache (and this rebuild) update immediately,
+    // before persistence — a failing/missing repository never undoes
+    // the interactive toggle. See PracticeSessionController.persistBookmark's
+    // own doc comment.
+    final bool newValue = controller.toggleBookmarkLocally(questionId);
+    setState(() {});
+    await controller.persistBookmark(questionId, newValue);
+  }
 
   Future<void> _next(
       BuildContext context, PracticeSessionController controller) async {
@@ -53,6 +89,7 @@ class AnswerExplanationScreen extends StatelessWidget {
     final semanticColors = context.semanticColors;
     final textStyles = context.textStyles;
     final Question question = controller.currentQuestion;
+    final bool isBookmarked = controller.isBookmarked(question.id);
     final AnswerFeedback? feedback = controller.feedbackFor(question.id);
     if (feedback == null) {
       // Structurally should never happen — this screen is only reached
@@ -74,16 +111,20 @@ class AnswerExplanationScreen extends StatelessWidget {
       title: 'Review Question',
       centerTitle: true,
       actions: [
-        // Disabled: bookmarking is a separate feature (its own UI/flow)
-        // not in this task's scope. A real examId/questionId now exists
-        // here (unlike before), but that alone isn't a reason to build
-        // the feature as a side effect of this fix.
+        // Real bookmark toggle (PREP-460), backed by
+        // QuestionState.bookmarked via ProgressRepository — filled icon
+        // + a distinct color *and* a distinct semantic label distinguish
+        // the bookmarked state, never color alone.
         CircleIconButton(
-          icon: Icons.bookmark_border_rounded,
+          icon: isBookmarked
+              ? Icons.bookmark_rounded
+              : Icons.bookmark_border_rounded,
           background: colors.surfaceContainer,
-          iconColor: context.semanticColors.mutedForeground,
-          onPressed: null,
-          semanticLabel: 'Bookmark question',
+          iconColor: isBookmarked
+              ? colors.primary
+              : context.semanticColors.mutedForeground,
+          onPressed: () => _toggleBookmark(controller, question.id),
+          semanticLabel: isBookmarked ? 'Remove bookmark' : 'Bookmark question',
         ),
       ],
       // The whole screen scrolls (rather than only the review content, with

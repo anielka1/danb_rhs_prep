@@ -146,5 +146,43 @@ void main() {
       expect(find.text('View Explanation'), findsOneWidget);
       expect(find.text('Submit Answer'), findsNothing);
     });
+
+    testWidgets(
+        'after Previous, Next actually returns to the not-yet-answered '
+        'question you came from (PREP-460 regression — Next used to stay '
+        'disabled forever once you stepped back from it)', (tester) async {
+      final controller = buildDemoPracticeSessionController();
+      await controller
+          .submitAnswer(DebugDemoEnvironment.demoQuestions[0].correctAnswerId);
+      controller.moveTo(1);
+
+      await tester.pumpWidget(wrap(PracticeSessionScope(
+        controller: controller,
+        child: const PracticeQuestionScreen(),
+      )));
+      expect(find.text('QUESTION 2 OF 5'), findsOneWidget);
+
+      await tester.tap(find.text('Previous'));
+      await tester.pumpAndSettle();
+      expect(find.text('QUESTION 1 OF 5'), findsOneWidget);
+
+      final TextButton next = tester.widget(find.ancestor(
+        of: find.text('Next'),
+        matching: find.byType(TextButton),
+      ));
+      expect(next.onPressed, isNotNull,
+          reason: 'Q2 was already reached this session (that is where '
+              'Previous just came from) — Next must not be permanently '
+              'disabled just because Q2 itself was never answered');
+
+      await tester.tap(find.text('Next'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('QUESTION 2 OF 5'), findsOneWidget);
+      expect(find.text('Submit Answer'), findsOneWidget,
+          reason: 'Q2 genuinely has not been answered, so returning to it '
+              'shows the normal interactive Submit flow, not a fake '
+              'review state');
+    });
   });
 }
