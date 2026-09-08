@@ -108,10 +108,7 @@ void main() {
     final List<String> order = semanticsLabelOrder(root);
 
     final int backIndex = order.indexOf('Back');
-    // "Sound Effects" is now the last item on the page (PREP-459 removed
-    // the trailing "ACCOUNT" section — "Change Password" no longer
-    // exists to anchor on).
-    final int soundEffectsIndex = order.indexOf('Sound Effects');
+    final int soundEffectsIndex = order.indexOf('Appearance');
     expect(backIndex, greaterThanOrEqualTo(0));
     expect(soundEffectsIndex, greaterThanOrEqualTo(0));
     expect(backIndex, lessThan(soundEffectsIndex),

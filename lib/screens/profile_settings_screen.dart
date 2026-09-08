@@ -1,34 +1,19 @@
 import 'package:flutter/material.dart';
 import '../services/theme_mode_controller.dart';
 import '../theme/app_theme.dart';
+import '../widgets/app_card.dart';
 import '../widgets/app_scaffold.dart';
 import '../widgets/primary_button.dart';
 
-class ProfileSettingsScreen extends StatefulWidget {
+/// Accountless settings. Only controls backed by working behavior are shown.
+class ProfileSettingsScreen extends StatelessWidget {
   static const String route = 'settings';
-
   const ProfileSettingsScreen({super.key, required this.themeModeController});
-
-  /// App-level controller (owned by `DanbRhsPrepApp`, not this screen) —
-  /// reading/writing it here, rather than holding a local bool, is what
-  /// makes the whole app update immediately and the choice survive
-  /// navigating away from and back to this screen.
   final ThemeModeController themeModeController;
 
   @override
-  State<ProfileSettingsScreen> createState() => _ProfileSettingsScreenState();
-}
-
-class _ProfileSettingsScreenState extends State<ProfileSettingsScreen> {
-  // Push Notifications and Sound Effects have no backing feature yet (no
-  // notification-permission/scheduling system, no audio system) — the
-  // switches are disabled rather than wired to a setState-only bool that
-  // would otherwise look like it's toggling a real feature.
-
-  @override
   Widget build(BuildContext context) {
-    final colors = context.colors;
-    final textStyles = context.textStyles;
+    final styles = context.textStyles;
     return AppScaffold(
       leading: CircleIconButton(
         icon: Icons.chevron_left_rounded,
@@ -38,118 +23,87 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen> {
       title: 'Settings',
       body: SingleChildScrollView(
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const SizedBox(height: AppSpacing.lg),
-            Container(
-              width: 92,
-              height: 92,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: colors.primaryContainer,
-                border: Border.all(color: colors.surfaceContainer, width: 4),
-                boxShadow: [
-                  BoxShadow(
-                      color: AppShadowColors.base.withValues(alpha: 0.05),
-                      blurRadius: 10,
-                      offset: const Offset(0, 4)),
+            Text('Make it yours.', style: styles.h1),
+            const SizedBox(height: AppSpacing.sm),
+            Text('Your study plan. Your pace.', style: styles.body),
+            const SizedBox(height: AppSpacing.xxxl),
+            Text('LOOK & FEEL', style: styles.label),
+            const SizedBox(height: AppSpacing.md),
+            AppCard(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const _SectionHeading(
+                    icon: Icons.contrast_rounded,
+                    title: 'Appearance',
+                    subtitle: 'Easy on your eyes',
+                  ),
+                  const SizedBox(height: AppSpacing.lg),
+                  ValueListenableBuilder<ThemeMode>(
+                    valueListenable: themeModeController,
+                    builder: (context, mode, _) => Wrap(
+                      spacing: AppSpacing.sm,
+                      runSpacing: AppSpacing.sm,
+                      children: [
+                        for (final entry in const {
+                          ThemeMode.system: 'System',
+                          ThemeMode.light: 'Light',
+                          ThemeMode.dark: 'Dark',
+                        }.entries)
+                          ChoiceChip(
+                            label: Text(entry.value),
+                            selected: mode == entry.key,
+                            onSelected: (_) =>
+                                themeModeController.value = entry.key,
+                          ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: AppSpacing.sm),
+                  Text('Applies throughout the app for this session.',
+                      style: styles.bodySmall),
                 ],
               ),
-              child: Icon(Icons.person, size: 44, color: colors.primary),
             ),
-            const SizedBox(height: AppSpacing.md + 2),
-            // No account/auth system exists yet — an honest "no profile
-            // loaded" placeholder, not a fabricated name, stands in until
-            // sign-in is real. See docs/PROTOTYPE_CONTENT_AUDIT.md.
-            Text('Guest', style: textStyles.h2),
-            const SizedBox(height: AppSpacing.xs),
-            Text('Not signed in', style: textStyles.bodySmall),
-            const SizedBox(height: AppSpacing.xl + 2),
-            // Same reasoning: no progress/attempt data exists yet, so the
-            // stat values are an honest "not available" placeholder
-            // rather than fabricated numbers.
-            const Row(
-              children: [
-                Expanded(child: _ProfileStat(value: '—', label: 'Rank')),
-                _VerticalDivider(),
-                Expanded(child: _ProfileStat(value: '—', label: 'Study Hours')),
-                _VerticalDivider(),
-                Expanded(child: _ProfileStat(value: '—', label: 'Exams Taken')),
-              ],
-            ),
-            const SizedBox(height: AppSpacing.xxl + 2),
-            const Divider(),
-            const SizedBox(height: AppSpacing.xl),
-            Align(
-              alignment: Alignment.centerLeft,
-              child: Text('APP PREFERENCES', style: textStyles.label),
-            ),
+            const SizedBox(height: AppSpacing.xxxl),
+            Text('HELP & YOUR DATA', style: styles.label),
             const SizedBox(height: AppSpacing.md),
-            // Disabled: no notification-permission/scheduling system
-            // exists yet to back this preference.
-            const _PreferenceRow(
-              title: 'Push Notifications',
-              subtitle: 'Daily alerts & streak reminders',
-              value: true,
-              onChanged: null,
-            ),
-            const SizedBox(height: 10),
-            Align(
-              alignment: Alignment.centerLeft,
-              child: Text('Appearance',
-                  style: TextStyle(
-                      fontWeight: FontWeight.w700,
-                      fontSize: 15,
-                      color: colors.onSurface)),
-            ),
-            const SizedBox(height: 2),
-            Text('System, Light, or Dark', style: textStyles.bodySmall),
-            const SizedBox(height: AppSpacing.sm),
-            Align(
-              alignment: Alignment.centerLeft,
-              child: ValueListenableBuilder<ThemeMode>(
-                valueListenable: widget.themeModeController,
-                builder: (context, mode, _) {
-                  return SegmentedButton<ThemeMode>(
-                    segments: const [
-                      ButtonSegment(
-                          value: ThemeMode.system,
-                          label: Text('System'),
-                          icon: Icon(Icons.brightness_auto_rounded)),
-                      ButtonSegment(
-                          value: ThemeMode.light,
-                          label: Text('Light'),
-                          icon: Icon(Icons.light_mode_rounded)),
-                      ButtonSegment(
-                          value: ThemeMode.dark,
-                          label: Text('Dark'),
-                          icon: Icon(Icons.dark_mode_rounded)),
-                    ],
-                    selected: {mode},
-                    onSelectionChanged: (selection) =>
-                        widget.themeModeController.value = selection.first,
-                  );
-                },
+            AppCard(
+              padding: EdgeInsets.zero,
+              child: Column(
+                children: [
+                  const _InformationSection(
+                    icon: Icons.help_outline_rounded,
+                    title: 'Study help',
+                    text: 'Use Practice for questions with explanations. '
+                        'Mock Exam saves explanations for the end. '
+                        'You can return to an unfinished session from Home.',
+                  ),
+                  Divider(color: context.colors.outlineVariant),
+                  const _InformationSection(
+                    icon: Icons.shield_outlined,
+                    title: 'Your data',
+                    text: 'No account is needed. Study progress is stored '
+                        'locally in the standard app. The debug demo uses '
+                        'temporary data that resets when it restarts.',
+                  ),
+                  Divider(color: context.colors.outlineVariant),
+                  const _InformationSection(
+                    icon: Icons.info_outline_rounded,
+                    title: 'About RHS Prep',
+                    text: 'An independent study tool, not affiliated with '
+                        'or endorsed by DANB. Practice results are educational '
+                        'estimates, not official exam results.',
+                  ),
+                ],
               ),
             ),
-            const SizedBox(height: 10),
-            // Disabled: no audio system exists yet to back this
-            // preference.
-            const _PreferenceRow(
-              title: 'Sound Effects',
-              subtitle: 'Play sound on question feedback',
-              value: true,
-              onChanged: null,
-            ),
-            // No "ACCOUNT" section (PREP-459): this app is accountless in
-            // V1, with no sign-in and no plan to add one — there is no
-            // account for a guest to edit or a password to change.
-            // PREP-652 had kept "Edit Profile"/"Change Password" visible
-            // but disabled, on the premise that a future auth phase might
-            // still arrive; PREP-459 deliberately reverses that call
-            // (see docs/INTERACTION_CONTROL_AUDIT.md) since "disabled and
-            // waiting" is dishonest for a capability this product will
-            // never have, not merely one that isn't built yet.
-            const SizedBox(height: 90),
+            const SizedBox(height: AppSpacing.xxxl),
+            Center(child: Text('RHS PREP', style: styles.label)),
+            const SizedBox(height: AppSpacing.huge),
           ],
         ),
       ),
@@ -157,95 +111,54 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen> {
   }
 }
 
-class _ProfileStat extends StatelessWidget {
-  final String value;
-  final String label;
-  const _ProfileStat({required this.value, required this.label});
-
-  @override
-  Widget build(BuildContext context) {
-    // "—" reads clearly on its own visually, but a screen reader hearing
-    // just "dash, Rank" wouldn't — one merged, honest announcement
-    // instead of two disconnected ones.
-    return Semantics(
-      label: value == '—' ? '$label: not yet available' : '$label: $value',
-      child: ExcludeSemantics(
-        child: Column(
-          children: [
-            Text(value,
-                style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w800,
-                    color: context.colors.secondary)),
-            const SizedBox(height: AppSpacing.xs),
-            Text(label, style: context.textStyles.bodySmall),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _VerticalDivider extends StatelessWidget {
-  const _VerticalDivider();
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-        width: 1, height: 34, color: context.colors.outlineVariant);
-  }
-}
-
-class _PreferenceRow extends StatelessWidget {
+class _SectionHeading extends StatelessWidget {
+  const _SectionHeading(
+      {required this.icon, required this.title, required this.subtitle});
+  final IconData icon;
   final String title;
   final String subtitle;
-  final bool value;
-
-  /// Null renders (and behaves as) a disabled row: no tap/toggle action
-  /// reaches assistive services, and the text is visually muted to match
-  /// — this is how a not-yet-implemented preference is represented,
-  /// rather than a switch that toggles a bool nothing else reads.
-  final ValueChanged<bool>? onChanged;
-
-  const _PreferenceRow({
-    required this.title,
-    required this.subtitle,
-    required this.value,
-    required this.onChanged,
-  });
 
   @override
-  Widget build(BuildContext context) {
-    final colors = context.colors;
-    final bool enabled = onChanged != null;
-    final Color textColor =
-        enabled ? colors.onSurface : context.semanticColors.mutedForeground;
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 10),
-      child: Row(
+  Widget build(BuildContext context) => Row(
         children: [
+          Container(
+            padding: const EdgeInsets.all(AppSpacing.md),
+            decoration: BoxDecoration(
+              color: context.colors.primaryContainer,
+              borderRadius: BorderRadius.circular(AppRadii.smallIcon),
+            ),
+            child: Icon(icon, color: context.colors.onPrimaryContainer),
+          ),
+          const SizedBox(width: AppSpacing.md),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(title,
-                    style: TextStyle(
-                        fontWeight: FontWeight.w700,
-                        fontSize: 15,
-                        color: textColor)),
-                const SizedBox(height: 2),
-                Text(subtitle,
-                    style: context.textStyles.bodySmall
-                        .copyWith(color: enabled ? null : textColor)),
+                Text(title, style: context.textStyles.h3),
+                Text(subtitle, style: context.textStyles.bodySmall),
               ],
             ),
           ),
-          Switch(
-            value: value,
-            onChanged: onChanged,
-          ),
         ],
-      ),
-    );
-  }
+      );
+}
+
+class _InformationSection extends StatelessWidget {
+  const _InformationSection(
+      {required this.icon, required this.title, required this.text});
+  final IconData icon;
+  final String title;
+  final String text;
+
+  @override
+  Widget build(BuildContext context) => ExpansionTile(
+        leading: Icon(icon, color: context.colors.secondary),
+        title: Text(title,
+            style: context.textStyles.body.copyWith(
+                fontWeight: FontWeight.w700, color: context.colors.onSurface)),
+        shape: const Border(),
+        collapsedShape: const Border(),
+        childrenPadding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+        children: [Text(text, style: context.textStyles.body)],
+      );
 }
