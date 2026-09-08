@@ -16,9 +16,8 @@ exactly one version of this process to keep current.
 - Run `git status --short` and `git branch --show-current`. Do not assume
   the working directory is clean, and do not assume a Jira label or an
   older roadmap document is still accurate — verify against current `main`.
-- If the Jira task doesn't state a `PREP-###` number, ask for it. Never
-  guess or reuse another task's number — commit/PR titles and this repo's
-  audit trail depend on it being correct.
+- Jira numbers are optional. Use a descriptive branch, commit and PR title
+  for user-requested work without a Jira issue; never invent an issue number.
 
 ## 1. Worktree or direct branch — decide based on what's in the working tree
 
@@ -52,8 +51,8 @@ uncommitted changes remain exactly as they were the whole time — nothing
 about them is read, staged, or modified.
 
 Branch name prefix: `feature`, `fix`, `chore`, `docs`, `ci`, `security`, or
-`test` — whichever matches the change. Always `PREP-<number>`, then a short
-kebab-case slug.
+`test` — whichever matches the change. Use a short kebab-case slug (for example `feature/ui-refresh`); include
+`PREP-<number>` only when an existing Jira issue is supplied.
 
 ## 2. Implement the smallest complete change
 
@@ -115,8 +114,7 @@ EOF
 git push -u origin <branch>
 ```
 
-Never push directly to `main`, never force-push. Open a PR whose title
-contains `PREP-<number>`; GitHub auto-populates the description from
+Never push directly to `main`, never force-push. Open a PR with a descriptive title (include a Jira number only when supplied); GitHub auto-populates the description from
 `.github/PULL_REQUEST_TEMPLATE.md` — fill in every section honestly
 (Jira link, real test evidence, risks, privacy/accessibility decisions,
 rollback plan). Do not merge it yourself; wait for required checks and
@@ -189,4 +187,4 @@ process, not by a server-side gate.
   produce in this session.
 - Never stage or commit a file outside the current task's scope, even if
   it's already sitting modified in the working tree.
-- Never guess a Jira number; ask.
+- Never invent a Jira number; descriptive names are sufficient without Jira.

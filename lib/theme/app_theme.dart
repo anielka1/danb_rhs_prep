@@ -25,7 +25,7 @@ class AppRadii {
 
   static const double card = 20;
   static const double pill = 32;
-  static const double button = 28;
+  static const double button = 18;
   static const double avatar = 100;
   static const double smallIcon = 16;
 }
@@ -56,8 +56,8 @@ class AppBorderWidth {
   AppBorderWidth._();
 
   static const double thin = 1;
-  static const double regular = 1.4;
-  static const double thick = 1.6;
+  static const double regular = 2;
+  static const double thick = 2;
 }
 
 /// Minimum interactive control size, matching Apple's Human Interface
@@ -198,17 +198,7 @@ class AppSemanticColors extends ThemeExtension<AppSemanticColors> {
     );
   }
 
-  // Light values. Three were darkened from an initial pass that only
-  // checked container pairs and missed that these colors are also
-  // rendered as plain text/small labels elsewhere:
-  // * success: 0xFF3FAE6B only reached 2.64:1 as the "88%"/stat-number
-  //   text color on the cream surface; darkened to 0xFF257D46 (~4.81:1).
-  // * accent: 0xFFEF6C4D only reached 2.85:1 as the day-streak stat
-  //   number (24px bold — WCAG "large text", so the 3:1 floor applies,
-  //   not 4.5:1); darkened to 0xFFD85A3D (~3.62:1).
-  // * mutedForeground: 0xFF9AA2BB only reached 2.39:1, and is used as the
-  //   11px bottom-nav label text (not just icons), so it needs the full
-  //   4.5:1 floor; darkened to 0xFF646B87 (~4.94:1).
+  // Semantic status colors remain distinct from the forest action palette.
   static const AppSemanticColors light = AppSemanticColors(
     success: Color(0xFF257D46),
     onSuccess: Color(0xFFFFFFFF),
@@ -219,7 +209,7 @@ class AppSemanticColors extends ThemeExtension<AppSemanticColors> {
     warningContainer: Color(0xFFFBF0DD),
     onWarningContainer: Color(0xFF7A4E0A),
     accent: Color(0xFFD85A3D),
-    mutedForeground: Color(0xFF646B87),
+    mutedForeground: Color(0xFF586C62),
   );
 
   static const AppSemanticColors dark = AppSemanticColors(
@@ -232,7 +222,7 @@ class AppSemanticColors extends ThemeExtension<AppSemanticColors> {
     warningContainer: Color(0xFF3D2C10),
     onWarningContainer: Color(0xFFF0CE94),
     accent: Color(0xFFFF9270),
-    mutedForeground: Color(0xFF7A82A6),
+    mutedForeground: Color(0xFFADBBB4),
   );
 }
 
@@ -245,69 +235,46 @@ class AppSemanticColors extends ThemeExtension<AppSemanticColors> {
 class AppTheme {
   AppTheme._();
 
-  // Light scheme: warm cream background, periwinkle primary action, navy
-  // text — the prototype's original palette, with contrast-driven fixes
-  // to the colors below (all verified against WCAG's 4.5:1 floor for
-  // normal-size text, using each color's actual rendered pairing):
-  // * primary stays the prototype's 0xFF8CA0E8 periwinkle unchanged.
-  //   onPrimary switches from white (2.53:1 — insufficient) to the same
-  //   dark navy ink already used as the dark theme's onPrimary,
-  //   0xFF141A33 (~6.78:1).
-  // * onSurfaceVariant (secondary text) is darkened from the prototype's
-  //   0xFF8E96B8 to 0xFF5F6890 (2.74:1 -> ~5.10:1 against the surface).
-  // * secondary / onPrimaryContainer (previously both 0xFF5D71C9, used as
-  //   link/accent text and as primaryContainer's "on" color) are darkened
-  //   to 0xFF4C5FB8 (~5.43:1 as text on surface, ~4.73:1 on
-  //   primaryContainer).
-  // * error is darkened from 0xFFDD5353 to 0xFFC03E3E: it's rendered both
-  //   as plain text on surface ("Sign Out", 3.63:1 -> ~4.94:1) and as the
-  //   errorContainer badge fill under white text (3.86:1 -> ~5.25:1).
-  // * onErrorContainer is set to a separate, further-darkened
-  //   0xFFB83D3D (previously reused `error`'s value at 3.25:1) so text on
-  //   errorContainer reaches ~4.69:1.
+  // Forest palette: neutral surfaces, strong teal actions and readable ink.
   static const ColorScheme _lightScheme = ColorScheme.light(
     brightness: Brightness.light,
-    primary: Color(0xFF8CA0E8),
-    onPrimary: Color(0xFF141A33),
-    primaryContainer: Color(0xFFE3E8FA),
-    onPrimaryContainer: Color(0xFF4C5FB8),
-    secondary: Color(0xFF4C5FB8),
+    primary: Color(0xFF17695F),
+    onPrimary: Color(0xFFFFFFFF),
+    primaryContainer: Color(0xFFE5F1EC),
+    onPrimaryContainer: Color(0xFF17695F),
+    secondary: Color(0xFF17695F),
     onSecondary: Color(0xFFFFFFFF),
     error: Color(0xFFC03E3E),
     onError: Color(0xFFFFFFFF),
     errorContainer: Color(0xFFFBE7E7),
     onErrorContainer: Color(0xFFB83D3D),
-    surface: Color(0xFFFBF8EC),
-    onSurface: Color(0xFF3B4A8C),
+    surface: Color(0xFFF5F7F5),
+    onSurface: Color(0xFF172D29),
     surfaceContainer: Color(0xFFFFFFFF),
-    onSurfaceVariant: Color(0xFF5F6890),
-    outline: Color(0xFFE3DFCB),
-    outlineVariant: Color(0xFFE9E6D8),
+    onSurfaceVariant: Color(0xFF586C62),
+    outline: Color(0xFFDCE5DF),
+    outlineVariant: Color(0xFFDCE5DF),
   );
 
-  // Dark scheme: deep navy background, a lightened periwinkle so it still
-  // reads clearly against the dark surface, and warm off-white text that
-  // echoes the light theme's cream instead of pure white. Every value here
-  // was chosen for this brightness, not derived by inverting the light
-  // scheme.
+  // Dark surfaces retain the same forest identity with brighter actions.
   static const ColorScheme _darkScheme = ColorScheme.dark(
     brightness: Brightness.dark,
-    primary: Color(0xFF9FB0F0),
-    onPrimary: Color(0xFF141A33),
-    primaryContainer: Color(0xFF2B3568),
-    onPrimaryContainer: Color(0xFFC2CDF6),
-    secondary: Color(0xFFAEB9F2),
-    onSecondary: Color(0xFF141A33),
+    primary: Color(0xFF91D5C1),
+    onPrimary: Color(0xFF102D26),
+    primaryContainer: Color(0xFF254C40),
+    onPrimaryContainer: Color(0xFFB7EBD8),
+    secondary: Color(0xFF91D5C1),
+    onSecondary: Color(0xFF102D26),
     error: Color(0xFFE98080),
     onError: Color(0xFF3B1414),
     errorContainer: Color(0xFF4A2432),
     onErrorContainer: Color(0xFFF3B4B4),
-    surface: Color(0xFF12162B),
-    onSurface: Color(0xFFF3F1E7),
-    surfaceContainer: Color(0xFF1C2140),
-    onSurfaceVariant: Color(0xFFAEB4D6),
-    outline: Color(0xFF3A4066),
-    outlineVariant: Color(0xFF2A2F52),
+    surface: Color(0xFF17221F),
+    onSurface: Color(0xFFEDF6F1),
+    surfaceContainer: Color(0xFF22312C),
+    onSurfaceVariant: Color(0xFFADBBB4),
+    outline: Color(0xFF465A50),
+    outlineVariant: Color(0xFF3B4B43),
   );
 
   static ThemeData get lightTheme =>
@@ -471,7 +438,7 @@ class AppTextStyles {
   final TextStyle statNumber;
 
   static const TextStyle _h1 = TextStyle(
-    fontSize: 28,
+    fontSize: 30,
     fontWeight: FontWeight.w800,
     height: 1.2,
   );
@@ -495,7 +462,7 @@ class AppTextStyles {
     letterSpacing: 0.6,
   );
   static const TextStyle _button =
-      TextStyle(fontSize: 16, fontWeight: FontWeight.w700);
+      TextStyle(fontSize: 16, fontWeight: FontWeight.w800);
   static const TextStyle _statNumber =
       TextStyle(fontSize: 30, fontWeight: FontWeight.w800);
 

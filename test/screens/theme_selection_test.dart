@@ -75,9 +75,9 @@ void main() {
     await openSettings(tester);
 
     expect(controller.value, ThemeMode.dark);
-    final SegmentedButton<ThemeMode> segmented =
-        tester.widget(find.byType(SegmentedButton<ThemeMode>));
-    expect(segmented.selected, {ThemeMode.dark});
+    final ChoiceChip selected =
+        tester.widget(find.widgetWithText(ChoiceChip, 'Dark'));
+    expect(selected.selected, isTrue);
     // And the app is still actually dark, not just the stored value.
     expect(Theme.of(tester.element(find.text('Settings'))).brightness,
         Brightness.dark);

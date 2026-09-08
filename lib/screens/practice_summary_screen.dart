@@ -17,6 +17,16 @@ class _TopicScore {
   int get percent => total == 0 ? 0 : ((correct / total) * 100).round();
 }
 
+/// The best- and worst-scoring topics in a breakdown, by [_TopicScore
+/// .percent]. Only meaningful when comparing 2+ distinct topics — a
+/// single-topic breakdown has nothing to compare against, and its one
+/// score is already shown by the topic breakdown list itself.
+class _StrongestWeakest {
+  final _TopicScore strongest;
+  final _TopicScore weakest;
+  const _StrongestWeakest(this.strongest, this.weakest);
+}
+
 class PracticeSummaryScreen extends StatelessWidget {
   static const String route = '/practice-summary';
   const PracticeSummaryScreen({super.key});
@@ -61,6 +71,22 @@ class PracticeSummaryScreen extends StatelessWidget {
     return byTopic.values.toList(growable: false);
   }
 
+  /// Null when there are fewer than 2 distinct topics — nothing to
+  /// meaningfully call "strongest" or "weakest" against, and a
+  /// single-topic score is already visible in the breakdown list itself.
+  /// Ties broken by [breakdown]'s own (deterministic, insertion) order,
+  /// same as every other derived value on this screen — never randomly.
+  _StrongestWeakest? _strongestWeakest(List<_TopicScore> breakdown) {
+    if (breakdown.length < 2) return null;
+    _TopicScore strongest = breakdown.first;
+    _TopicScore weakest = breakdown.first;
+    for (final topic in breakdown.skip(1)) {
+      if (topic.percent > strongest.percent) strongest = topic;
+      if (topic.percent < weakest.percent) weakest = topic;
+    }
+    return _StrongestWeakest(strongest, weakest);
+  }
+
   @override
   Widget build(BuildContext context) {
     final PracticeSessionController? controller =
@@ -68,6 +94,7 @@ class PracticeSummaryScreen extends StatelessWidget {
     if (controller == null) return const _NoActiveSessionView();
 
     final colors = context.colors;
+    final semanticColors = context.semanticColors;
     final textStyles = context.textStyles;
     final int total = controller.totalQuestions;
     final int correct = controller.correctCount;
@@ -76,6 +103,7 @@ class PracticeSummaryScreen extends StatelessWidget {
     final String timeSpent =
         elapsed.inMinutes < 1 ? '<1m' : '${elapsed.inMinutes}m';
     final List<_TopicScore> breakdown = _breakdown(controller);
+    final _StrongestWeakest? strongestWeakest = _strongestWeakest(breakdown);
 
     return AppScaffold(
       body: SingleChildScrollView(
@@ -165,6 +193,38 @@ class PracticeSummaryScreen extends StatelessWidget {
                     ),
                   );
                 },
+              ),
+              const SizedBox(height: AppSpacing.md),
+            ],
+            if (strongestWeakest != null) ...[
+              Row(
+                children: [
+                  Icon(Icons.trending_up_rounded,
+                      color: semanticColors.success, size: AppIconSize.small),
+                  const SizedBox(width: AppSpacing.xs),
+                  Expanded(
+                    child: Text(
+                      'Strongest area: ${strongestWeakest.strongest.topicId} '
+                      '(${strongestWeakest.strongest.percent}%)',
+                      style: textStyles.bodySmall,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              Row(
+                children: [
+                  Icon(Icons.trending_down_rounded,
+                      color: semanticColors.warning, size: AppIconSize.small),
+                  const SizedBox(width: AppSpacing.xs),
+                  Expanded(
+                    child: Text(
+                      'Weakest area: ${strongestWeakest.weakest.topicId} '
+                      '(${strongestWeakest.weakest.percent}%)',
+                      style: textStyles.bodySmall,
+                    ),
+                  ),
+                ],
               ),
               const SizedBox(height: AppSpacing.md),
             ],

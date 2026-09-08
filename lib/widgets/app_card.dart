@@ -63,22 +63,17 @@ class AppCard extends StatelessWidget {
     final Widget card = Material(
       color: backgroundColor ?? colors.surfaceContainer,
       borderRadius: borderRadius,
-      child: isSelected
-          ? DecoratedBox(
-              decoration: BoxDecoration(
-                borderRadius: borderRadius,
-                border: Border.all(
-                    color: colors.primary, width: AppBorderWidth.thick),
-              ),
-              child: onTap == null
-                  ? content
-                  : InkWell(
-                      borderRadius: borderRadius, onTap: onTap, child: content),
-            )
-          : (onTap == null
-              ? content
-              : InkWell(
-                  borderRadius: borderRadius, onTap: onTap, child: content)),
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          borderRadius: borderRadius,
+          border: Border.all(
+              color: isSelected ? colors.primary : colors.outlineVariant,
+              width: AppBorderWidth.thick),
+        ),
+        child: onTap == null
+            ? content
+            : InkWell(borderRadius: borderRadius, onTap: onTap, child: content),
+      ),
     );
 
     if (semanticLabel == null && onTap == null && selected == null) return card;
