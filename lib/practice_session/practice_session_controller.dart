@@ -268,6 +268,16 @@ class PracticeSessionController {
     try {
       final QuestionState state =
           await repo.questionState(session.examId, questionId);
+      // Re-checked after the await, not just before: a concurrent
+      // toggleBookmarkLocally can race ahead of this read (the screen
+      // fires this load as soon as it's built, and a user can tap the
+      // toggle before a real disk read completes) and populate the
+      // cache first. Without this second check, the stale value this
+      // load started with would land *after* the user's toggle and
+      // silently revert it — the toggle would flip the icon/color for
+      // a moment and then undo itself, with no error and no visible
+      // cause.
+      if (_bookmarked.containsKey(questionId)) return;
       _bookmarked[questionId] = state.bookmarked;
     } catch (_) {
       // Best-effort — see doc comment above.
