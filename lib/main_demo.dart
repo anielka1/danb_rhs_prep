@@ -45,6 +45,13 @@ DanbRhsPrepApp createDebugDemoApp() {
   return DanbRhsPrepApp(
     bootstrapService: bootstrapService,
     localStore: localStore,
-    progressRepository: DebugDemoEnvironment.buildProgressRepository(),
+    // Real device clock, not the fixed bootstrap `now` above — matches
+    // HomeScreen's own "Today" header, which is deliberately real too
+    // (see docs/PROTOTYPE_CONTENT_AUDIT.md's HomeScreen row), so the
+    // seeded in-progress session's elapsed time always looks like a
+    // normal, just-started practice session, however long after
+    // 2026-01-01 this demo is actually launched.
+    progressRepository:
+        DebugDemoEnvironment.buildProgressRepository(now: DateTime.now),
   );
 }

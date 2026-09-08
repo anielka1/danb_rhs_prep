@@ -59,6 +59,7 @@ class PracticeSession {
 
   PracticeSession copyWith({
     SessionStatus? status,
+    DateTime? startedAt,
     DateTime? completedAt,
   }) {
     return PracticeSession(
@@ -67,7 +68,7 @@ class PracticeSession {
       mode: mode,
       questionIds: questionIds,
       status: status ?? this.status,
-      startedAt: startedAt,
+      startedAt: startedAt ?? this.startedAt,
       completedAt: completedAt ?? this.completedAt,
       contentVersion: contentVersion,
     );

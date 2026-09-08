@@ -49,26 +49,83 @@ void main() {
   });
 
   group('Next Question', () {
-    testWidgets('advances to the next real question when not the last',
-        (tester) async {
+    testWidgets(
+        'advances to the next real question when not the last, by '
+        'popping back to the real underlying PracticeQuestionScreen '
+        'route, not stacking a new one on top (PREP-457)', (tester) async {
+      // A real root screen with PracticeQuestionScreen pushed *onto* it —
+      // exactly like production (ExamOverviewScreen pushes
+      // PracticeQuestionScreen, which then pushes this screen on top of
+      // itself on Submit) — pumping AnswerExplanationScreen alone as the
+      // navigator root, as this test used to, could never catch the
+      // orphaned-route bug this regression test exists for: there was
+      // nothing underneath it to leave behind, and no root to prove
+      // Close actually reaches.
       final controller = buildDemoPracticeSessionController();
-      await controller
-          .submitAnswer(DebugDemoEnvironment.demoQuestions[0].correctAnswerId);
+      final GlobalKey<NavigatorState> navigatorKey = GlobalKey();
+      await tester.pumpWidget(MaterialApp(
+        theme: AppTheme.lightTheme,
+        navigatorKey: navigatorKey,
+        home: const Scaffold(body: Center(child: Text('Exam Overview root'))),
+      ));
+      navigatorKey.currentState!.push(MaterialPageRoute(
+        builder: (_) => PracticeSessionScope(
+          controller: controller,
+          child: const PracticeQuestionScreen(),
+        ),
+      ));
+      await tester.pumpAndSettle();
 
-      await tester.pumpWidget(wrap(PracticeSessionScope(
-        controller: controller,
-        child: const AnswerExplanationScreen(),
-      )));
+      await tester.tap(
+          find.text(DebugDemoEnvironment.demoQuestions[0].answers.first.text));
+      await tester.pump();
+      await tester.tap(find.text('Submit Answer'));
+      await tester.pumpAndSettle();
+      expect(find.byType(AnswerExplanationScreen), findsOneWidget);
 
       await tester.tap(find.text('Next Question'));
       await tester.pumpAndSettle();
 
       expect(controller.currentIndex, 1);
+      expect(find.byType(AnswerExplanationScreen), findsNothing);
       expect(find.byType(PracticeQuestionScreen), findsOneWidget);
       expect(
         find.text(DebugDemoEnvironment.demoQuestions[1].questionText),
         findsOneWidget,
       );
+
+      // A second question answered and advanced past — the original bug
+      // compounded with every question (one extra dead route each time),
+      // so a single cycle alone wasn't strong enough proof; this is what
+      // actually matched the reported symptom of needing to tap Close
+      // more than once, worsening the longer a session went on.
+      await tester.tap(
+          find.text(DebugDemoEnvironment.demoQuestions[1].answers.first.text));
+      await tester.pump();
+      await tester.tap(find.text('Submit Answer'));
+      await tester.pumpAndSettle();
+      expect(find.byType(AnswerExplanationScreen), findsOneWidget);
+      await tester.tap(find.text('Next Question'));
+      await tester.pumpAndSettle();
+      expect(controller.currentIndex, 2);
+      expect(
+        find.text(DebugDemoEnvironment.demoQuestions[2].questionText),
+        findsOneWidget,
+      );
+
+      // The real regression: closing out now must take exactly one tap,
+      // not one per question already answered — before this fix, each
+      // "Next Question" left a dead PracticeQuestionScreen route behind
+      // via pushReplacement, so Close only unwound one dead layer at a
+      // time instead of exiting.
+      await tester.tap(find.bySemanticsLabel('Close'));
+      await tester.pumpAndSettle();
+      expect(find.byType(PracticeQuestionScreen), findsNothing);
+      expect(find.byType(AnswerExplanationScreen), findsNothing);
+      expect(find.text('Exam Overview root'), findsOneWidget,
+          reason: 'one tap of Close must exit all the way back to the '
+              'screen practice was started from, even after two '
+              'questions worth of Next Question transitions');
     });
 
     testWidgets(

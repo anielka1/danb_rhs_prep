@@ -2,6 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:danb_rhs_prep/debug/debug_demo_environment.dart';
+import 'package:danb_rhs_prep/domain/models/answer_attempt.dart';
+import 'package:danb_rhs_prep/domain/models/practice_session.dart';
+import 'package:danb_rhs_prep/domain/repositories/fakes/in_memory_progress_repository.dart';
+import 'package:danb_rhs_prep/practice_session/practice_session_controller.dart';
 import 'package:danb_rhs_prep/practice_session/practice_session_scope.dart';
 import 'package:danb_rhs_prep/screens/answer_explanation_screen.dart';
 import 'package:danb_rhs_prep/screens/practice_question_screen.dart';
@@ -102,6 +106,64 @@ void main() {
       expect(controller.isAnswered(firstQuestion.id), isTrue);
       expect(find.byType(AnswerExplanationScreen), findsOneWidget);
       expect(find.text(firstQuestion.explanation), findsOneWidget);
+    });
+
+    testWidgets(
+        'a rapid double-tap on Submit Answer records exactly one '
+        'AnswerAttempt, never two (PREP-457)', (tester) async {
+      final repo = InMemoryProgressRepository();
+      final questions = DebugDemoEnvironment.demoQuestions;
+      final session = PracticeSession(
+        id: 'double-submit-test-session',
+        examId: DebugDemoEnvironment.demoExamId,
+        mode: PracticeMode.quickPractice,
+        questionIds: questions.map((q) => q.id).toList(),
+        status: SessionStatus.inProgress,
+        startedAt: DateTime.utc(2026, 1, 1),
+      );
+      final controller = PracticeSessionController(
+        session: session,
+        questions: questions,
+        progressRepository: repo,
+        now: () => DateTime.utc(2026, 1, 1, 0, 5),
+      );
+
+      await tester.pumpWidget(wrap(PracticeSessionScope(
+        controller: controller,
+        child: const PracticeQuestionScreen(),
+      )));
+
+      final firstQuestion = questions.first;
+      await tester.tap(find.text(firstQuestion.answers.first.text));
+      await tester.pump();
+
+      // Invoked directly, twice, with no `pump()` between them — a real
+      // rapid double-tap before the button's own `isLoading` guard has
+      // had a frame to visually disable it. `tester.tap()` twice in a
+      // row would hit-test against a tree that's already navigated away
+      // after the first (a harmless but noisy warning); calling the
+      // exact same callback the first tap would have triggered is the
+      // precise way to simulate two competing activations of one
+      // control, matching how the controller-level test already
+      // exercises this same guard directly.
+      final ElevatedButton button = tester.widget(find.ancestor(
+        of: find.text('Submit Answer'),
+        matching: find.byType(ElevatedButton),
+      ));
+      button.onPressed!();
+      button.onPressed!();
+      await tester.pumpAndSettle();
+
+      final List<AnswerAttempt> attempts =
+          await repo.answerAttemptsForExam(DebugDemoEnvironment.demoExamId);
+      expect(
+        attempts.where((a) => a.questionId == firstQuestion.id),
+        hasLength(1),
+        reason: 'PracticeSessionController.submitAnswer\'s own in-flight '
+            'guard (PREP-664) must prevent a second recorded attempt for '
+            'one logical tap, exercised here through the real screen and '
+            'button, not just called directly on the controller',
+      );
     });
   });
 
@@ -239,6 +301,56 @@ void main() {
       expect(find.bySemanticsLabel('Remove bookmark'), findsOneWidget,
           reason: 'back on Q1, the bookmark made through the controller '
               '(as AnswerExplanationScreen would) must still show');
+    });
+  });
+
+  group('elapsed timer (PREP-457)', () {
+    testWidgets(
+        'the displayed elapsed time updates on its own as time passes, '
+        'with no answer/navigation action in between', (tester) async {
+      // A plain mutable value under this test's own control, standing in
+      // for the passage of real time — isolates "does the screen rebuild
+      // on its own" from PracticeSessionController's own now-injection
+      // (covered separately in exam_overview_screen_test.dart). Before
+      // this fix, PracticeQuestionScreen had no periodic timer of its own
+      // (unlike MockExamQuestionScreen's identical one) — elapsed only
+      // ever changed on the next unrelated setState (selecting an answer,
+      // Submit, bookmark), so it looked frozen between those.
+      DateTime fakeNow = DateTime.utc(2026, 1, 1, 9, 0, 0);
+      final session = PracticeSession(
+        id: 'elapsed-ticker-test-session',
+        examId: DebugDemoEnvironment.demoExamId,
+        mode: PracticeMode.quickPractice,
+        questionIds:
+            DebugDemoEnvironment.demoQuestions.map((q) => q.id).toList(),
+        status: SessionStatus.inProgress,
+        startedAt: DateTime.utc(2026, 1, 1, 9, 0, 0),
+      );
+      final controller = PracticeSessionController(
+        session: session,
+        questions: DebugDemoEnvironment.demoQuestions,
+        now: () => fakeNow,
+      );
+
+      await tester.pumpWidget(wrap(PracticeSessionScope(
+        controller: controller,
+        child: const PracticeQuestionScreen(),
+      )));
+      // Lets the screen's own one-time bookmark-load rebuild (unrelated
+      // to this test) settle first, so the only thing that can explain a
+      // rebuild after the next, deliberately time-only pump below is the
+      // elapsed-time ticker under test — not a coincidental dirty flag
+      // left over from something else.
+      await tester.pump();
+
+      expect(find.text('00:00'), findsOneWidget);
+
+      fakeNow = fakeNow.add(const Duration(seconds: 5));
+      await tester.pump(const Duration(seconds: 1));
+
+      expect(find.text('00:05'), findsOneWidget,
+          reason: 'the screen must rebuild on its own tick and re-read '
+              "controller.elapsed — no tap or navigation happened here");
     });
   });
 }
