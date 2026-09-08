@@ -24,6 +24,23 @@ void main() {
         InMemorySharedPreferencesAsync.empty();
   });
 
+  for (final precision in [
+    ExamDatePrecision.withinMonth,
+    ExamDatePrecision.oneToThreeMonths,
+    ExamDatePrecision.later,
+  ]) {
+    test('$precision survives reopening storage without inventing a date',
+        () async {
+      final selection = ExamDateSelection(precision: precision);
+      await SharedPreferencesBootstrapLocalStore()
+          .writeExamDateSelection(selection);
+      final restored =
+          await SharedPreferencesBootstrapLocalStore().readExamDateSelection();
+      expect(restored, selection);
+      expect(restored!.date, isNull);
+    });
+  }
+
   test('every key starts absent on a fresh store', () async {
     final store = SharedPreferencesBootstrapLocalStore();
 

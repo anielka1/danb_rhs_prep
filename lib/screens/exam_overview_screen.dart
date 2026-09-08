@@ -9,16 +9,10 @@ import '../practice_session/practice_session_controller.dart';
 import '../practice_session/practice_session_scope.dart';
 import '../theme/app_theme.dart';
 import '../widgets/app_scaffold.dart';
-import '../widgets/empty_state.dart';
+import '../widgets/app_card.dart';
 import '../widgets/error_state.dart';
 import '../widgets/primary_button.dart';
 import 'practice_question_screen.dart';
-
-class _Topic {
-  final String title;
-  final int questions;
-  const _Topic(this.title, this.questions);
-}
 
 class ExamOverviewScreen extends StatefulWidget {
   static const String route = '/exam-overview';
@@ -85,6 +79,9 @@ class ExamOverviewScreen extends StatefulWidget {
 
 class _ExamOverviewScreenState extends State<ExamOverviewScreen> {
   bool _starting = false;
+  int _requestedCount = 10;
+  PracticeFocus _focus = PracticeFocus.any;
+  String? _domainId;
 
   /// Set only when a fresh (never-resumed) session could not be
   /// generated. Shown in the same caption slot as the "no content package
@@ -119,39 +116,7 @@ class _ExamOverviewScreenState extends State<ExamOverviewScreen> {
   /// Cleared on every new attempt.
   bool _limitCheckFailed = false;
 
-  /// The question-set size for the single "Quick Practice" button.
-  ///
-  /// This is a current, deliberate product decision for this screen's one
-  /// entry point — not a stand-in value that needs replacing — chosen as
-  /// the middle of the 5/10/20 range `PracticeGenerator` itself already
-  /// supports via `requestedCount`, so a meaningful session starts without
-  /// assuming the larger 20 is always available or wanted. Letting the
-  /// user pick 5/10/20 directly is a separate, later UI feature (a
-  /// count-picker control), tracked apart from this ticket, not a
-  /// prerequisite for this constant being correct today.
-  static const int _defaultQuickPracticeCount = 10;
-
-  bool get _hasContent =>
-      widget.contentPackage != null &&
-      widget.contentPackage!.questions.isNotEmpty;
-
-  /// One [_Topic] per configured domain (PREP-460), each with the real
-  /// count of currently-[Question.isApproved] questions in it — never an
-  /// invented number. Every domain in [ContentPackage.exam] is included
-  /// even when its count is 0 (an honest, computed zero, not a
-  /// placeholder), so the list always matches the exam's actual
-  /// blueprint structure rather than a hardcoded guess at it.
-  static List<_Topic> _domainCoverage(ContentPackage package) {
-    final Map<String, int> approvedCountByDomainId = {};
-    for (final question in package.approvedQuestions) {
-      approvedCountByDomainId[question.domainId] =
-          (approvedCountByDomainId[question.domainId] ?? 0) + 1;
-    }
-    return [
-      for (final domain in package.exam.domains)
-        _Topic(domain.name, approvedCountByDomainId[domain.id] ?? 0),
-    ];
-  }
+  bool get _hasContent => widget.contentPackage?.questions.isNotEmpty ?? false;
 
   Future<void> _startOrResumePractice() async {
     if (_starting || !_hasContent) return;
@@ -234,8 +199,12 @@ class _ExamOverviewScreenState extends State<ExamOverviewScreen> {
       try {
         generator = PracticeGenerator.select(
           package: package,
-          questionStates: const [],
-          requestedCount: _defaultQuickPracticeCount,
+          questionStates: _focus == PracticeFocus.any || repository == null
+              ? const []
+              : await repository.questionStatesForExam(examId),
+          requestedCount: _requestedCount,
+          focus: _focus,
+          domainId: _domainId,
           maxCount: maxCount,
         );
       } on PracticeGenerationUnavailable catch (error) {
@@ -243,6 +212,14 @@ class _ExamOverviewScreenState extends State<ExamOverviewScreen> {
         setState(() {
           _starting = false;
           _unavailableReason = error.message;
+        });
+        return;
+      } catch (_) {
+        if (!mounted) return;
+        setState(() {
+          _starting = false;
+          _unavailableReason =
+              'Could not load your practice history. Please try again.';
         });
         return;
       }
@@ -337,17 +314,13 @@ class _ExamOverviewScreenState extends State<ExamOverviewScreen> {
     final colors = context.colors;
     final textStyles = context.textStyles;
     final ContentPackage? package = widget.contentPackage;
-    final List<_Topic> domainCoverage =
-        package != null ? _domainCoverage(package) : const [];
-    final bool hasApprovedQuestions =
-        package != null && package.approvedQuestions.isNotEmpty;
     return AppScaffold(
       leading: CircleIconButton(
         icon: Icons.chevron_left_rounded,
         onPressed: () => Navigator.of(context).maybePop(),
         semanticLabel: 'Back',
       ),
-      title: 'Exam Info',
+      title: 'Practice setup',
       // The whole screen scrolls (rather than only the topics list, with
       // a fixed button pinned below it) so the button is never clipped
       // when its label wraps to multiple lines at large Dynamic Type
@@ -357,72 +330,67 @@ class _ExamOverviewScreenState extends State<ExamOverviewScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(AppSpacing.xl),
-              decoration: BoxDecoration(
-                color: colors.primaryContainer,
-                borderRadius: BorderRadius.circular(AppRadii.card),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('Practice Exam Prep', style: textStyles.h2),
-                  // Sourced from the real ExamConfig (PREP-460) — never
-                  // a hardcoded duration/count, and no difficulty label
-                  // (no such field exists anywhere in ExamConfig to back
-                  // one). Omitted entirely rather than shown as a
-                  // placeholder when there's no content package to read
-                  // it from at all.
-                  if (package != null) ...[
-                    const SizedBox(height: 6),
-                    Text(
-                      '${package.exam.mockExam.durationMinutes} Minutes · '
-                      '${package.exam.mockExam.questionCount} Questions',
-                      style: textStyles.body.copyWith(
-                        color: colors.secondary,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ],
-                ],
-              ),
-            ),
-            const SizedBox(height: 26),
-            Text('About Certification', style: textStyles.h3),
-            const SizedBox(height: 10),
-            Text(
-              'This simulator prepares you comprehensively for the official '
-              'Dental Assisting National Board Radiation Health & Safety exam. '
-              'Complete each module with 80% correct score.',
-              style: textStyles.body,
-            ),
-            const SizedBox(height: 26),
-            Text('Topics Covered', style: textStyles.h3),
-            const SizedBox(height: AppSpacing.md + 2),
-            // Real per-domain approved-question counts (PREP-460), never
-            // an invented topic list. An exam with zero approved
-            // questions anywhere gets an honest empty state instead of a
-            // domain list that would otherwise show every row at zero.
-            if (package == null)
-              Text(
-                "Topic coverage isn't available from here yet.",
-                style: textStyles.bodySmall,
-              )
-            else if (!hasApprovedQuestions)
-              const EmptyState(
-                icon: Icons.menu_book_rounded,
-                title: 'No approved questions yet',
-                message: "This exam's question bank is still being "
-                    'reviewed. Check back once questions have been '
-                    'approved.',
-              )
-            else
-              ...domainCoverage.map((t) => Padding(
-                    padding: const EdgeInsets.only(bottom: 18),
-                    child: _TopicRow(topic: t),
-                  )),
+            Text('MAKE IT YOURS', style: textStyles.label),
             const SizedBox(height: AppSpacing.md),
+            Text('Let’s practice.', style: textStyles.h1),
+            const SizedBox(height: AppSpacing.sm),
+            Text('Choose a short session that fits your day.',
+                style: textStyles.body),
+            const SizedBox(height: AppSpacing.xxl),
+            Text('Session length', style: textStyles.h3),
+            const SizedBox(height: AppSpacing.md),
+            Wrap(spacing: AppSpacing.sm, runSpacing: AppSpacing.sm, children: [
+              for (final count in [5, 10, 20])
+                ChoiceChip(
+                    label: Text('$count questions'),
+                    selected: _requestedCount == count,
+                    onSelected: _starting
+                        ? null
+                        : (_) => setState(() => _requestedCount = count)),
+            ]),
+            const SizedBox(height: AppSpacing.xxl),
+            Text('Focus', style: textStyles.h3),
+            const SizedBox(height: AppSpacing.md),
+            for (final entry in const {
+              PracticeFocus.any: 'All questions',
+              PracticeFocus.weakAreas: 'My weak areas',
+              PracticeFocus.incorrectQuestions: 'Missed questions',
+            }.entries) ...[
+              AppCard(
+                  selected: _focus == entry.key,
+                  onTap: _starting
+                      ? null
+                      : () => setState(() => _focus = entry.key),
+                  child: Row(children: [
+                    Icon(
+                        _focus == entry.key
+                            ? Icons.check_circle_rounded
+                            : Icons.circle_outlined,
+                        color: colors.secondary),
+                    const SizedBox(width: AppSpacing.md),
+                    Expanded(child: Text(entry.value, style: textStyles.h3)),
+                  ])),
+              const SizedBox(height: AppSpacing.sm),
+            ],
+            if (package != null) ...[
+              const SizedBox(height: AppSpacing.md),
+              DropdownButtonFormField<String>(
+                initialValue: _domainId ?? '',
+                isExpanded: true,
+                decoration: const InputDecoration(labelText: 'Topic'),
+                items: [
+                  const DropdownMenuItem(value: '', child: Text('All topics')),
+                  for (final domain in package.exam.domains)
+                    DropdownMenuItem(
+                        value: domain.id, child: Text(domain.name)),
+                ],
+                onChanged: _starting
+                    ? null
+                    : (value) =>
+                        setState(() => _domainId = value == '' ? null : value),
+              ),
+            ],
+            const SizedBox(height: AppSpacing.xxl),
             PrimaryButton(
               label: 'Start Practice Exam',
               isLoading: _starting,
@@ -462,55 +430,6 @@ class _ExamOverviewScreenState extends State<ExamOverviewScreen> {
           ],
         ),
       ),
-    );
-  }
-}
-
-class _TopicRow extends StatelessWidget {
-  final _Topic topic;
-  const _TopicRow({required this.topic});
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.colors;
-    return Row(
-      children: [
-        Container(
-          width: 36,
-          height: 36,
-          decoration: BoxDecoration(
-            color: colors.primaryContainer,
-            shape: BoxShape.circle,
-          ),
-          alignment: Alignment.center,
-          // No per-topic unlock/completion tracking exists yet — every
-          // topic uses the same neutral icon rather than a fake locked or
-          // completed state. See docs/PROTOTYPE_CONTENT_AUDIT.md.
-          child: Icon(
-            Icons.menu_book_rounded,
-            size: AppIconSize.small + 2,
-            color: colors.primary,
-          ),
-        ),
-        const SizedBox(width: 14),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                topic.title,
-                style: TextStyle(
-                    fontWeight: FontWeight.w700,
-                    fontSize: 14,
-                    color: colors.onSurface),
-              ),
-              const SizedBox(height: 2),
-              Text('${topic.questions} Questions',
-                  style: context.textStyles.bodySmall),
-            ],
-          ),
-        ),
-      ],
     );
   }
 }

@@ -55,6 +55,6 @@ void main() {
             'production repositories must produce an honest empty state, '
             'never an uncaught exception');
     expect(find.byType(MainShell), findsOneWidget);
-    expect(find.text('Today'), findsOneWidget);
+    expect(find.text('Small steps.\nSteady progress.'), findsOneWidget);
   });
 }

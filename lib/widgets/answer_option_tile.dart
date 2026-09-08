@@ -58,7 +58,7 @@ class AnswerOptionTile extends StatelessWidget {
     switch (state) {
       case AnswerOptionState.unselected:
         background = colors.surfaceContainer;
-        border = Colors.transparent;
+        border = colors.outlineVariant;
         badgeBackground = colors.primaryContainer;
         // onSurfaceVariant only reaches ~4.44:1 against primaryContainer
         // (just under the 4.5:1 text floor); onPrimaryContainer is the
@@ -94,7 +94,7 @@ class AnswerOptionTile extends StatelessWidget {
         break;
       case AnswerOptionState.disabled:
         background = colors.surfaceContainer;
-        border = Colors.transparent;
+        border = colors.outlineVariant;
         badgeBackground = colors.primaryContainer;
         // Deliberately muted below the 4.5:1 text floor (light ~4.30:1,
         // dark ~3.07:1) to visually read as inactive, matching this

@@ -1,3 +1,4 @@
+import 'package:danb_rhs_prep/screens/home_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -69,12 +70,12 @@ void main() {
     testWidgets('each tab maps to its screen', (tester) async {
       await tester.pumpWidget(wrap(const MainShell()));
       expect(currentTab(tester), AppTab.home);
-      expect(find.text('Today'), findsOneWidget);
+      expect(find.text('Small steps.\nSteady progress.'), findsOneWidget);
 
       await tester.tap(find.text('Practice'));
       await tester.pumpAndSettle();
       expect(currentTab(tester), AppTab.practice);
-      expect(find.text('Exam Info'), findsOneWidget);
+      expect(find.text('Let’s practice.'), findsOneWidget);
 
       await tester.tap(find.text('Mock Exam'));
       await tester.pumpAndSettle();
@@ -111,35 +112,21 @@ void main() {
   });
 
   group('state preservation', () {
-    testWidgets('Home day selection survives switching tabs away and back',
+    testWidgets('Home state survives switching tabs away and back',
         (tester) async {
       final SemanticsHandle handle = tester.ensureSemantics();
       await tester.pumpWidget(wrap(const MainShell()));
 
-      await tester.tap(find.bySemanticsLabel(RegExp('Wed')));
+      final homeBefore = tester.state(find.byType(HomeScreen));
       await tester.pump();
-      expect(
-        tester.getSemantics(find.bySemanticsLabel(RegExp('Wed'))),
-        matchesSemantics(
-            isSelected: true,
-            hasSelectedState: true,
-            isButton: true,
-            hasTapAction: true),
-      );
+      expect(tester.state(find.byType(HomeScreen)), same(homeBefore));
 
       await tester.tap(find.text('Practice'));
       await tester.pumpAndSettle();
       await tester.tap(find.text('Home'));
       await tester.pumpAndSettle();
 
-      expect(
-        tester.getSemantics(find.bySemanticsLabel(RegExp('Wed'))),
-        matchesSemantics(
-            isSelected: true,
-            hasSelectedState: true,
-            isButton: true,
-            hasTapAction: true),
-      );
+      expect(tester.state(find.byType(HomeScreen)), same(homeBefore));
 
       handle.dispose();
     });
@@ -170,21 +157,14 @@ void main() {
       final SemanticsHandle handle = tester.ensureSemantics();
       await tester.pumpWidget(wrap(const MainShell()));
 
-      await tester.tap(find.bySemanticsLabel(RegExp('Wed')));
+      final homeBefore = tester.state(find.byType(HomeScreen));
       await tester.pump();
 
       await tester.tap(find.text('Home'));
       await tester.pump();
 
       expect(currentTab(tester), AppTab.home);
-      expect(
-        tester.getSemantics(find.bySemanticsLabel(RegExp('Wed'))),
-        matchesSemantics(
-            isSelected: true,
-            hasSelectedState: true,
-            isButton: true,
-            hasTapAction: true),
-      );
+      expect(tester.state(find.byType(HomeScreen)), same(homeBefore));
 
       handle.dispose();
     });
@@ -194,7 +174,7 @@ void main() {
       final SemanticsHandle handle = tester.ensureSemantics();
       await tester.pumpWidget(wrap(const MainShell()));
 
-      await tester.tap(find.bySemanticsLabel(RegExp('Wed')));
+      final homeBefore = tester.state(find.byType(HomeScreen));
       await tester.pump();
 
       await tester.tap(find.byTooltip('Settings'));
@@ -206,14 +186,7 @@ void main() {
 
       expect(find.byType(ProfileSettingsScreen), findsNothing);
       expect(currentTab(tester), AppTab.home);
-      expect(
-        tester.getSemantics(find.bySemanticsLabel(RegExp('Wed'))),
-        matchesSemantics(
-            isSelected: true,
-            hasSelectedState: true,
-            isButton: true,
-            hasTapAction: true),
-      );
+      expect(tester.state(find.byType(HomeScreen)), same(homeBefore));
 
       handle.dispose();
     });

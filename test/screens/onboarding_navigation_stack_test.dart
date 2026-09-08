@@ -484,6 +484,7 @@ void main() {
       // real current date, which this test doesn't control).
       await tester.tap(find.text('OK'));
       await tester.pumpAndSettle();
+      await tester.ensureVisible(find.text('Continue'));
       await tester.tap(find.text('Continue'));
       await tester.pumpAndSettle();
 

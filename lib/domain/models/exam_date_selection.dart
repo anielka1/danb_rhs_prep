@@ -26,7 +26,7 @@ import 'exam_date_precision.dart';
 /// a possibly-stale saved value, etc).
 class ExamDateSelection {
   ExamDateSelection({required this.precision, this.date}) {
-    final bool requiresDate = precision != ExamDatePrecision.notScheduled;
+    final bool requiresDate = precision.requiresDate;
     if (requiresDate != (date != null)) {
       throw ArgumentError(
         'date must be non-null exactly when precision is exact or '
@@ -94,6 +94,9 @@ DateTime normalizeToLocalDate(DateTime dateTime) {
 /// it was saved can make a once-valid date invalid.
 bool isExamDateSelectionValid(ExamDateSelection selection, DateTime today) {
   switch (selection.precision) {
+    case ExamDatePrecision.withinMonth:
+    case ExamDatePrecision.oneToThreeMonths:
+    case ExamDatePrecision.later:
     case ExamDatePrecision.notScheduled:
       return selection.date == null;
     case ExamDatePrecision.exact:

@@ -106,11 +106,11 @@ void main() {
     await _clickThroughOnboarding(tester);
 
     expect(find.byType(MainShell), findsOneWidget);
-    expect(find.text('Today'), findsOneWidget);
+    expect(find.text('Small steps.\nSteady progress.'), findsOneWidget);
 
     await tester.tap(find.text('Practice'));
     await tester.pumpAndSettle();
-    expect(find.text('Exam Info'), findsOneWidget);
+    expect(find.text('Let’s practice.'), findsOneWidget);
 
     // A fresh createDebugDemoApp() call is a new in-memory environment —
     // exactly what happens if the demo process is actually restarted.

@@ -48,6 +48,40 @@ void main() {
   Widget wrap(Widget child) =>
       MaterialApp(theme: AppTheme.lightTheme, home: child);
 
+  testWidgets('review shows only mistakes and leaves the score unchanged',
+      (tester) async {
+    final controller = buildDemoPracticeSessionController();
+    for (var i = 0; i < controller.questions.length; i++) {
+      controller.moveTo(i);
+      final question = controller.questions[i];
+      await controller.submitAnswer(i == 0
+          ? question.answers
+              .firstWhere((a) => a.id != question.correctAnswerId)
+              .id
+          : question.correctAnswerId);
+    }
+    await controller.complete();
+    final score = controller.correctCount;
+    await tester.pumpWidget(wrap(PracticeSessionScope(
+      controller: controller,
+      child: const PracticeSummaryScreen(),
+    )));
+    await tester.ensureVisible(find.text('Review Mistakes'));
+    await tester.tap(find.text('Review Mistakes'));
+    await tester.pumpAndSettle();
+    expect(find.text(controller.questions.first.questionText), findsOneWidget);
+    expect(find.text(controller.questions[1].questionText), findsNothing);
+    expect(
+        find.text(
+            controller.feedbackFor(controller.questions.first.id)!.explanation),
+        findsOneWidget);
+    await tester.ensureVisible(find.text('Back to summary'));
+    await tester.tap(find.text('Back to summary'));
+    await tester.pumpAndSettle();
+    expect(find.text('Session Complete!'), findsOneWidget);
+    expect(controller.correctCount, score);
+  });
+
   group('no active session', () {
     testWidgets('shows an honest empty state, not a fake score',
         (tester) async {

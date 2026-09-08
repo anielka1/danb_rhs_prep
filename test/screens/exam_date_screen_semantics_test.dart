@@ -227,12 +227,12 @@ void main() {
     final List<String> order = _labelOrder(_rootSemanticsNode(tester));
 
     final int headingIndex = order.indexOf('When is your exam?');
-    final int copyIndex = order.indexOf(
-        'This helps us shape your study plan. You can change it later.');
+    final int copyIndex =
+        order.indexOf('A rough idea is enough. You can change this anytime.');
     final int exactIndex =
-        order.indexWhere((l) => l.startsWith('I know the exact date'));
+        order.indexWhere((l) => l.startsWith('Within a month'));
     final int approximateIndex =
-        order.indexWhere((l) => l.startsWith('I have an approximate date'));
+        order.indexWhere((l) => l.startsWith('In 1–3 months'));
     final int unscheduledIndex =
         order.indexWhere((l) => l.startsWith("I haven't scheduled it yet"));
     final int continueIndex = order.indexOf('Continue');
@@ -262,15 +262,11 @@ void main() {
     expect(
         order
             .where((l) =>
-                l ==
-                'This helps us shape your study plan. You can change it '
-                    'later.')
+                l == 'A rough idea is enough. You can change this anytime.')
             .length,
         1);
-    expect(order.where((l) => l.startsWith('I know the exact date')).length, 1);
-    expect(
-        order.where((l) => l.startsWith('I have an approximate date')).length,
-        1);
+    expect(order.where((l) => l.startsWith('Within a month')).length, 1);
+    expect(order.where((l) => l.startsWith('Within a month')).length, 1);
     expect(
         order.where((l) => l.startsWith("I haven't scheduled it yet")).length,
         1);
@@ -290,12 +286,12 @@ void main() {
     final List<SemanticsNode> nodes = _labeledNodes(_rootSemanticsNode(tester));
     final SemanticsNode exact =
         nodes.firstWhere((n) => n.label.startsWith('I know the exact date'));
-    final SemanticsNode approximate = nodes
-        .firstWhere((n) => n.label.startsWith('I have an approximate date'));
+    final SemanticsNode approximate =
+        nodes.firstWhere((n) => n.label.startsWith('Within a month'));
 
     expect(exact.label, 'I know the exact date, selected');
     expect(exact.flagsCollection.isSelected, Tristate.isTrue);
-    expect(approximate.label, 'I have an approximate date, not selected');
+    expect(approximate.label, 'Within a month, not selected');
     expect(approximate.flagsCollection.isSelected, isNot(Tristate.isTrue));
 
     handle.dispose();

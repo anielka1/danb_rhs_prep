@@ -215,22 +215,7 @@ class _PracticeQuestionScreenState extends State<PracticeQuestionScreen> {
               ],
             ),
             const SizedBox(height: AppSpacing.md + 2),
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(AppSpacing.xl),
-              decoration: BoxDecoration(
-                color: colors.surfaceContainer,
-                borderRadius: BorderRadius.circular(AppRadii.card),
-              ),
-              child: Text(
-                question.questionText,
-                style: TextStyle(
-                    fontWeight: FontWeight.w700,
-                    fontSize: 17,
-                    color: colors.onSurface,
-                    height: 1.3),
-              ),
-            ),
+            Text(question.questionText, style: textStyles.h2),
             const SizedBox(height: 18),
             Column(
               children: [

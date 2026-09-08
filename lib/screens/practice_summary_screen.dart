@@ -5,6 +5,7 @@ import '../practice_session/practice_session_scope.dart';
 import '../theme/app_theme.dart';
 import '../widgets/app_bottom_navigation.dart';
 import '../widgets/app_scaffold.dart';
+import '../widgets/app_card.dart';
 import '../widgets/empty_state.dart';
 import '../widgets/primary_button.dart';
 import 'main_shell.dart';
@@ -108,6 +109,7 @@ class PracticeSummaryScreen extends StatelessWidget {
     return AppScaffold(
       body: SingleChildScrollView(
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const SizedBox(height: 28),
             Container(
@@ -124,35 +126,39 @@ class PracticeSummaryScreen extends StatelessWidget {
             Text('Session Complete!', style: textStyles.h1),
             const SizedBox(height: AppSpacing.sm),
             Text(
-              'You did an outstanding job reviewing today.',
-              textAlign: TextAlign.center,
+              'Another step forward. Keep building your understanding.',
+              textAlign: TextAlign.start,
               style: textStyles.body,
             ),
             const SizedBox(height: 30),
-            Row(
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('$percent%', style: textStyles.statNumber),
-                      const SizedBox(height: AppSpacing.xs),
-                      Text('$correct/$total Correct',
-                          style: textStyles.bodySmall),
-                    ],
+            AppCard(
+              backgroundColor: colors.primaryContainer,
+              padding: const EdgeInsets.all(AppSpacing.xxl),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('$percent%', style: textStyles.statNumber),
+                        const SizedBox(height: AppSpacing.xs),
+                        Text('$correct/$total Correct',
+                            style: textStyles.bodySmall),
+                      ],
+                    ),
                   ),
-                ),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(timeSpent, style: textStyles.statNumber),
-                      const SizedBox(height: AppSpacing.xs),
-                      Text('Time Spent', style: textStyles.bodySmall),
-                    ],
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(timeSpent, style: textStyles.statNumber),
+                        const SizedBox(height: AppSpacing.xs),
+                        Text('Time Spent', style: textStyles.bodySmall),
+                      ],
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
             const SizedBox(height: AppSpacing.xxl + 4),
             if (breakdown.isNotEmpty) ...[
@@ -228,10 +234,16 @@ class PracticeSummaryScreen extends StatelessWidget {
               ),
               const SizedBox(height: AppSpacing.md),
             ],
-            // Disabled: reviewing missed practice questions needs its own
-            // review screen/flow, not part of this task's scope, even
-            // though the incorrect answers themselves are now real data.
-            const SecondaryButton(label: 'Review Mistakes', onPressed: null),
+            SecondaryButton(
+              label: 'Review Mistakes',
+              onPressed: controller.questions.any(
+                (question) => controller.isCorrectFor(question.id) == false,
+              )
+                  ? () => Navigator.of(context).push(MaterialPageRoute<void>(
+                        builder: (_) => _MistakesReview(controller: controller),
+                      ))
+                  : null,
+            ),
             const SizedBox(height: AppSpacing.md),
             PrimaryButton(
               label: 'Back to Home',
@@ -240,6 +252,68 @@ class PracticeSummaryScreen extends StatelessWidget {
             const SizedBox(height: AppSpacing.lg),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _MistakesReview extends StatelessWidget {
+  const _MistakesReview({required this.controller});
+
+  final PracticeSessionController controller;
+
+  @override
+  Widget build(BuildContext context) {
+    final mistakes = controller.questions.where(
+      (question) => controller.isCorrectFor(question.id) == false,
+    );
+    return AppScaffold(
+      title: 'Review Mistakes',
+      leading: BackButton(onPressed: () => Navigator.of(context).pop()),
+      body: ListView(
+        children: [
+          Text('Learn from each answer.', style: context.textStyles.h1),
+          const SizedBox(height: AppSpacing.sm),
+          Text('Reviewing does not change your session score.',
+              style: context.textStyles.body),
+          const SizedBox(height: AppSpacing.xl),
+          for (final question in mistakes) ...[
+            AppCard(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(question.questionText, style: context.textStyles.h2),
+                  const SizedBox(height: AppSpacing.lg),
+                  for (final answer in question.answers)
+                    if (answer.id ==
+                            controller
+                                .feedbackFor(question.id)!
+                                .selectedAnswerId ||
+                        answer.id ==
+                            controller
+                                .feedbackFor(question.id)!
+                                .correctAnswerId)
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: AppSpacing.md),
+                        child: Text(
+                          '${answer.id == controller.feedbackFor(question.id)!.correctAnswerId ? 'Correct answer' : 'Your answer'}: ${answer.text}',
+                          style: context.textStyles.body,
+                        ),
+                      ),
+                  Text('WHY', style: context.textStyles.label),
+                  const SizedBox(height: AppSpacing.sm),
+                  Text(controller.feedbackFor(question.id)!.explanation,
+                      style: context.textStyles.body),
+                ],
+              ),
+            ),
+            const SizedBox(height: AppSpacing.lg),
+          ],
+          PrimaryButton(
+            label: 'Back to summary',
+            onPressed: () => Navigator.of(context).pop(),
+          ),
+        ],
       ),
     );
   }

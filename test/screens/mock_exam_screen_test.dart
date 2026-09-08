@@ -62,6 +62,6 @@ void main() {
     await tester.tap(find.text('View Exam Info'));
     await tester.pumpAndSettle();
 
-    expect(find.text('Exam Info'), findsOneWidget);
+    expect(find.text('Let’s practice.'), findsOneWidget);
   });
 }

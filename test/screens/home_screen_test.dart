@@ -150,7 +150,7 @@ void main() {
       // state first, it would still be visible right here.
       await tester.pump();
 
-      expect(find.text('No study tasks yet'), findsOneWidget);
+      expect(find.text('Build your confidence'), findsOneWidget);
       expect(find.text('Start Practicing'), findsOneWidget);
       expect(find.text('Continue'), findsNothing);
       expect(find.byType(CircularProgressIndicator), findsNothing);
@@ -181,14 +181,14 @@ void main() {
       // wrong (empty) content.
       await tester.pump();
       expect(find.byType(CircularProgressIndicator), findsOneWidget);
-      expect(find.text('No study tasks yet'), findsNothing);
+      expect(find.text('Build your confidence'), findsNothing);
 
       repository.complete(DebugDemoEnvironment.demoInProgressPracticeSession);
       await tester.pumpAndSettle();
 
       expect(find.text('Pick up where you left off'), findsOneWidget);
       expect(find.text('Continue'), findsOneWidget);
-      expect(find.text('No study tasks yet'), findsNothing);
+      expect(find.text('Build your confidence'), findsNothing);
       expect(find.text('Start Practicing'), findsNothing);
     });
 
@@ -205,7 +205,7 @@ void main() {
 
       expect(find.text('Pick up where you left off'), findsOneWidget);
       expect(find.text('Continue'), findsOneWidget);
-      expect(find.text('No study tasks yet'), findsNothing);
+      expect(find.text('Build your confidence'), findsNothing);
       expect(find.text('Start Practicing'), findsNothing);
     });
 
@@ -245,7 +245,7 @@ void main() {
           .pumpWidget(_wrap(HomeScreen(progressRepository: repository)));
       await tester.pumpAndSettle();
 
-      expect(find.text('No study tasks yet'), findsOneWidget);
+      expect(find.text('Build your confidence'), findsOneWidget);
       expect(find.text('Start Practicing'), findsOneWidget);
     });
   });
@@ -259,7 +259,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(tester.takeException(), isNull);
-      expect(find.text('No study tasks yet'), findsOneWidget);
+      expect(find.text('Build your confidence'), findsOneWidget);
       expect(find.text('Start Practicing'), findsOneWidget);
     });
   });

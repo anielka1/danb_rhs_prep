@@ -275,14 +275,14 @@ class _ExperienceLevelScreenState extends State<ExperienceLevelScreen> {
             const SizedBox(height: AppSpacing.md),
             Text(
               'Where are you in your preparation?',
-              style: textStyles.h2,
-              textAlign: TextAlign.center,
+              style: textStyles.h1,
+              textAlign: TextAlign.start,
             ),
             const SizedBox(height: AppSpacing.sm),
             Text(
               'Choose the option that best describes you right now.',
               style: textStyles.body,
-              textAlign: TextAlign.center,
+              textAlign: TextAlign.start,
             ),
             const SizedBox(height: AppSpacing.xl),
             _ChoiceCard(
@@ -341,7 +341,7 @@ class _ExperienceLevelScreenState extends State<ExperienceLevelScreen> {
                 style: textStyles.body.copyWith(
                   color: colors.onSurfaceVariant,
                 ),
-                textAlign: TextAlign.center,
+                textAlign: TextAlign.start,
               ),
             ],
             const SizedBox(height: AppSpacing.xl),
@@ -387,7 +387,7 @@ class _ChoiceCard extends StatelessWidget {
                   selected ? colors.primaryContainer : colors.surfaceContainer,
               borderRadius: BorderRadius.circular(AppRadii.smallIcon),
               border: Border.all(
-                color: selected ? colors.primary : Colors.transparent,
+                color: selected ? colors.primary : colors.outlineVariant,
                 width: AppBorderWidth.regular,
               ),
             ),

@@ -31,8 +31,7 @@ class UserProfile {
     required this.createdAt,
     required this.updatedAt,
   }) {
-    if ((examDate != null) !=
-        (examDatePrecision != ExamDatePrecision.notScheduled)) {
+    if ((examDate != null) != examDatePrecision.requiresDate) {
       throw ArgumentError(
         'examDate must be set if and only if an exam date has been scheduled.',
       );

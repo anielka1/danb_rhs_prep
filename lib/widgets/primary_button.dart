@@ -44,10 +44,10 @@ class PrimaryButton extends StatelessWidget {
           style: color != null || disabled
               ? ElevatedButton.styleFrom(
                   backgroundColor: disabled
-                      ? context.colors.primary.withValues(alpha: 0.55)
+                      ? context.colors.primary.withValues(alpha: 0.8)
                       : color,
                   disabledBackgroundColor: context.colors.primary.withValues(
-                    alpha: 0.55,
+                    alpha: 0.8,
                   ),
                 )
               : null,

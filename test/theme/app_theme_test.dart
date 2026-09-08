@@ -181,7 +181,7 @@ void main() {
       // PrimaryButton's disabled fill: primary at 55% opacity, actually
       // rendered over the screen's surface color, with the unfaded
       // onPrimary label on top.
-      final Color disabledFill = _blend(scheme.primary, scheme.surface, 0.55);
+      final Color disabledFill = _blend(scheme.primary, scheme.surface, 0.8);
       expectReadable('onPrimary on blended disabled-button fill',
           scheme.onPrimary, disabledFill,
           minRatio: 3);
@@ -237,7 +237,7 @@ void main() {
       expectReadable('mutedForeground on primaryContainer (disabled option)',
           semantic.mutedForeground, scheme.primaryContainer,
           minRatio: 3);
-      final Color disabledFill = _blend(scheme.primary, scheme.surface, 0.55);
+      final Color disabledFill = _blend(scheme.primary, scheme.surface, 0.8);
       expectReadable('onPrimary on blended disabled-button fill',
           scheme.onPrimary, disabledFill,
           minRatio: 3);
