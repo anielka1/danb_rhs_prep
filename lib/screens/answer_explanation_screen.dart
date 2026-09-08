@@ -8,7 +8,6 @@ import '../widgets/answer_option_tile.dart';
 import '../widgets/app_scaffold.dart';
 import '../widgets/empty_state.dart';
 import '../widgets/primary_button.dart';
-import 'practice_question_screen.dart';
 import 'practice_summary_screen.dart';
 
 class AnswerExplanationScreen extends StatefulWidget {
@@ -68,15 +67,21 @@ class _AnswerExplanationScreenState extends State<AnswerExplanationScreen> {
       return;
     }
     controller.moveTo(controller.currentIndex + 1);
-    Navigator.of(context).pushReplacement(
-      MaterialPageRoute(
-        settings: const RouteSettings(name: PracticeQuestionScreen.route),
-        builder: (_) => PracticeSessionScope(
-          controller: controller,
-          child: const PracticeQuestionScreen(),
-        ),
-      ),
-    );
+    // Not pushReplacement with a new PracticeQuestionScreen: that only
+    // ever replaces *this* explanation route, leaving the real,
+    // originally-pushed PracticeQuestionScreen route (from
+    // PracticeQuestionScreen._submit's own push, further down the
+    // stack) orphaned underneath it — one extra dead layer per question
+    // answered. That original screen is still live and already reads
+    // `controller.currentQuestion`/`currentIndex` on every rebuild
+    // (exactly how its own Previous/Next buttons update it with no
+    // navigation at all), so simply popping back to it here shows the
+    // question `moveTo` above just selected — no new instance needed.
+    // Before this fix, closing out with the top-left X after answering
+    // even one question popped only this dead layer, landing back on
+    // what looked like an unresponsive question screen instead of
+    // exiting practice.
+    Navigator.of(context).pop();
   }
 
   @override

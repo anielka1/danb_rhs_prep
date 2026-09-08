@@ -96,10 +96,19 @@ class _PracticeQuestionScreenState extends State<PracticeQuestionScreen> {
         ),
       ),
     );
+    // Runs once AnswerExplanationScreen is popped, for any reason —
+    // including AnswerExplanationScreen's own "Next Question", which
+    // pops back here (rather than pushing a new instance of this screen)
+    // after moving the controller forward. This is the *same* long-lived
+    // PracticeQuestionScreen instance throughout the session (see the
+    // class doc comment), so nothing else marks it dirty when the
+    // controller's current question changes out from under it this way.
+    if (!mounted) return;
+    setState(() {});
   }
 
-  void _viewExplanation(PracticeSessionController controller) {
-    Navigator.of(context).push(
+  Future<void> _viewExplanation(PracticeSessionController controller) async {
+    await Navigator.of(context).push(
       MaterialPageRoute(
         settings: const RouteSettings(name: AnswerExplanationScreen.route),
         builder: (_) => PracticeSessionScope(
@@ -108,6 +117,11 @@ class _PracticeQuestionScreenState extends State<PracticeQuestionScreen> {
         ),
       ),
     );
+    // See the identical rebuild in _submit above — reached instead when
+    // reviewing an already-answered question (e.g. after Previous) hits
+    // "Next Question" from there.
+    if (!mounted) return;
+    setState(() {});
   }
 
   void _goToPrevious(PracticeSessionController controller) {
