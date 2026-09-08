@@ -27,6 +27,33 @@ class _PracticeQuestionScreenState extends State<PracticeQuestionScreen> {
   String? _pendingSelection;
   bool _submitting = false;
 
+  /// Which question's bookmark state has already been requested from
+  /// [PracticeSessionController.loadBookmark] (PREP-460) — unlike
+  /// `AnswerExplanationScreen`, this screen is one long-lived instance
+  /// reused across every question in the session (Previous/Next just
+  /// call `setState`, never push a new screen), so "load once ever" is
+  /// wrong here: this must reload whenever the *current question*
+  /// changes, tracked by id rather than a one-shot bool.
+  String? _bookmarkLoadedForQuestionId;
+
+  void _ensureBookmarkLoaded(
+      PracticeSessionController controller, String questionId) {
+    if (_bookmarkLoadedForQuestionId == questionId) return;
+    _bookmarkLoadedForQuestionId = questionId;
+    controller.loadBookmark(questionId).then((_) {
+      if (mounted) setState(() {});
+    });
+  }
+
+  Future<void> _toggleBookmark(
+      PracticeSessionController controller, String questionId) async {
+    // Optimistic — see AnswerExplanationScreen's identical handler for
+    // why this doesn't await persistence before updating the UI.
+    final bool newValue = controller.toggleBookmarkLocally(questionId);
+    setState(() {});
+    await controller.persistBookmark(questionId, newValue);
+  }
+
   Future<void> _submit(PracticeSessionController controller) async {
     final String? answerId = _pendingSelection;
     if (answerId == null || _submitting) return;
@@ -87,6 +114,8 @@ class _PracticeQuestionScreenState extends State<PracticeQuestionScreen> {
     final Question question = controller.currentQuestion;
     final AnswerFeedback? feedback = controller.feedbackFor(question.id);
     final bool alreadyAnswered = feedback != null;
+    _ensureBookmarkLoaded(controller, question.id);
+    final bool isBookmarked = controller.isBookmarked(question.id);
 
     return AppScaffold(
       body: SingleChildScrollView(
@@ -122,10 +151,32 @@ class _PracticeQuestionScreenState extends State<PracticeQuestionScreen> {
               ],
             ),
             const SizedBox(height: AppSpacing.xl + 2),
-            Text(
-                'QUESTION ${controller.currentIndex + 1} OF '
-                '${controller.totalQuestions}',
-                style: textStyles.label),
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                      'QUESTION ${controller.currentIndex + 1} OF '
+                      '${controller.totalQuestions}',
+                      style: textStyles.label),
+                ),
+                // Real bookmark toggle (PREP-460) — available while
+                // looking at the question itself, not only afterward on
+                // AnswerExplanationScreen; both screens read/write the
+                // exact same PracticeSessionController state, so
+                // bookmarking here or there always agrees.
+                CircleIconButton(
+                  icon: isBookmarked
+                      ? Icons.bookmark_rounded
+                      : Icons.bookmark_border_rounded,
+                  iconColor: isBookmarked
+                      ? colors.primary
+                      : context.semanticColors.mutedForeground,
+                  onPressed: () => _toggleBookmark(controller, question.id),
+                  semanticLabel:
+                      isBookmarked ? 'Remove bookmark' : 'Bookmark question',
+                ),
+              ],
+            ),
             const SizedBox(height: AppSpacing.md + 2),
             Container(
               width: double.infinity,

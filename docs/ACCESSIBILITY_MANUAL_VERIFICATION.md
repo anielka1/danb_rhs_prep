@@ -35,7 +35,7 @@ Accessibility Shortcut), then swipe/explore and note what's announced.
 - [ ] An unselected option announces "Option A: <text>, not selected".
 - [ ] Selecting it announces "...selected".
 - [ ] After submitting, correct/incorrect options announce "...correct answer" / "...incorrect, your answer" and the decorative check/cancel icon is *not* announced separately.
-- [ ] The bookmark button on the review screen announces "Bookmark question" as a button.
+- [ ] The bookmark button on the review screen announces "Bookmark question" as a button when not bookmarked, and "Remove bookmark" once tapped (PREP-460: a real toggle now, not disabled) — confirm VoiceOver announces the *label* change, not just an icon-color difference.
 
 ## Progress/chart reading
 - [ ] The weekly activity chart on Progress reads as one summary, not seven unlabeled decorative bars.
@@ -47,7 +47,7 @@ Accessibility Shortcut), then swipe/explore and note what's announced.
 
 ## Appearance selector (new in this task)
 - [ ] Settings → Appearance: selecting System/Light/Dark is announced with the segment's name and its selected state.
-- [ ] The disabled Push Notifications / Sound Effects switches, and the disabled Forgot Password / Google / Apple / Previous / Next / Review Answers / Review Mistakes / bookmark / Home FAB controls, are all announced as unavailable (not silently skipped, not announced as active buttons) — this checks the *live* VoiceOver experience of the `enabled: false` state the automated tests only check structurally. ("Edit Profile" / "Change Password" removed outright by PREP-459 — this app is accountless in V1 with no plan to add sign-in, so there's nothing left here to verify.)
+- [ ] The disabled Push Notifications / Sound Effects switches, and the disabled Forgot Password / Google / Apple / Review Answers / Review Mistakes / Home FAB controls, are all announced as unavailable (not silently skipped, not announced as active buttons) — this checks the *live* VoiceOver experience of the `enabled: false` state the automated tests only check structurally. ("Edit Profile" / "Change Password" removed outright by PREP-459 — this app is accountless in V1 with no plan to add sign-in, so there's nothing left here to verify. Previous/Next and the bookmark control are real, enabled controls now — PREP-460 — so they belong in the *working*-control checks above, not here.)
 
 ## Light and dark mode
 - [ ] Repeat the Home/tab-bar pass in dark mode — VoiceOver behavior should be identical (this is a rendering/contrast check, not a semantics check, but worth confirming nothing visually breaks while VoiceOver is on).

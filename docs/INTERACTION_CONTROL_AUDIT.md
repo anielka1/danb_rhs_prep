@@ -65,6 +65,48 @@ roadmap at all, which makes "disabled and waiting" dishonest rather than
 merely premature. See `test/screens/accountless_no_login_test.dart` for
 the test guarding their absence.
 
+## PREP-460 changes
+
+Two real, confirmed defects, both reproduced with a failing test before
+being fixed (not merely observed):
+
+- **`AnswerExplanationScreen`'s bookmark icon: Disabled → Fixed to
+  Working.** Now a real toggle backed by `QuestionState.bookmarked` via
+  `ProgressRepository` — `PracticeSessionController` gained
+  `isBookmarked`/`loadBookmark`/`toggleBookmarkLocally`/`persistBookmark`,
+  best-effort exactly like `submitAnswer`'s own persistence (a
+  null/failing repository never blocks the interactive toggle). Filled
+  icon + a distinct color *and* a distinct semantic label ("Remove
+  bookmark" vs. "Bookmark question") distinguish the bookmarked state —
+  never color alone. See
+  `test/screens/answer_explanation_bookmark_test.dart`.
+  **Follow-up in the same ticket:** the reporter asked why bookmarking
+  had "disappeared" on the question screen itself — it had never
+  existed there, only on the post-answer review. Added the identical
+  control to `PracticeQuestionScreen` too (next to the "QUESTION N OF
+  M" label), reading/writing the exact same controller state, so
+  bookmarking from either screen always agrees. Unlike
+  `AnswerExplanationScreen` (a fresh screen instance per question),
+  `PracticeQuestionScreen` is one long-lived instance reused across
+  Previous/Next, so its bookmark load is keyed by the current question
+  id and re-triggered whenever that id changes, not a one-shot flag.
+  See `test/screens/practice_question_screen_test.dart`'s "bookmark
+  (PREP-460)" group.
+- **`PracticeQuestionScreen` Previous/Next: real navigation bug, not
+  just the intended "never skip ahead to fresh content" restriction.**
+  `canGoToNext` gated on whether the *next* question was itself already
+  answered — so using Previous to browse back into answered history
+  from a not-yet-answered "current" question left Next permanently
+  disabled the moment you stepped back, with no way to return to where
+  you were. Fixed by tracking `_furthestIndex` (the furthest position
+  ever reached this session, via any `moveTo` call) and gating
+  `canGoToNext` on that instead — Next can now return anywhere already
+  reached, but still refuses to skip ahead past it without a real
+  submission. See `test/practice_session/practice_session_controller_test.dart`'s
+  "Previous/Next navigation (PREP-460 regression)" group (confirmed
+  failing against the pre-fix code) and
+  `test/screens/practice_question_screen_test.dart`'s matching widget test.
+
 ## Summary counts
 
 **Before PREP-652:** 14 no-op controls existed at the time of the prior
@@ -79,12 +121,13 @@ removed by PREP-645/650 respectively). **PREP-652 itself removes 3 more**
 the unreachable screen that contained them, leaving 8 disabled
 no-op-shaped controls. **PREP-459 removes 2 more**
 (`ProfileSettingsScreen`'s "Edit Profile" and "Change Password" — see
-"PREP-459 changes" above). That leaves **6 disabled no-op-shaped
-controls**, all reachable, all with a real future feature and an
-explicit doc comment: `HomeScreen`'s floating "+" button,
-`AnswerExplanationScreen`'s bookmark icon, `PracticeSummaryScreen`'s
-"Review Mistakes", and `ProfileSettingsScreen`'s Push Notifications
-switch and Sound Effects switch.
+"PREP-459 changes" above), leaving 5. **PREP-460 fixes 1 more to
+Working** (`AnswerExplanationScreen`'s bookmark icon — see "PREP-460
+changes" below). That leaves **4 disabled no-op-shaped controls**, all
+reachable, all with a real future feature and an explicit doc comment:
+`HomeScreen`'s floating "+" button, `PracticeSummaryScreen`'s "Review
+Mistakes", and `ProfileSettingsScreen`'s Push Notifications switch and
+Sound Effects switch.
 
 | Screen | Control | Current behavior | Status | Intended behavior | Roadmap phase |
 | --- | --- | --- | --- | --- | --- |
@@ -99,9 +142,10 @@ switch and Sound Effects switch.
 | PracticeQuestionScreen | Close icon | `Navigator.maybePop()` | Working | — | 2.3 (done) |
 | PracticeQuestionScreen | Answer option tiles | `setState` tracks the pending selection before submit; disabled/read-only for an already-answered question reached via Previous | Working | — | 2.3 (done) |
 | PracticeQuestionScreen | "Submit Answer" / "View Explanation" | Calls `PracticeSessionController.submitAnswer`, which evaluates the tapped option against the real correct answer, before navigating to a scoped `AnswerExplanationScreen` | **Fixed → Working** (tested) | — | Fixed by PREP-649 (previously **Partially working**: navigated but never evaluated the answer) |
-| PracticeQuestionScreen | Previous / Next | `controller.moveTo(...)`, gated by `canGoToPrevious`/`canGoToNext` — real multi-question session navigation | **Fixed → Working** (tested) | — | Fixed by PREP-649 (previously **No-op → Disabled**) |
+| PracticeQuestionScreen | Previous / Next | `controller.moveTo(...)`, gated by `canGoToPrevious`/`canGoToNext` (`canGoToNext` now checks the furthest position ever reached, not `isAnswered`) — real multi-question session navigation | **Fixed → Working** (tested) | — | Fixed by PREP-649 (previously **No-op → Disabled**); a real "Next stays disabled forever after Previous" bug fixed by PREP-460 — see "PREP-460 changes" above |
+| PracticeQuestionScreen | Bookmark icon | Toggles `QuestionState.bookmarked` via `PracticeSessionController`/`ProgressRepository`, same shared state as the identical control on `AnswerExplanationScreen` | Working (tested) | — | Added by PREP-460, alongside the `AnswerExplanationScreen` control below, at the reporter's explicit request ("czemu bookmark zniknął przy pytaniach" — it had never existed on this screen before, only on the review screen) |
 | AnswerExplanationScreen | Back icon | `Navigator.maybePop()` | Working | — | 2.3 (done) |
-| AnswerExplanationScreen | Bookmark icon | `onPressed: null`, documented | Disabled | Toggle `QuestionState.bookmarked` via `ProgressRepository` | A real `examId`/`questionId` exists here now (PREP-649); wiring the toggle itself is a separate, undescoped feature, not a control fix |
+| AnswerExplanationScreen | Bookmark icon | Toggles `QuestionState.bookmarked` via `PracticeSessionController`/`ProgressRepository`, optimistic + best-effort | **Fixed → Working** (tested) | — | Fixed by PREP-460 — see "PREP-460 changes" above |
 | AnswerExplanationScreen | "Next Question" / "Finish" | `controller.moveTo(index+1)` + push a fresh `PracticeQuestionScreen`, or — on the last question — `controller.complete()` + navigate to `PracticeSummaryScreen` | **Fixed → Working** (tested) | — | Fixed by PREP-649 (previously **Partially working**: dismissed rather than advancing) |
 | PracticeSummaryScreen | "Review Mistakes" | `onPressed: null`, documented | Disabled | Show missed questions from the completed session | Needs its own review screen/flow — undescoped |
 | PracticeSummaryScreen | "Back to Home" | `Navigator.popUntil` back to the existing `MainShell` route (not `pushNamedAndRemoveUntil`, which would re-enter through the static route table with no `BootstrapSessionScope` ancestor) | Working (tested) | — | Mechanism fixed by PREP-649 (found while wiring real session state) |

@@ -3,7 +3,6 @@ import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:danb_rhs_prep/practice_session/practice_session_scope.dart';
-import 'package:danb_rhs_prep/screens/answer_explanation_screen.dart';
 import 'package:danb_rhs_prep/screens/home_screen.dart';
 import 'package:danb_rhs_prep/screens/mock_exam_results_screen.dart';
 import 'package:danb_rhs_prep/screens/practice_summary_screen.dart';
@@ -62,26 +61,9 @@ void main() {
     });
   });
 
-  group('AnswerExplanationScreen', () {
-    testWidgets('bookmark has no tap action', (tester) async {
-      final SemanticsHandle handle = tester.ensureSemantics();
-      final controller = buildDemoPracticeSessionController();
-      // Only reached, in practice, for an already-answered question
-      // (PREP-668) — see this screen's own doc comment.
-      await controller.submitAnswer(controller.currentQuestion.correctAnswerId);
-      await tester.pumpWidget(wrap(PracticeSessionScope(
-        controller: controller,
-        child: const AnswerExplanationScreen(),
-      )));
-
-      expect(
-          _hasTapAction(
-              tester.getSemantics(find.bySemanticsLabel('Bookmark question'))),
-          isFalse);
-
-      handle.dispose();
-    });
-  });
+  // AnswerExplanationScreen's bookmark control is no longer a no-op
+  // (PREP-460): it's a real toggle now, covered by
+  // test/screens/answer_explanation_bookmark_test.dart instead.
 
   group('HomeScreen', () {
     testWidgets('the floating action button has no tap action', (tester) async {
