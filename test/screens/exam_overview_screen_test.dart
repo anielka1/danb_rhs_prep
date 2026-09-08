@@ -14,6 +14,7 @@ import 'package:danb_rhs_prep/domain/repositories/fakes/in_memory_progress_repos
 import 'package:danb_rhs_prep/domain/repositories/progress_repository.dart';
 import 'package:danb_rhs_prep/features/content/data/exam_content_codec.dart';
 import 'package:danb_rhs_prep/features/content/domain/content_package.dart';
+import 'package:danb_rhs_prep/features/questions/domain/question.dart';
 import 'package:danb_rhs_prep/practice_session/practice_session_controller.dart';
 import 'package:danb_rhs_prep/practice_session/practice_session_scope.dart';
 import 'package:danb_rhs_prep/screens/exam_overview_screen.dart';
@@ -186,6 +187,135 @@ void main() {
           reason: 'the button itself stays enabled — a retry with '
               'different content should be possible without navigating '
               'away and back');
+    });
+  });
+
+  group('real exam stats and topic coverage (PREP-460)', () {
+    ContentPackage realPackage() => const ExamContentCodec().decode(
+        File('assets/content/danb_rhs/content.json').readAsStringSync());
+
+    Question approved(Question q) => Question(
+          id: q.id,
+          examId: q.examId,
+          domainId: q.domainId,
+          topicId: q.topicId,
+          questionText: q.questionText,
+          answers: q.answers,
+          correctAnswerId: q.correctAnswerId,
+          explanation: q.explanation,
+          references: q.references,
+          difficulty: q.difficulty,
+          status: QuestionStatus.approved,
+          version: q.version,
+          updatedAt: q.updatedAt,
+          sourceVersion: q.sourceVersion,
+          tags: q.tags,
+        );
+
+    ContentPackage withApprovedQuestions(
+      ContentPackage package,
+      List<Question> questions,
+    ) =>
+        ContentPackage(
+          exam: package.exam,
+          contentVersion: package.contentVersion,
+          sourceVersion: package.sourceVersion,
+          generatedAt: package.generatedAt,
+          questions: questions,
+        );
+
+    testWidgets(
+        'shows the real exam duration/question count from ExamConfig, '
+        'never the old hardcoded 1.5 Hours / 100 Questions / Intermediate',
+        (tester) async {
+      final ContentPackage package = realPackage();
+      expect(package.exam.mockExam.durationMinutes, 60,
+          reason: 'sanity check against the real, current content.json');
+      expect(package.exam.mockExam.questionCount, 75,
+          reason: 'sanity check against the real, current content.json');
+
+      await tester
+          .pumpWidget(wrap(ExamOverviewScreen(contentPackage: package)));
+
+      expect(find.textContaining('60 Minutes'), findsOneWidget);
+      expect(find.textContaining('75 Questions'), findsOneWidget);
+      expect(find.textContaining('100 Questions'), findsNothing);
+      expect(find.textContaining('1.5 Hours'), findsNothing);
+      expect(find.textContaining('Intermediate'), findsNothing,
+          reason: 'no difficulty-label field exists anywhere in '
+              'ExamConfig — this was always a fabricated value with no '
+              'backing data, not merely a stale one');
+    });
+
+    testWidgets(
+        "shows the real exam's domain names under Topics Covered, never "
+        'the old invented 5-topic list', (tester) async {
+      final ContentPackage base = realPackage();
+      // At least one approved question per domain, so the domain list
+      // renders instead of the zero-approved empty state (covered by
+      // its own test below) — this test is specifically about the
+      // domain *names*, not the empty-bank behavior.
+      final ContentPackage package =
+          withApprovedQuestions(base, base.questions.map(approved).toList());
+
+      await tester
+          .pumpWidget(wrap(ExamOverviewScreen(contentPackage: package)));
+
+      for (final domain in package.exam.domains) {
+        expect(find.text(domain.name), findsOneWidget,
+            reason: 'every configured domain should be listed');
+      }
+      expect(find.text('Radiation Physics & Characteristics'), findsNothing);
+      expect(find.text('Radiation Biology & Safety'), findsNothing);
+      expect(find.text('Radiation Protection Standards'), findsNothing);
+      expect(find.text('Equipment Operation & Imaging'), findsNothing);
+      expect(find.text('Patient Management & Procedures'), findsNothing);
+    });
+
+    testWidgets(
+        'shows an honest empty state under Topics Covered when the exam '
+        'has zero approved questions, not zero-count rows for invented '
+        'topics', (tester) async {
+      final ContentPackage package = realPackage();
+      expect(package.approvedQuestions, isEmpty,
+          reason: "today's real bundled content is entirely draft — see "
+              'docs/PROTOTYPE_CONTENT_AUDIT.md');
+
+      await tester
+          .pumpWidget(wrap(ExamOverviewScreen(contentPackage: package)));
+
+      expect(find.textContaining('No approved questions'), findsOneWidget);
+      for (final domain in package.exam.domains) {
+        expect(find.text(domain.name), findsNothing,
+            reason: 'an empty bank should not render a domain list with '
+                'zero-count rows');
+      }
+    });
+
+    testWidgets(
+        'shows a real per-domain approved-question count once questions '
+        'are actually approved', (tester) async {
+      final ContentPackage package = realPackage();
+      final Question firstQuestion = package.questions.first;
+      final ContentPackage packageWithOneApproved = withApprovedQuestions(
+        package,
+        [
+          for (final q in package.questions)
+            if (q.id == firstQuestion.id) approved(q) else q,
+        ],
+      );
+      final String approvedDomainName = package.exam.domains
+          .firstWhere((d) => d.id == firstQuestion.domainId)
+          .name;
+
+      await tester.pumpWidget(
+          wrap(ExamOverviewScreen(contentPackage: packageWithOneApproved)));
+
+      expect(find.text(approvedDomainName), findsOneWidget);
+      expect(find.textContaining('No approved questions'), findsNothing);
+      expect(find.text('1 Questions'), findsOneWidget,
+          reason: 'the domain with the newly-approved question shows a '
+              'real count of 1, not a fabricated or zero value');
     });
   });
 

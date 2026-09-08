@@ -406,10 +406,13 @@ Returning users should go directly from app bootstrap to the main app.
   `test/screens/phase_2_exit_criteria_test.dart` already used correctly.)
 - [ ] No final screen depends on prototype-only content. (See
   `docs/PROTOTYPE_CONTENT_AUDIT.md`. `HomeScreen`, `ProfileSettingsScreen`,
-  and `ProgressScreen` were fixed to use real data or an honest
-  empty/unavailable state. `ExamOverviewScreen`, `PracticeQuestionScreen`,
-  and `AnswerExplanationScreen` are reachable today and still depend on
-  hardcoded prototype question/exam-spec content that requires Phase 6
+  `ProgressScreen`, and `ExamOverviewScreen` (PREP-460: real exam
+  duration/question count and per-domain approved-question coverage,
+  replacing the hardcoded "1.5 Hours · 100 Questions · Intermediate"
+  and invented 5-topic list) were fixed to use real data or an honest
+  empty/unavailable state. `PracticeQuestionScreen` and
+  `AnswerExplanationScreen` are reachable today and still depend on
+  hardcoded prototype question content that requires Phase 6
   content-package and practice-engine work to resolve honestly. Left
   unchecked until those are addressed.)
 

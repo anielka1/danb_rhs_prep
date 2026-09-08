@@ -1,5 +1,26 @@
 # Prototype Content Audit
 
+## PREP-460 update (2026-09-08)
+
+`ExamOverviewScreen`'s "1.5 Hours · 100 Questions · Intermediate" caption
+and its hardcoded 5-topic list (rows below) — previously **Deferred** on
+the premise that "wiring real counts requires the content package to be
+complete" — are fixed. Both were wrong immediately, not merely
+incomplete: the real `content.json` already specifies `durationMinutes:
+60`/`questionCount: 75` (contradicting the hardcoded "1.5 Hours · 100
+Questions" outright), and the hardcoded topic names never matched the
+real exam's actual domain structure at all (5 invented domains vs. the
+real 3: Purpose and Technique, Radiation Characteristics and Protection,
+Infection Prevention and Control). The screen now reads
+`ExamConfig.mockExam` for the header stats and computes real
+per-domain approved-question counts from `ContentPackage
+.approvedQuestions`, showing an honest empty state when that count is
+zero (true for today's all-draft real content) instead of a domain list
+of invented or zero-count rows. The fabricated "Intermediate" difficulty
+label is removed outright — no field for it exists anywhere in
+`ExamConfig` to back one. See `test/screens/exam_overview_screen_test.dart`'s
+"real exam stats and topic coverage (PREP-460)" group.
+
 ## PREP-652 update (2026-09-06)
 
 `LoginScreen` (referenced throughout the rows below) no longer exists —
@@ -55,8 +76,8 @@ content must be revisited.
 | ProfileSettingsScreen | Push Notifications / Sound Effects toggles | No-op controls | — | — | Notification/audio systems | Various later phases | Already disabled (Task 2) |
 | ProfileSettingsScreen | Edit Profile / Change Password | No-op controls | — | — | N/A — this app is accountless in V1 with no plan to add sign-in | N/A | Disabled (Task 2); **removed outright by PREP-459**: this app has no auth phase planned at all, so "disabled and waiting" advertised a capability that will never exist, not merely one not yet built — see `docs/INTERACTION_CONTROL_AUDIT.md` |
 | ExamOverviewScreen | "Practice Exam Prep", "About Certification" body copy | Hardcoded string | Yes — final educational/explanatory copy | No | n/a | n/a | None needed |
-| ExamOverviewScreen | "1.5 Hours · 100 Questions · Intermediate" | Hardcoded string presented as the real exam's specs | No | Yes | Real content package / exam blueprint (only 2 draft sample questions currently exist in `assets/content/danb_rhs/content.json`) | Phase 6 (content authoring) | **Deferred**: left as a documented placeholder; wiring real counts requires the content package to be complete, out of this task's scope |
-| ExamOverviewScreen | Topic list names and per-topic question counts | Hardcoded string, mirrors the real exam blueprint's domain/topic names but with invented counts | No | Yes | Real content package | Phase 6 | **Deferred**, same reasoning as above |
+| ExamOverviewScreen | "1.5 Hours · 100 Questions · Intermediate" | Hardcoded string presented as the real exam's specs | No | Yes | Real content package / exam blueprint (only 2 draft sample questions currently exist in `assets/content/danb_rhs/content.json`) | Phase 6 (content authoring) | Was **Deferred**; **fixed by PREP-460**: now reads `ExamConfig.mockExam.durationMinutes`/`questionCount` directly (real content.json already has 60/75, contradicting the old hardcoded 1.5/100 outright — this never needed the content package to be "complete"); "Intermediate" removed outright, no backing field exists |
+| ExamOverviewScreen | Topic list names and per-topic question counts | Hardcoded string, mirrors the real exam blueprint's domain/topic names but with invented counts | No | Yes | Real content package | Phase 6 | Was **Deferred**; **fixed by PREP-460**: now one row per real `ExamConfig` domain with a real approved-question count from `ContentPackage.approvedQuestions`; an honest empty state replaces the list entirely when that count is zero |
 | ExamOverviewScreen | Per-topic locked/unlocked icon | Was a hardcoded fake progression gate (3 of 5 topics "locked") with no backing unlock system | No | Yes | A real progression/unlock system (not yet designed) | Unscheduled | **Fixed in this task**: removed the fake lock/check icons; every topic now shows the same neutral icon |
 | PracticeQuestionScreen | Question text, 4 answer options, "QUESTION 12 OF 100" | Hardcoded single fake question, fake position-in-set | No | Yes | Real content package + a practice-session engine (Phase 6) | Phase 6 | **Deferred**: two real draft sample questions exist in `content.json`, but wiring them in requires new async content-loading infrastructure and would still leave fake session-progress chrome around them — a content/engine change beyond this task's control-level scope. Classified unfinished. |
 | PracticeQuestionScreen | Timer ("24:18") | Hardcoded, static (does not run) | No | Yes | Real timed-session engine | Phase 6/8 | **Deferred**, same reasoning |
@@ -79,19 +100,23 @@ content must be revisited.
   (identity + stats), `ProgressScreen` (entire stats body), `ExamOverviewScreen`
   (removed fake topic lock/unlock), `LoginScreen` (removed fake pre-filled
   credentials, fixed branding-name inconsistency).
-- **Deferred — reachable but still prototype-only content**: `ExamOverviewScreen`'s
-  exam specs and per-topic question counts; `PracticeQuestionScreen` and
-  `AnswerExplanationScreen`'s hardcoded question/answer/explanation and
-  session chrome. All require Phase 6 content-package and/or
-  practice-engine work outside this task's scope (no business logic was
-  implemented, per the task's explicit constraints).
+- **Deferred — reachable but still prototype-only content**:
+  `PracticeQuestionScreen` and `AnswerExplanationScreen`'s hardcoded
+  question/answer/explanation and session chrome. These require Phase 6
+  content-package and/or practice-engine work outside this task's scope
+  (no business logic was implemented, per the task's explicit
+  constraints). `ExamOverviewScreen`'s exam specs and per-topic question
+  counts, previously listed here, were **fixed by PREP-460** — see the
+  update note at the top of this file.
 - **Deferred — currently unreachable, so out of this criterion's scope**:
   `PracticeSummaryScreen`, `MockExamResultsScreen`. Both still contain
   fabricated results and must not be wired into real navigation until
   they show real attempt data (Phase 6/8).
 
-**Conclusion**: because `ExamOverviewScreen`, `PracticeQuestionScreen`, and
+**Conclusion**: because `PracticeQuestionScreen` and
 `AnswerExplanationScreen` are reachable today and still depend on
 prototype-only content that this task could not honestly resolve without
 Phase 6 business logic, the roadmap exit criterion "No final screen
 depends on prototype-only content" is **not met** and is left unchecked.
+(`ExamOverviewScreen` no longer belongs on this list — PREP-460 fixed
+its remaining prototype-only content.)

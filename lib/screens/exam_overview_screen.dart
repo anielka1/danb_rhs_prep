@@ -9,6 +9,7 @@ import '../practice_session/practice_session_controller.dart';
 import '../practice_session/practice_session_scope.dart';
 import '../theme/app_theme.dart';
 import '../widgets/app_scaffold.dart';
+import '../widgets/empty_state.dart';
 import '../widgets/error_state.dart';
 import '../widgets/primary_button.dart';
 import 'practice_question_screen.dart';
@@ -78,20 +79,6 @@ class ExamOverviewScreen extends StatefulWidget {
   /// production.
   final DateTime Function()? now;
 
-  // Topic names and per-topic question counts mirror the real DANB RHS exam
-  // blueprint (see assets/content/danb_rhs/content.json) but are not yet
-  // sourced from it — only 2 draft sample questions exist there so far.
-  // Documented as a prototype placeholder pending real content authoring;
-  // see docs/PROTOTYPE_CONTENT_AUDIT.md. Out of this task's scope, which
-  // only wires the "Start Practice Exam" action itself to real state.
-  static const List<_Topic> _topics = [
-    _Topic('Radiation Physics & Characteristics', 15),
-    _Topic('Radiation Biology & Safety', 25),
-    _Topic('Radiation Protection Standards', 30),
-    _Topic('Equipment Operation & Imaging', 20),
-    _Topic('Patient Management & Procedures', 10),
-  ];
-
   @override
   State<ExamOverviewScreen> createState() => _ExamOverviewScreenState();
 }
@@ -147,6 +134,24 @@ class _ExamOverviewScreenState extends State<ExamOverviewScreen> {
   bool get _hasContent =>
       widget.contentPackage != null &&
       widget.contentPackage!.questions.isNotEmpty;
+
+  /// One [_Topic] per configured domain (PREP-460), each with the real
+  /// count of currently-[Question.isApproved] questions in it — never an
+  /// invented number. Every domain in [ContentPackage.exam] is included
+  /// even when its count is 0 (an honest, computed zero, not a
+  /// placeholder), so the list always matches the exam's actual
+  /// blueprint structure rather than a hardcoded guess at it.
+  static List<_Topic> _domainCoverage(ContentPackage package) {
+    final Map<String, int> approvedCountByDomainId = {};
+    for (final question in package.approvedQuestions) {
+      approvedCountByDomainId[question.domainId] =
+          (approvedCountByDomainId[question.domainId] ?? 0) + 1;
+    }
+    return [
+      for (final domain in package.exam.domains)
+        _Topic(domain.name, approvedCountByDomainId[domain.id] ?? 0),
+    ];
+  }
 
   Future<void> _startOrResumePractice() async {
     if (_starting || !_hasContent) return;
@@ -322,6 +327,11 @@ class _ExamOverviewScreenState extends State<ExamOverviewScreen> {
   Widget build(BuildContext context) {
     final colors = context.colors;
     final textStyles = context.textStyles;
+    final ContentPackage? package = widget.contentPackage;
+    final List<_Topic> domainCoverage =
+        package != null ? _domainCoverage(package) : const [];
+    final bool hasApprovedQuestions =
+        package != null && package.approvedQuestions.isNotEmpty;
     return AppScaffold(
       leading: CircleIconButton(
         icon: Icons.chevron_left_rounded,
@@ -349,14 +359,23 @@ class _ExamOverviewScreenState extends State<ExamOverviewScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text('Practice Exam Prep', style: textStyles.h2),
-                  const SizedBox(height: 6),
-                  Text(
-                    '1.5 Hours · 100 Questions · Intermediate',
-                    style: textStyles.body.copyWith(
-                      color: colors.secondary,
-                      fontWeight: FontWeight.w600,
+                  // Sourced from the real ExamConfig (PREP-460) — never
+                  // a hardcoded duration/count, and no difficulty label
+                  // (no such field exists anywhere in ExamConfig to back
+                  // one). Omitted entirely rather than shown as a
+                  // placeholder when there's no content package to read
+                  // it from at all.
+                  if (package != null) ...[
+                    const SizedBox(height: 6),
+                    Text(
+                      '${package.exam.mockExam.durationMinutes} Minutes · '
+                      '${package.exam.mockExam.questionCount} Questions',
+                      style: textStyles.body.copyWith(
+                        color: colors.secondary,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
-                  ),
+                  ],
                 ],
               ),
             ),
@@ -372,10 +391,28 @@ class _ExamOverviewScreenState extends State<ExamOverviewScreen> {
             const SizedBox(height: 26),
             Text('Topics Covered', style: textStyles.h3),
             const SizedBox(height: AppSpacing.md + 2),
-            ...ExamOverviewScreen._topics.map((t) => Padding(
-                  padding: const EdgeInsets.only(bottom: 18),
-                  child: _TopicRow(topic: t),
-                )),
+            // Real per-domain approved-question counts (PREP-460), never
+            // an invented topic list. An exam with zero approved
+            // questions anywhere gets an honest empty state instead of a
+            // domain list that would otherwise show every row at zero.
+            if (package == null)
+              Text(
+                "Topic coverage isn't available from here yet.",
+                style: textStyles.bodySmall,
+              )
+            else if (!hasApprovedQuestions)
+              const EmptyState(
+                icon: Icons.menu_book_rounded,
+                title: 'No approved questions yet',
+                message: "This exam's question bank is still being "
+                    'reviewed. Check back once questions have been '
+                    'approved.',
+              )
+            else
+              ...domainCoverage.map((t) => Padding(
+                    padding: const EdgeInsets.only(bottom: 18),
+                    child: _TopicRow(topic: t),
+                  )),
             const SizedBox(height: AppSpacing.md),
             PrimaryButton(
               label: 'Start Practice Exam',
