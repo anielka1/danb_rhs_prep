@@ -6,6 +6,9 @@ import 'package:danb_rhs_prep/bootstrap/bootstrap_session_controller.dart';
 import 'package:danb_rhs_prep/bootstrap/bootstrap_session_scope.dart';
 import 'package:danb_rhs_prep/debug/debug_demo_environment.dart';
 import 'package:danb_rhs_prep/domain/models/entitlement.dart';
+import 'package:danb_rhs_prep/domain/models/exam_date_precision.dart';
+import 'package:danb_rhs_prep/domain/models/exam_date_selection.dart';
+import 'package:danb_rhs_prep/domain/models/experience_level.dart';
 import 'package:danb_rhs_prep/domain/models/practice_session.dart';
 import 'package:danb_rhs_prep/domain/models/user_profile.dart';
 import 'package:danb_rhs_prep/domain/repositories/fakes/in_memory_bootstrap_local_store.dart';
@@ -190,8 +193,18 @@ void main() {
             ],
           ),
         ),
-    'settings': () =>
-        ProfileSettingsScreen(themeModeController: ThemeModeController()),
+    'settings': () => withBootstrapSession(child: Builder(builder: (context) {
+          final session = BootstrapSessionScope.controllerOf(context);
+          session.update(session.snapshot.copyWith(
+            examDateSelection: ExamDateSelection(
+                precision: ExamDatePrecision.oneToThreeMonths),
+            experienceLevel: ExperienceLevel.studyingAlready,
+          ));
+          return ProfileSettingsScreen(
+              themeModeController: ThemeModeController(),
+              session: session,
+              localStore: InMemoryBootstrapLocalStore());
+        })),
   };
 
   for (final entry in screens.entries) {

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../bootstrap/app_bootstrap_service.dart';
 import '../bootstrap/bootstrap_session_controller.dart';
 import '../bootstrap/bootstrap_session_scope.dart';
+import '../bootstrap/sync_study_profile.dart';
 import '../domain/models/exam_date_precision.dart';
 import '../domain/models/exam_date_selection.dart';
 import '../domain/repositories/bootstrap_local_store.dart';
@@ -32,14 +33,17 @@ class ExamDateScreen extends StatefulWidget {
     this.analytics = const NoOpAnalyticsService(),
     this.userSettingsRepository,
     this.now,
+    this.editing = false,
   });
 
   final BootstrapLocalStore localStore;
+
+  /// Saves back to settings instead of advancing onboarding.
+  final bool editing;
   final AnalyticsService analytics;
 
-  /// Forwarded straight to [ExperienceLevelScreen] — this screen itself
-  /// never reads or writes through it. See that screen's own doc comment
-  /// for what it enables.
+  /// Used to synchronize the profile when editing; forwarded to the
+  /// experience step during onboarding.
   final UserSettingsRepository? userSettingsRepository;
 
   /// Test-only injection point for a deterministic "today". Null in
@@ -193,12 +197,27 @@ class _ExamDateScreenState extends State<ExamDateScreen> {
       return;
     }
 
-    if (!mounted) return;
     // Only update the shared session after the write actually succeeded
     // — a failed write above returns before reaching this line, so the
     // controller retains whatever it held before.
     controller
         .update(controller.snapshot.copyWith(examDateSelection: selection));
+
+    if (widget.editing) {
+      try {
+        await syncStudyProfile(controller, widget.userSettingsRepository);
+      } on Object {
+        if (!mounted) return;
+        setState(() {
+          _busy = false;
+          _selectionSaveFailed = true;
+        });
+        return;
+      }
+      if (mounted) Navigator.of(context).pop();
+      return;
+    }
+    if (!mounted) return;
 
     // A `push`, not a replace: this screen stays on the stack so Back
     // returns here with its selection still visible. `_busy` stays true
@@ -230,7 +249,9 @@ class _ExamDateScreenState extends State<ExamDateScreen> {
         MaterialLocalizations.of(context);
 
     final String? errorMessage = _selectionSaveFailed
-        ? "We couldn't save your exam date. Please try again."
+        ? widget.editing
+            ? "We couldn't finish saving your changes. Please try again."
+            : "We couldn't save your exam date. Please try again."
         : _restoredDateExpired
             ? 'Your saved exam date has already passed. Please choose a '
                 'new date.'
@@ -313,7 +334,11 @@ class _ExamDateScreenState extends State<ExamDateScreen> {
             ],
             const SizedBox(height: AppSpacing.xxl),
             PrimaryButton(
-              label: _selectionSaveFailed ? 'Retry' : 'Continue',
+              label: _selectionSaveFailed
+                  ? 'Retry'
+                  : widget.editing
+                      ? 'Save changes'
+                      : 'Continue',
               isLoading: _busy,
               onPressed: (_busy || !_canContinue) ? null : _continue,
             ),

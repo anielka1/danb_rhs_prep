@@ -69,12 +69,19 @@ void main() {
 
     expect(
       source.replaceAll(RegExp(r'\s+'), '').contains(
-          'userSettingsRepository:DebugDemoEnvironment.buildUserSettingsRepository()'),
+          'finaluserSettingsRepository=DebugDemoEnvironment.buildUserSettingsRepository();'),
       isTrue,
       reason: 'lib/main_demo.dart is expected to be the one place that '
           "explicitly wires DebugDemoEnvironment's UserSettingsRepository "
-          'into AppBootstrapService.',
+          'into bootstrap and the application.',
     );
+    expect(
+        RegExp(r'userSettingsRepository:\s*userSettingsRepository')
+            .allMatches(source)
+            .length,
+        2,
+        reason:
+            'Bootstrap and settings must share the same in-memory demo repository.');
   });
 
   test(

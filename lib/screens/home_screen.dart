@@ -10,6 +10,8 @@ import '../widgets/primary_button.dart';
 import 'exam_overview_screen.dart';
 import 'profile_settings_screen.dart';
 import 'progress_screen.dart';
+import 'main_shell.dart';
+import '../widgets/app_bottom_navigation.dart';
 
 class HomeScreen extends StatefulWidget {
   static const String route = '/home';
@@ -24,11 +26,17 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   Future<PracticeSession?>? _session;
+  bool _wasActive = false;
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    if (widget.progressRepository != null) _session ??= _loadSession();
+    final active = MainShellScope.activeTabOf(context) == AppTab.home;
+    if (widget.progressRepository != null &&
+        (_session == null || (active && !_wasActive))) {
+      _session = _loadSession();
+    }
+    _wasActive = active;
   }
 
   Future<PracticeSession?> _loadSession() async {
@@ -78,7 +86,9 @@ class _HomeScreenState extends State<HomeScreen> {
             icon: Icons.settings_rounded,
             semanticLabel: 'Settings',
             onPressed: () => Navigator.of(context, rootNavigator: true)
-                .pushNamed(ProfileSettingsScreen.route),
+                .pushNamed(ProfileSettingsScreen.route,
+                    arguments:
+                        BootstrapSessionScope.maybeControllerOf(context)),
           ),
         ),
       ],

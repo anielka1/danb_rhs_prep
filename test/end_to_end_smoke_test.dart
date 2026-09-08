@@ -41,6 +41,26 @@ Future<void> _completeOnboarding(WidgetTester tester) async {
 }
 
 void main() {
+  testWidgets('settings edits study answers and returns without onboarding',
+      (tester) async {
+    await _completeOnboarding(tester);
+    await tester.tap(find.byTooltip('Settings'));
+    await tester.pumpAndSettle();
+    await _tapText(tester, 'Exam timeframe');
+    await _tapText(tester, 'In 1–3 months');
+    await _tapText(tester, 'Save changes');
+    expect(find.byType(ProfileSettingsScreen), findsOneWidget);
+    expect(find.text('In 1–3 months'), findsOneWidget);
+    await _tapText(tester, 'Study experience');
+    await _tapText(tester, 'Studying already');
+    await _tapText(tester, 'Save changes');
+    expect(find.byType(ProfileSettingsScreen), findsOneWidget);
+    expect(find.text('Studying already'), findsOneWidget);
+    await _tapText(tester, 'Exam timeframe');
+    await tester.tap(find.bySemanticsLabel('Back'));
+    await tester.pumpAndSettle();
+    expect(find.text('In 1–3 months'), findsOneWidget);
+  });
   testWidgets(
       'E2E: onboarding -> Home -> Practice -> feedback -> Summary -> '
       'Progress, entirely through real demo composition', (tester) async {
