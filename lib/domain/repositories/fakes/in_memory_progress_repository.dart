@@ -1,3 +1,4 @@
+import '../progress_reset_repository.dart';
 import '../../models/answer_attempt.dart';
 import '../../models/mock_attempt.dart';
 import '../../models/practice_session.dart';
@@ -12,7 +13,8 @@ import '../progress_repository.dart';
 /// requiring a caller to `await save...(...)` for each item first, which
 /// matters for a caller (e.g. `DebugDemoEnvironment`) that needs a
 /// fully-seeded repository back from a synchronous factory.
-class InMemoryProgressRepository implements ProgressRepository {
+class InMemoryProgressRepository
+    implements ProgressRepository, ProgressResetRepository {
   InMemoryProgressRepository({
     List<AnswerAttempt> seedAnswerAttempts = const [],
     List<QuestionState> seedQuestionStates = const [],
@@ -40,6 +42,17 @@ class InMemoryProgressRepository implements ProgressRepository {
 
   static String _questionKey(String examId, String questionId) =>
       '$examId::$questionId';
+
+  @override
+  Future<void> resetProgressForExam(String examId) async {
+    if (examId.trim().isEmpty) throw ArgumentError.value(examId, 'examId');
+    // No await between mutations: readers cannot observe a partial reset.
+    _attempts.removeWhere((a) => a.examId == examId);
+    _questionStates.removeWhere((_, state) => state.examId == examId);
+    _practiceSessions.removeWhere((_, session) => session.examId == examId);
+    _mockAttempts.removeWhere((_, attempt) => attempt.examId == examId);
+    _readinessSnapshots.removeWhere((snapshot) => snapshot.examId == examId);
+  }
 
   @override
   Future<void> recordAnswerAttempt(AnswerAttempt attempt) async {
