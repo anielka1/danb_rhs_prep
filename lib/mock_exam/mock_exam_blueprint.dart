@@ -125,16 +125,21 @@ class MockExamBlueprint {
       throw const FormatException(
           'A result requires a valid completed attempt.');
     }
-    return MockExamResult._(attempt, config.practicePassingPercent, isDemo);
+    return MockExamResult._(
+        attempt, config.practicePassingPercent, isDemo, resolved);
   }
 }
 
 /// Constructed only from a validated, completed attempt; never a UI default.
 class MockExamResult {
-  const MockExamResult._(this.attempt, this.threshold, this.isDemo);
+  const MockExamResult._(
+      this.attempt, this.threshold, this.isDemo, this.questions);
   static const disclaimer = 'Practice estimate only. This is not an official '
       'DANB result or a prediction of exam performance.';
   final MockAttempt attempt;
+
+  /// Validated questions in attempt order, retained for read-only review.
+  final List<Question> questions;
   final double threshold;
   final bool isDemo;
   String get outcome => outcomeFor(
