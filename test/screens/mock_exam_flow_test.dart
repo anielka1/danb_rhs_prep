@@ -63,11 +63,16 @@ void main() {
     await tester.pumpAndSettle();
     await tapText(tester, 'Flag question');
     expect(controller.attempt!.flaggedQuestionIds, {'demo-question-1'});
+    expect(find.bySemanticsLabel('Question 3, unanswered'), findsNothing);
+    await tapText(tester, 'Show question navigator');
     final jump = find.bySemanticsLabel('Question 3, unanswered');
     await tester.ensureVisible(jump);
     await tester.tap(jump);
     await tester.pumpAndSettle();
     expect(find.text('Question 3 of 5'), findsOneWidget);
+    expect(find.text('Show question navigator'), findsOneWidget);
+    expect(
+        find.bySemanticsLabel('Question 3, current, unanswered'), findsNothing);
     await tapText(tester, 'Previous question');
     expect(find.text('Question 2 of 5'), findsOneWidget);
     for (var i = 1; i < 5; i++) {

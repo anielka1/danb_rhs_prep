@@ -22,6 +22,7 @@ class _MockExamQuestionScreenState extends State<MockExamQuestionScreen> {
   Timer? _timer;
   bool _busy = false;
   bool _confirming = false;
+  bool _showNavigator = false;
   Future<void> Function()? _retry;
   final ScrollController _scroll = ScrollController();
 
@@ -72,7 +73,10 @@ class _MockExamQuestionScreenState extends State<MockExamQuestionScreen> {
 
   Future<void> _move(int index) async {
     await _perform(() => widget.controller.moveTo(index));
-    if (mounted && _scroll.hasClients && _retry == null) _scroll.jumpTo(0);
+    if (mounted && _retry == null) {
+      setState(() => _showNavigator = false);
+      if (_scroll.hasClients) _scroll.jumpTo(0);
+    }
   }
 
   Future<void> _finish() async {
@@ -181,12 +185,27 @@ class _MockExamQuestionScreenState extends State<MockExamQuestionScreen> {
             const SizedBox(height: AppSpacing.sm),
           ],
           const SizedBox(height: AppSpacing.md),
-          Text('Question navigator', style: text.h3),
-          const SizedBox(height: AppSpacing.sm),
-          Wrap(spacing: AppSpacing.sm, runSpacing: AppSpacing.sm, children: [
-            for (var i = 0; i < controller.questions.length; i++)
-              _navigatorItem(i),
-          ]),
+          Semantics(
+            expanded: _showNavigator,
+            child: SecondaryButton(
+              label: _showNavigator
+                  ? 'Hide question navigator'
+                  : 'Show question navigator',
+              onPressed: () => setState(() => _showNavigator = !_showNavigator),
+            ),
+          ),
+          if (_showNavigator) ...[
+            const SizedBox(height: AppSpacing.md),
+            Text(
+                'Choose a question to jump to. Check marks mean answered; '
+                'flags mark questions to revisit.',
+                style: text.body),
+            const SizedBox(height: AppSpacing.sm),
+            Wrap(spacing: AppSpacing.sm, runSpacing: AppSpacing.sm, children: [
+              for (var i = 0; i < controller.questions.length; i++)
+                _navigatorItem(i),
+            ]),
+          ],
           const SizedBox(height: AppSpacing.xl),
           SecondaryButton(label: 'Finish mock exam', onPressed: _finish),
           const SizedBox(height: AppSpacing.lg),
