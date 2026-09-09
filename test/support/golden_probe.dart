@@ -49,16 +49,10 @@ enum GoldenTextScale {
 /// - **Theme + text scale**: whichever [theme]/[textScale] the caller
 ///   asks for.
 ///
-/// Cross-platform note: golden images in this repo were generated on
-/// macOS (Flutter 3.41.2, matching CI's pinned version exactly — see
-/// `.github/workflows/ci.yml`), since this development environment has
-/// no Linux host to generate them on directly. All of the above is
-/// controlled specifically to minimize (real font, fixed device/DPI,
-/// fixed locale, no mid-animation frames) — but Skia's software
-/// rasterizer can still theoretically differ in subpixel anti-aliasing
-/// between platform builds of the Flutter engine. See
-/// `test/golden/README.md` for what to do if CI's Linux runner ever
-/// produces a genuine mismatch against these macOS-generated baselines.
+/// Cross-platform note: baselines are generated on Ubuntu with Flutter
+/// 3.41.2, matching CI. macOS produces different pixels even with these
+/// controls. See `test/golden/README.md` for the authoritative workflow;
+/// never replace Linux baselines with local macOS output.
 Future<void> pumpGolden(
   WidgetTester tester,
   Widget child, {

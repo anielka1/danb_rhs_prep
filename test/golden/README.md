@@ -39,24 +39,20 @@ than left to whatever a given machine defaults to (see
   spacing regressions; it just can't distinguish one icon shape from
   another.
 
-## Known cross-platform risk
+## Baseline platform
 
-These baseline images were generated on macOS (Flutter 3.41.2 — pinned
-to match `.github/workflows/ci.yml`'s `quality` job exactly), since
-this repository's day-to-day development environment has no Linux host
-to generate them on directly. `flutter test`'s golden comparison
-(`matchesGoldenFile`) is an exact pixel match; even with every axis
-above controlled, Skia's software rasterizer can theoretically differ
-in subpixel anti-aliasing between the macOS and Linux (`ubuntu-latest`,
-where CI's `quality` job actually runs and enforces these goldens)
-builds of the Flutter engine.
+The checked-in 32 images were generated on Ubuntu with Flutter 3.41.2
+by [update-goldens run 34375367854](https://github.com/anielka1/danb_rhs_prep/actions/runs/34375367854),
+from commit `3818ddd047da209cdf55ecd7f5adaa1d9ef2a1be`.
+Artifact `10113655121` was visually reviewed before copying the PNGs.
 
-**If CI fails on one of these goldens with a small, cosmetic pixel diff
-(not a real layout/color regression)**: that's this risk materializing,
-not a bug in the screen under test. Regenerate the goldens *on the same
-platform CI enforces them on* — see the procedure below — rather than
-re-generating locally on macOS again, which would just reproduce the
-same mismatch.
+Linux CI is authoritative for exact pixel comparisons. macOS rendering
+produced differences across all 32 images despite the same Flutter version,
+fonts and viewport. Do not replace these baselines with macOS output or
+relax the comparator to hide those differences. Use the workflow below
+for intentional UI changes, review its images, then commit them through a PR.
+Local macOS runs can report golden mismatches; verify the committed images
+with the Linux quality job before merging.
 
 ## Update procedure
 
