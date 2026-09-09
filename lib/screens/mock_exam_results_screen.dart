@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../mock_exam/mock_exam_blueprint.dart';
 import '../theme/app_theme.dart';
 import '../widgets/app_scaffold.dart';
+import '../widgets/app_card.dart';
 import '../widgets/empty_state.dart';
 import '../widgets/primary_button.dart';
 
@@ -37,19 +38,59 @@ class MockExamResultsScreen extends StatelessWidget {
                   if (value.isDemo)
                     Text('Demo result · synthetic questions',
                         style: text.label),
-                  Semantics(
-                      header: true,
-                      liveRegion: true,
-                      child: Text(value.outcome, style: text.h1)),
-                  const SizedBox(height: AppSpacing.lg),
-                  Text(
-                      'Correct answers: ${value.attempt.correctCount} / ${value.attempt.questionIds.length}',
-                      style: text.h3),
                   const SizedBox(height: AppSpacing.md),
-                  Text(
-                      '${value.attempt.answeredCount} questions answered. '
-                      '${value.attempt.questionIds.length - value.attempt.answeredCount} unanswered.',
-                      style: text.body),
+                  Text('One more step forward.', style: text.h1),
+                  const SizedBox(height: AppSpacing.lg),
+                  AppCard(
+                    backgroundColor: context.colors.primaryContainer,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('YOUR PRACTICE RESULT', style: text.label),
+                        const SizedBox(height: AppSpacing.md),
+                        Text(
+                          '${(value.attempt.correctCount! * 100 / value.attempt.questionIds.length).round()}%',
+                          style: text.h1,
+                        ),
+                        Text(
+                          'Correct answers: ${value.attempt.correctCount} / ${value.attempt.questionIds.length}',
+                          style: text.h3,
+                        ),
+                        const SizedBox(height: AppSpacing.md),
+                        Semantics(
+                          header: true,
+                          liveRegion: true,
+                          child: Text(value.outcome, style: text.h3),
+                        ),
+                        const SizedBox(height: AppSpacing.sm),
+                        Text('Practice threshold: ${value.threshold}%',
+                            style: text.body),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: AppSpacing.md),
+                  AppCard(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('Your session', style: text.h3),
+                        const SizedBox(height: AppSpacing.sm),
+                        Text(
+                          '${value.attempt.answeredCount} questions answered. '
+                          '${value.attempt.questionIds.length - value.attempt.answeredCount} unanswered.',
+                          style: text.body,
+                        ),
+                        const SizedBox(height: AppSpacing.md),
+                        Text('Keep your momentum', style: text.h3),
+                        const SizedBox(height: AppSpacing.sm),
+                        Text(
+                          'Try a short practice session next. Take time to read '
+                          'each explanation before another mock exam.',
+                          style: text.body,
+                        ),
+                      ],
+                    ),
+                  ),
                   const SizedBox(height: AppSpacing.lg),
                   Text(MockExamResult.disclaimer, style: text.body),
                   const SizedBox(height: AppSpacing.xl),

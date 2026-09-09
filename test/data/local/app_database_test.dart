@@ -177,6 +177,8 @@ void main() {
         ..writeAsStringSync('stale wal content');
       final File shmFile = File('${dbFile.path}-shm')
         ..writeAsStringSync('stale shm content');
+      final File journalFile = File('${dbFile.path}-journal')
+        ..writeAsStringSync('stale journal content');
 
       openSqliteWithCorruptionRecovery(dbFile).dispose();
 
@@ -184,6 +186,7 @@ void main() {
           reason: 'the stale -wal must be moved aside, not left in place '
               'where the fresh database could pick it up');
       expect(shmFile.existsSync(), isFalse);
+      expect(journalFile.existsSync(), isFalse);
       final List<String> quarantined = tempDir
           .listSync()
           .map((e) => e.path)
@@ -191,6 +194,11 @@ void main() {
           .toList();
       expect(quarantined.any((path) => path.contains('-wal')), isTrue);
       expect(quarantined.any((path) => path.contains('-shm')), isTrue);
+      for (final suffix in ['wal', 'shm', 'journal']) {
+        final path = quarantined
+            .singleWhere((path) => path.contains('-$suffix.corrupt.'));
+        expect(File(path).readAsStringSync(), 'stale $suffix content');
+      }
     });
 
     test(
