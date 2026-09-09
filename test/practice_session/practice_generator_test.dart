@@ -133,6 +133,68 @@ QuestionState _seenState({
 }
 
 void main() {
+  group('saved questions', () {
+    final questions = [
+      _buildQuestion(id: 'q1', domainId: 'd1', topicId: 't1'),
+      _buildQuestion(id: 'q2', domainId: 'd2', topicId: 't2'),
+      _buildQuestion(
+          id: 'q3',
+          domainId: 'd1',
+          topicId: 't1',
+          status: QuestionStatus.retired),
+      _buildQuestion(id: 'q4', domainId: 'd1', topicId: 't1'),
+    ];
+    final states = [
+      for (final id in ['q1', 'q2', 'q3', 'missing'])
+        QuestionState.unseen(examId: _examId, questionId: id)
+            .copyWith(bookmarked: true),
+      QuestionState.unseen(examId: 'another_exam', questionId: 'q4')
+          .copyWith(bookmarked: true),
+    ];
+    test(
+        'includes unseen bookmarks, excludes retired, missing and other-exam records',
+        () {
+      final generator = PracticeGenerator.select(
+          package: _buildPackage(questions),
+          questionStates: states,
+          requestedCount: 20,
+          focus: PracticeFocus.bookmarkedQuestions);
+      expect(generator.questions.map((q) => q.id), ['q1', 'q2']);
+    });
+    test('combines bookmarks with topic selection and count limits', () {
+      final generator = PracticeGenerator.select(
+          package: _buildPackage(questions),
+          questionStates: states,
+          requestedCount: 20,
+          maxCount: 1,
+          domainId: 'd2',
+          topicId: 't2',
+          focus: PracticeFocus.bookmarkedQuestions);
+      expect(generator.questions.map((q) => q.id), ['q2']);
+    });
+    test('removing bookmarks does not fall back to all questions', () {
+      expect(
+          () => PracticeGenerator.select(
+              package: _buildPackage(questions),
+              questionStates:
+                  states.map((s) => s.copyWith(bookmarked: false)).toList(),
+              requestedCount: 5,
+              focus: PracticeFocus.bookmarkedQuestions),
+          throwsA(isA<PracticeGenerationUnavailable>().having((e) => e.message,
+              'message', contains('No saved questions match'))));
+    });
+    test('an empty topic does not pull saved questions from a different topic',
+        () {
+      expect(
+          () => PracticeGenerator.select(
+              package: _buildPackage(questions),
+              questionStates: states,
+              requestedCount: 5,
+              topicId: 't1b',
+              focus: PracticeFocus.bookmarkedQuestions),
+          throwsA(isA<PracticeGenerationUnavailable>()));
+    });
+  });
   group('approved-only and basic count enforcement', () {
     test('excludes non-approved questions from the pool', () {
       final questions = [

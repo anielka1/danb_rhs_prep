@@ -29,6 +29,9 @@ enum PracticeFocus {
   /// missed", regardless of whether it's since been answered correctly
   /// too.
   incorrectQuestions,
+
+  /// Questions explicitly saved with a bookmark, answered or unseen.
+  bookmarkedQuestions,
 }
 
 /// Selects a deterministic, duplicate-free, approved-only question set for
@@ -81,6 +84,8 @@ class PracticeGenerator {
   ///   never crashing this lookup.
   /// * [PracticeFocus.incorrectQuestions] — any question with
   ///   [QuestionState.timesIncorrect] greater than zero.
+  /// * [PracticeFocus.bookmarkedQuestions] — bookmarked questions in the
+  ///   active exam, including ones that have not been answered yet.
   ///
   /// Fewer than [requestedCount] eligible questions ("mala pule") is not
   /// an error — every eligible question (up to [maxCount], if given) is
@@ -145,6 +150,13 @@ class PracticeGenerator {
     switch (focus) {
       case PracticeFocus.any:
         break;
+      case PracticeFocus.bookmarkedQuestions:
+        final savedIds = {
+          for (final state in questionStates)
+            if (state.examId == package.exam.id && state.bookmarked)
+              state.questionId,
+        };
+        pool = pool.where((q) => savedIds.contains(q.id));
       case PracticeFocus.incorrectQuestions:
         final Set<String> incorrectIds = {
           for (final state in questionStates)
@@ -162,6 +174,11 @@ class PracticeGenerator {
     final List<Question> sorted = pool.toList()
       ..sort((a, b) => a.id.compareTo(b.id));
     if (sorted.isEmpty) {
+      if (focus == PracticeFocus.bookmarkedQuestions) {
+        throw const PracticeGenerationUnavailable(
+          'No saved questions match this selection. Bookmark questions during practice, or choose another topic.',
+        );
+      }
       throw const PracticeGenerationUnavailable(
           'There are no eligible questions for this selection.');
     }

@@ -10,6 +10,7 @@ import '../practice_session/practice_session_scope.dart';
 import '../theme/app_theme.dart';
 import '../widgets/app_scaffold.dart';
 import '../widgets/app_card.dart';
+import '../widgets/app_dialog.dart';
 import '../widgets/error_state.dart';
 import '../widgets/primary_button.dart';
 import 'practice_question_screen.dart';
@@ -79,9 +80,17 @@ class ExamOverviewScreen extends StatefulWidget {
 
 class _ExamOverviewScreenState extends State<ExamOverviewScreen> {
   bool _starting = false;
+  bool _choosingSession = false;
   int _requestedCount = 10;
   PracticeFocus _focus = PracticeFocus.any;
   String? _domainId;
+
+  void _updateSelection(VoidCallback update) {
+    setState(() {
+      update();
+      _unavailableReason = null;
+    });
+  }
 
   /// Set only when a fresh (never-resumed) session could not be
   /// generated. Shown in the same caption slot as the "no content package
@@ -146,14 +155,39 @@ class _ExamOverviewScreenState extends State<ExamOverviewScreen> {
       }
     }
 
+    if (!mounted) return;
+    if (existing != null &&
+        (_focus != PracticeFocus.any ||
+            _domainId != null ||
+            _requestedCount != 10)) {
+      setState(() => _choosingSession = true);
+      final startNew = await AppDialog.show<bool?>(
+        context: context,
+        title: 'You have an unfinished session',
+        message:
+            'Resume it, or start a new session using your selected filters. Your previous session stays saved.',
+        actions: const [
+          AppDialogAction(label: 'Resume session', value: false),
+          AppDialogAction(label: 'Start selected practice', value: true),
+          AppDialogAction<bool?>(
+              label: 'Cancel', value: null, style: AppDialogActionStyle.cancel),
+        ],
+      );
+      if (!mounted) return;
+      setState(() => _choosingSession = false);
+      if (startNew == null) {
+        setState(() => _starting = false);
+        return;
+      }
+      if (startNew) existing = null;
+    }
+
     final PracticeSession session;
     if (existing != null) {
       session = existing;
     } else {
-      // No progress history is threaded in for this default "Quick
-      // Practice" entry point — PracticeFocus.any never reads it. A future
-      // weak-areas/incorrect-questions picker UI would fetch real
-      // QuestionState history before calling this.
+      // Filtered practice reads persisted question history; the default
+      // selection needs only the content package.
       int? maxCount;
       if (widget.entitlement != null && repository != null) {
         final DateTime nowValue = nowFn();
@@ -226,7 +260,14 @@ class _ExamOverviewScreenState extends State<ExamOverviewScreen> {
       session = PracticeSession(
         id: 'practice-$examId-${nowFn().toUtc().microsecondsSinceEpoch}',
         examId: examId,
-        mode: PracticeMode.quickPractice,
+        mode: switch (_focus) {
+          PracticeFocus.any => _domainId == null
+              ? PracticeMode.quickPractice
+              : PracticeMode.browseDomain,
+          PracticeFocus.weakAreas => PracticeMode.weakAreas,
+          PracticeFocus.incorrectQuestions => PracticeMode.incorrectQuestions,
+          PracticeFocus.bookmarkedQuestions => PracticeMode.bookmarked,
+        },
         questionIds: generator.questions.map((q) => q.id).toList(),
         status: SessionStatus.inProgress,
         startedAt: nowFn().toUtc(),
@@ -346,7 +387,8 @@ class _ExamOverviewScreenState extends State<ExamOverviewScreen> {
                     selected: _requestedCount == count,
                     onSelected: _starting
                         ? null
-                        : (_) => setState(() => _requestedCount = count)),
+                        : (_) =>
+                            _updateSelection(() => _requestedCount = count)),
             ]),
             const SizedBox(height: AppSpacing.xxl),
             Text('Focus', style: textStyles.h3),
@@ -355,12 +397,13 @@ class _ExamOverviewScreenState extends State<ExamOverviewScreen> {
               PracticeFocus.any: 'All questions',
               PracticeFocus.weakAreas: 'My weak areas',
               PracticeFocus.incorrectQuestions: 'Missed questions',
+              PracticeFocus.bookmarkedQuestions: 'Saved questions',
             }.entries) ...[
               AppCard(
                   selected: _focus == entry.key,
                   onTap: _starting
                       ? null
-                      : () => setState(() => _focus = entry.key),
+                      : () => _updateSelection(() => _focus = entry.key),
                   child: Row(children: [
                     Icon(
                         _focus == entry.key
@@ -386,14 +429,14 @@ class _ExamOverviewScreenState extends State<ExamOverviewScreen> {
                 ],
                 onChanged: _starting
                     ? null
-                    : (value) =>
-                        setState(() => _domainId = value == '' ? null : value),
+                    : (value) => _updateSelection(
+                        () => _domainId = value == '' ? null : value),
               ),
             ],
             const SizedBox(height: AppSpacing.xxl),
             PrimaryButton(
               label: 'Start Practice Exam',
-              isLoading: _starting,
+              isLoading: _starting && !_choosingSession,
               onPressed: _hasContent ? _startOrResumePractice : null,
             ),
             if (!_hasContent) ...[
