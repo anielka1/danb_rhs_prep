@@ -413,6 +413,21 @@ class _CorruptDatabaseException implements Exception {
 /// corruption can surface (see [openSqliteWithCorruptionRecovery]'s doc
 /// comment). Any other exception is rethrown as-is.
 Database _openAndValidate(File file) {
+  // Reject an invalid header before SQLite opens the file. Some SQLite
+  // builds remove stale WAL/SHM files while closing a failed writable
+  // handle, which would destroy evidence before _quarantine can move it.
+  // Empty files remain valid inputs: SQLite initializes them on first use.
+  if (file.existsSync() && file.lengthSync() > 0) {
+    final input = file.openSync(mode: FileMode.read);
+    try {
+      final header = input.readSync(16);
+      if (String.fromCharCodes(header) != 'SQLite format 3\x00') {
+        throw _CorruptDatabaseException('Invalid SQLite header');
+      }
+    } finally {
+      input.closeSync();
+    }
+  }
   Database? database;
   try {
     database = sqlite3.open(file.path);
