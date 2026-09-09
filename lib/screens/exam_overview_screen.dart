@@ -275,14 +275,6 @@ class _ExamOverviewScreenState extends State<ExamOverviewScreen> {
       );
     }
 
-    if (existing == null && repository != null) {
-      try {
-        await repository.savePracticeSession(session);
-      } catch (_) {
-        // Best-effort: an unsaved session still runs fully in-memory below.
-      }
-    }
-
     // A resumed (`existing != null`) session's questionIds were recorded
     // against whatever content existed when it was first created; a
     // freshly-generated one's ids always resolve, since they were just
@@ -336,6 +328,7 @@ class _ExamOverviewScreenState extends State<ExamOverviewScreen> {
                 now: nowFn,
               );
 
+    if (existing == null) await controller.saveSession();
     if (!mounted) return;
     setState(() => _starting = false);
 

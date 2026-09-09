@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../widgets/practice_save_status.dart';
 import '../features/questions/domain/question.dart';
 import '../practice_session/practice_session_controller.dart';
 import '../practice_session/practice_session_scope.dart';
@@ -47,7 +48,13 @@ class PracticeSummaryScreen extends StatelessWidget {
   /// is present (e.g. a test that pumps this screen without a real
   /// `MainShell` ancestor) — still leaves the finished session behind,
   /// just without also switching tabs.
-  void _backToHome(BuildContext context) {
+  Future<void> _backToHome(BuildContext context) async {
+    final controller = PracticeSessionScope.maybeOf(context);
+    if (controller != null &&
+        !await confirmLeavingUnsavedPractice(context, controller)) {
+      return;
+    }
+    if (!context.mounted) return;
     final MainShellController? shell = MainShellScope.maybeOf(context);
     if (shell != null) {
       shell.goToTab(AppTab.home, resetTab: shell.currentTab);
@@ -111,6 +118,7 @@ class PracticeSummaryScreen extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            PracticeSaveStatus(controller: controller),
             const SizedBox(height: 28),
             Container(
               width: 56,
