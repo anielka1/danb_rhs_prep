@@ -5,6 +5,7 @@ import '../widgets/app_scaffold.dart';
 import '../widgets/app_card.dart';
 import '../widgets/empty_state.dart';
 import '../widgets/primary_button.dart';
+import 'mock_exam_answer_review_screen.dart';
 
 /// No default score: only a structurally validated, completed attempt can
 /// produce a result. Deep links without that data show an honest empty state.
@@ -94,10 +95,21 @@ class MockExamResultsScreen extends StatelessWidget {
                   const SizedBox(height: AppSpacing.lg),
                   Text(MockExamResult.disclaimer, style: text.body),
                   const SizedBox(height: AppSpacing.xl),
-                  if (canPop)
+                  if (canPop) ...[
                     PrimaryButton(
+                      label: 'Review answers',
+                      onPressed: () => Navigator.of(context).push(
+                        MaterialPageRoute<void>(
+                          builder: (_) =>
+                              MockExamAnswerReviewScreen(result: value),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.md),
+                    SecondaryButton(
                         label: 'Back to Mock Exam',
                         onPressed: () => Navigator.of(context).pop()),
+                  ],
                   const SizedBox(height: AppSpacing.lg),
                 ])),
     );
