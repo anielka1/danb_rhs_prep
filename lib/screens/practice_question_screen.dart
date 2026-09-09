@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import '../widgets/practice_save_status.dart';
 import '../domain/models/answer_feedback.dart';
 import '../features/questions/domain/question.dart';
 import '../practice_session/practice_session_controller.dart';
@@ -75,6 +76,7 @@ class _PracticeQuestionScreenState extends State<PracticeQuestionScreen> {
     final bool newValue = controller.toggleBookmarkLocally(questionId);
     setState(() {});
     await controller.persistBookmark(questionId, newValue);
+    if (mounted) setState(() {});
   }
 
   Future<void> _submit(PracticeSessionController controller) async {
@@ -159,12 +161,19 @@ class _PracticeQuestionScreenState extends State<PracticeQuestionScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            PracticeSaveStatus(controller: controller),
             const SizedBox(height: 12),
             Row(
               children: [
                 CircleIconButton(
                   icon: Icons.close_rounded,
-                  onPressed: () => Navigator.of(context).maybePop(),
+                  onPressed: () async {
+                    if (await confirmLeavingUnsavedPractice(
+                            context, controller) &&
+                        context.mounted) {
+                      Navigator.of(context).maybePop();
+                    }
+                  },
                   semanticLabel: 'Close',
                 ),
                 const SizedBox(width: 14),

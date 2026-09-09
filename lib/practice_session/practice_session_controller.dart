@@ -5,6 +5,7 @@ import '../domain/models/practice_session.dart';
 import '../domain/models/question_state.dart';
 import '../domain/repositories/progress_repository.dart';
 import '../features/questions/domain/question.dart';
+import 'practice_persistence.dart';
 
 /// Drives one practice session's question-by-question flow: which
 /// question is current, what's been answered so far (and whether it was
@@ -19,12 +20,16 @@ import '../features/questions/domain/question.dart';
 /// state at build time, so nothing here needs to *notify* a still-mounted
 /// widget of a change.
 ///
-/// [progressRepository] is optional: recording attempts/question-state and
-/// persisting the session are best-effort and silently skipped (or
-/// swallowed on failure) when it's null or a write fails, since — like
-/// `HomeScreen`'s progress card — the interactive flow itself must work
-/// with no backing store at all (always true in production today).
+/// [progressRepository] is optional for session-only previews. When a
+/// repository write fails, the interactive result stays available and
+/// [hasUnsavedChanges] exposes the retained writes for [retrySaving].
+/// The retry queue lives only as long as this controller.
 class PracticeSessionController {
+  late final PracticePersistence _persistence =
+      PracticePersistence(progressRepository);
+  bool get hasUnsavedChanges => _persistence.hasUnsavedChanges;
+  Future<void> retrySaving() => _persistence.retry();
+  Future<void> saveSession() => _persistence.saveSession(_session);
   PracticeSessionController({
     required PracticeSession session,
     required List<Question> questions,
@@ -294,25 +299,10 @@ class PracticeSessionController {
     return newValue;
   }
 
-  /// Best-effort persists [questionId]'s bookmark as [value] via
-  /// [progressRepository]. A null repository or a failing write leaves
-  /// the local cache (already updated by [toggleBookmarkLocally]) as the
-  /// interactive source of truth for the rest of this session — exactly
-  /// like [submitAnswer]'s own persistence failures never undo its
-  /// already-returned interactive result, though unlike an answer, a
-  /// bookmark that fails to persist here has no other record of ever
-  /// having been toggled once this controller is gone.
-  Future<void> persistBookmark(String questionId, bool value) async {
-    final ProgressRepository? repo = progressRepository;
-    if (repo == null) return;
-    try {
-      final QuestionState current =
-          await repo.questionState(session.examId, questionId);
-      await repo.saveQuestionState(current.copyWith(bookmarked: value));
-    } catch (_) {
-      // Best-effort — see doc comment above.
-    }
-  }
+  /// Persists the optimistic bookmark value. A failed write remains in
+  /// the session's retry queue; rapid changes keep the latest desired value.
+  Future<void> persistBookmark(String questionId, bool value) =>
+      _persistence.saveBookmark(session.examId, questionId, value);
 
   Duration get elapsed =>
       (_session.completedAt ?? _now().toUtc()).difference(_session.startedAt);
@@ -343,9 +333,8 @@ class PracticeSessionController {
   /// — guarded by [_pendingSubmit] against a concurrent double-submit the
   /// same way this always has been — persists an [AnswerAttempt], and
   /// returns the immutable [AnswerFeedback] built from that same
-  /// evaluation. Best-effort persistence: a missing or failing
-  /// [progressRepository] never prevents the interactive result from
-  /// being returned.
+  /// evaluation. A failed write retains this exact attempt for retry and
+  /// never prevents the interactive result from being returned.
   Future<AnswerFeedback> submitAnswer(String answerId) {
     final Future<AnswerFeedback>? pending = _pendingSubmit;
     if (pending != null) return pending;
@@ -381,56 +370,45 @@ class PracticeSessionController {
 
     final ProgressRepository? repo = progressRepository;
     if (repo != null) {
-      try {
-        await repo.recordAnswerAttempt(
-          AnswerAttempt(
-            // A fresh, unique id per attempt — not a value derived from
-            // session+question, which would collide (and, against a real
-            // database's primary key, fail or silently overwrite) the
-            // moment the same question is answered more than once in the
-            // same session, e.g. after `moveTo`-ing back to change an
-            // earlier answer.
-            id: _idGenerator.generate(),
-            examId: session.examId,
-            questionId: question.id,
-            domainId: question.domainId,
-            topicId: question.topicId,
-            difficulty: question.difficulty,
-            sessionId: session.id,
-            sessionType: AttemptSessionType.practice,
-            selectedAnswerId: answerId,
-            isCorrect: correct,
-            answeredAt: answeredAt,
-            contentVersion: session.contentVersion,
-            // Persisted redundantly alongside the attempt (PREP-668) so a
-            // later resume() can rebuild this exact AnswerFeedback from
-            // the attempt itself — see AnswerAttempt.questionVersion's
-            // own doc comment for why.
-            questionVersion: question.version,
-            correctAnswerId: question.correctAnswerId,
-            explanation: question.explanation,
-          ),
-        );
-      } catch (_) {
-        // Recording history must never block the interactive result above.
-      }
+      await _persistence.saveAttempt(
+        AnswerAttempt(
+          // A fresh, unique id per attempt — not a value derived from
+          // session+question, which would collide (and, against a real
+          // database's primary key, fail or silently overwrite) the
+          // moment the same question is answered more than once in the
+          // same session, e.g. after `moveTo`-ing back to change an
+          // earlier answer.
+          id: _idGenerator.generate(),
+          examId: session.examId,
+          questionId: question.id,
+          domainId: question.domainId,
+          topicId: question.topicId,
+          difficulty: question.difficulty,
+          sessionId: session.id,
+          sessionType: AttemptSessionType.practice,
+          selectedAnswerId: answerId,
+          isCorrect: correct,
+          answeredAt: answeredAt,
+          contentVersion: session.contentVersion,
+          // Persisted redundantly alongside the attempt (PREP-668) so a
+          // later resume() can rebuild this exact AnswerFeedback from
+          // the attempt itself — see AnswerAttempt.questionVersion's
+          // own doc comment for why.
+          questionVersion: question.version,
+          correctAnswerId: question.correctAnswerId,
+          explanation: question.explanation,
+        ),
+      );
     }
     return feedback;
   }
 
-  /// Marks the session finished. Best-effort persistence, same reasoning
-  /// as [submitAnswer].
+  /// Marks the session finished and retains its timestamp if saving needs retry.
   Future<void> complete() async {
     _session = _session.copyWith(
       status: SessionStatus.completed,
       completedAt: _now().toUtc(),
     );
-    final ProgressRepository? repo = progressRepository;
-    if (repo == null) return;
-    try {
-      await repo.savePracticeSession(_session);
-    } catch (_) {
-      // Same best-effort reasoning as submitAnswer.
-    }
+    await saveSession();
   }
 }

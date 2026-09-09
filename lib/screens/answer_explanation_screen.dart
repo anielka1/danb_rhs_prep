@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../widgets/practice_save_status.dart';
 import '../domain/models/answer_feedback.dart';
 import '../features/questions/domain/question.dart';
 import '../practice_session/practice_session_controller.dart';
@@ -48,6 +49,7 @@ class _AnswerExplanationScreenState extends State<AnswerExplanationScreen> {
     final bool newValue = controller.toggleBookmarkLocally(questionId);
     setState(() {});
     await controller.persistBookmark(questionId, newValue);
+    if (mounted) setState(() {});
   }
 
   Future<void> _next(
@@ -142,6 +144,7 @@ class _AnswerExplanationScreenState extends State<AnswerExplanationScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            PracticeSaveStatus(controller: controller),
             Container(
               width: double.infinity,
               padding: const EdgeInsets.all(AppSpacing.xl),
