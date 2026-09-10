@@ -291,6 +291,15 @@ class _ProgressScreenState extends State<ProgressScreen> {
             Text('Your Progress', style: textStyles.h1),
             const SizedBox(height: AppSpacing.sm),
             Text('Progress you can see.', style: textStyles.body),
+            const SizedBox(height: AppSpacing.sm),
+            Text(
+              widget.contentPackage?.questions
+                          .any((q) => q.tags.contains('demo')) ==
+                      true
+                  ? 'Demo includes sample history. These results do not assess your exam readiness.'
+                  : 'Accuracy reflects recorded answers, not your chance of passing. A personalized readiness estimate is not available yet.',
+              style: textStyles.bodySmall,
+            ),
             const SizedBox(height: AppSpacing.xxl + 2),
             AppCard(padding: const EdgeInsets.all(AppSpacing.xl), child: body),
             const SizedBox(height: 90),

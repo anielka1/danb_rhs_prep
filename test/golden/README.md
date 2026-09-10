@@ -59,6 +59,10 @@ with the Linux quality job before merging.
 **Prefer regenerating on Linux (matching what CI actually enforces),
 not locally on a different OS:**
 
+UI pull requests now generate the same `golden-images` review artifact automatically.
+The workflow never writes baselines back; review and commit the intended changes.
+Manual generation remains available:
+
 1. Go to this repository's GitHub Actions tab -> `update-goldens`
    workflow -> "Run workflow" (manual `workflow_dispatch`, `main` or
    your branch).
