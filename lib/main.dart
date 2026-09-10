@@ -30,7 +30,6 @@ import 'screens/practice_summary_screen.dart';
 import 'screens/mock_exam_results_screen.dart';
 import 'screens/mock_exam_screen.dart';
 import 'screens/profile_settings_screen.dart';
-import 'widgets/app_bottom_navigation.dart';
 
 void main() {
   runApp(const DanbRhsPrepApp());
@@ -46,14 +45,12 @@ class DanbRhsPrepApp extends StatefulWidget {
     AppDatabase? database,
     this.progressRepository,
     this.userSettingsRepository,
-    this.initialTab = AppTab.home,
   })  : _injectedThemeModeController = themeModeController,
         _injectedLocalStore = localStore,
         _injectedBootstrapService = bootstrapService,
         _injectedDatabase = database;
 
   final AnalyticsService analytics;
-  final AppTab initialTab;
   final UserSettingsRepository? userSettingsRepository;
 
   /// Test and demo-entrypoint injection points, mirroring [analytics]'s
@@ -190,7 +187,6 @@ class _DanbRhsPrepAppState extends State<DanbRhsPrepApp> {
                   localStore: _localStore,
                   analytics: widget.analytics,
                   onReady: _applyBootstrapTheme,
-                  initialTab: widget.initialTab,
                   progressRepository: _effectiveProgressRepository,
                 ),
             MainShell.route: (_) => MainShell(

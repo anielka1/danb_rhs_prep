@@ -9,6 +9,7 @@ import 'package:danb_rhs_prep/main_demo.dart' as demo;
 import 'package:danb_rhs_prep/screens/exam_date_screen.dart';
 import 'package:danb_rhs_prep/screens/experience_level_screen.dart';
 import 'package:danb_rhs_prep/screens/main_shell.dart';
+import 'package:danb_rhs_prep/screens/practice_question_screen.dart';
 import 'package:danb_rhs_prep/screens/welcome_screen.dart';
 
 /// Exercises the real composition root, including the snapshot consumed
@@ -118,6 +119,12 @@ void main() {
     await tester.tap(find.text('Practice'));
     await tester.pumpAndSettle();
     expect(find.text('Let’s practice.'), findsOneWidget);
+    final startPractice = find.text('Start Practice Exam');
+    await tester.ensureVisible(startPractice);
+    await tester.tap(startPractice);
+    await tester.pumpAndSettle();
+    expect(find.byType(PracticeQuestionScreen), findsOneWidget);
+    expect(tester.takeException(), isNull);
 
     // A fresh createDebugDemoApp() call is a new in-memory environment —
     // exactly what happens if the demo process is actually restarted.

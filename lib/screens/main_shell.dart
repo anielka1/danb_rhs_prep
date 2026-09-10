@@ -42,11 +42,9 @@ class MainShell extends StatefulWidget {
     super.key,
     this.analytics = const NoOpAnalyticsService(),
     this.progressRepository,
-    this.initialTab = AppTab.home,
   });
 
   final AnalyticsService analytics;
-  final AppTab initialTab;
 
   /// Forwarded straight to [HomeScreen]. A real `DriftProgressRepository`
   /// in production (wired as `main.dart`'s default); see
@@ -126,7 +124,7 @@ class _MainShellState extends State<MainShell>
   // phase actually needs. Each tab's own navigation stack is intentionally
   // not restored across a full app restart — only its in-memory state
   // survives (per [IndexedStack]) while the app is running.
-  late final RestorableInt _tabIndex = RestorableInt(widget.initialTab.index);
+  final RestorableInt _tabIndex = RestorableInt(AppTab.home.index);
 
   /// One key per tab, in [AppTab] enum order — never recreated, so each
   /// `Navigator`'s identity (and therefore its whole route stack) survives

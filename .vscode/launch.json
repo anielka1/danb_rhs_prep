@@ -1,0 +1,18 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Full app demo (clickable practice)",
+      "request": "launch",
+      "type": "dart",
+      "program": "lib/main_demo.dart",
+      "flutterMode": "debug"
+    },
+    {
+      "name": "Production content",
+      "request": "launch",
+      "type": "dart",
+      "program": "lib/main.dart"
+    }
+  ]
+}

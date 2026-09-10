@@ -5,8 +5,6 @@ import 'bootstrap/app_bootstrap_service.dart';
 import 'debug/debug_demo_environment.dart';
 import 'domain/repositories/fakes/in_memory_bootstrap_local_store.dart';
 import 'main.dart';
-import 'widgets/app_bottom_navigation.dart';
-import 'domain/repositories/fakes/in_memory_progress_repository.dart';
 
 /// Offline demo: `flutter run -t lib/main_demo.dart`.
 /// Release/profile fail before constructing the app or any fake repositories.
@@ -17,23 +15,25 @@ import 'domain/repositories/fakes/in_memory_progress_repository.dart';
 /// card — see [DebugDemoEnvironment.demoInProgressPracticeSession]);
 /// study-session UI beyond that card is implemented in separate tasks.
 ///
-/// This entrypoint retains the full onboarding walkthrough.
-/// Use main_demo_practice.dart to open fresh demo Practice directly.
+/// Onboarding starts incomplete on purpose (see [createDebugDemoApp]):
+/// this is the vehicle for demonstrating that Welcome -> Exam Date ->
+/// Experience Level -> Home is genuinely clickable end to end (PREP-647),
+/// not a shortcut around it. No experience level is pre-seeded either,
+/// so Experience Level's choice cards must actually be tapped, the same
+/// as a real accountless user would.
 void main() {
   runApp(createDebugDemoApp());
 }
 
 /// Shared composition root for the entrypoint and widget tests.
-DanbRhsPrepApp createDebugDemoApp({bool startInPractice = false}) {
+DanbRhsPrepApp createDebugDemoApp() {
   if (!kDebugMode) {
     throw UnsupportedError('The demo entrypoint requires debug mode.');
   }
-  final localStore = startInPractice
-      ? InMemoryBootstrapLocalStore(onboardingComplete: true)
-      : InMemoryBootstrapLocalStore(
-          onboardingComplete: false,
-          readinessSnapshot: DebugDemoEnvironment.demoReadinessSnapshot,
-        );
+  final localStore = InMemoryBootstrapLocalStore(
+    onboardingComplete: false,
+    readinessSnapshot: DebugDemoEnvironment.demoReadinessSnapshot,
+  );
   final userSettingsRepository =
       DebugDemoEnvironment.buildUserSettingsRepository();
   final bootstrapService = AppBootstrapService(
@@ -45,7 +45,6 @@ DanbRhsPrepApp createDebugDemoApp({bool startInPractice = false}) {
   );
 
   return DanbRhsPrepApp(
-    initialTab: startInPractice ? AppTab.practice : AppTab.home,
     bootstrapService: bootstrapService,
     localStore: localStore,
     userSettingsRepository: userSettingsRepository,
@@ -55,8 +54,7 @@ DanbRhsPrepApp createDebugDemoApp({bool startInPractice = false}) {
     // seeded in-progress session's elapsed time always looks like a
     // normal, just-started practice session, however long after
     // 2026-01-01 this demo is actually launched.
-    progressRepository: startInPractice
-        ? InMemoryProgressRepository()
-        : DebugDemoEnvironment.buildProgressRepository(now: DateTime.now),
+    progressRepository:
+        DebugDemoEnvironment.buildProgressRepository(now: DateTime.now),
   );
 }
