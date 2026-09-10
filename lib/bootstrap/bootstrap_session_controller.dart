@@ -24,11 +24,20 @@ import '../domain/repositories/progress_repository.dart';
 /// `BootstrapSessionScope`. No route may construct a new one; each only
 /// ever forwards the instance it was given.
 class BootstrapSessionController {
-  BootstrapSessionController(BootstrapReady initial, {this.progressRepository})
-      : _snapshot = initial;
+  BootstrapSessionController(BootstrapReady initial,
+      {ProgressRepository? progressRepository})
+      : _snapshot = initial,
+        _progressRepository = progressRepository;
 
   /// The injected repository follows the session through pushed onboarding routes.
-  final ProgressRepository? progressRepository;
+  ProgressRepository? _progressRepository;
+  ProgressRepository? get progressRepository => _progressRepository;
+
+  /// Called only after a successful reset, before rebuilding all study routes.
+  void replaceProgressRepository(ProgressRepository repository) {
+    _progressRepository = repository;
+    _snapshot = _snapshot.copyWith(clearReadiness: true);
+  }
 
   BootstrapReady _snapshot;
 

@@ -100,6 +100,7 @@ final class BootstrapReady extends BootstrapResult {
     UserProfile? profile,
     ThemePreference? themePreference,
     ReadinessSnapshot? readinessSnapshot,
+    bool clearReadiness = false,
     Entitlement? entitlement,
     bool? onboardingComplete,
     ExamDateSelection? examDateSelection,
@@ -110,7 +111,8 @@ final class BootstrapReady extends BootstrapResult {
       contentPackage: contentPackage ?? this.contentPackage,
       profile: profile ?? this.profile,
       themePreference: themePreference ?? this.themePreference,
-      readinessSnapshot: readinessSnapshot ?? this.readinessSnapshot,
+      readinessSnapshot:
+          clearReadiness ? null : readinessSnapshot ?? this.readinessSnapshot,
       entitlement: entitlement ?? this.entitlement,
       onboardingComplete: onboardingComplete ?? this.onboardingComplete,
       examDateSelection: examDateSelection ?? this.examDateSelection,

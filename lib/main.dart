@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'theme/app_theme.dart';
 import 'bootstrap/app_bootstrap_service.dart';
 import 'bootstrap/bootstrap_session_controller.dart';
+import 'bootstrap/bootstrap_session_scope.dart';
+import 'domain/repositories/progress_session_repository.dart';
 import 'bootstrap/shared_preferences_bootstrap_local_store.dart';
 import 'data/local/app_database.dart';
 import 'data/repositories/drift_progress_repository.dart';
@@ -108,12 +110,11 @@ class _DanbRhsPrepAppState extends State<DanbRhsPrepApp> {
   late final UserSettingsRepository _userSettingsRepository =
       widget.userSettingsRepository ?? DriftUserSettingsRepository(_database);
 
-  /// The repository actually threaded to [MainShell]/[HomeScreen]/
-  /// [SplashScreen]: [widget.progressRepository] when a caller explicitly
-  /// injected one (see its own doc comment), otherwise a real
-  /// [DriftProgressRepository] over this State's database.
-  late final ProgressRepository _effectiveProgressRepository =
-      widget.progressRepository ?? DriftProgressRepository(_database);
+  /// Current UI generation's lease over the injected or SQLite repository.
+  /// A successful reset replaces it; old controllers retain a retired lease.
+  late ProgressSessionRepository _effectiveProgressRepository =
+      ProgressSessionRepository(
+          widget.progressRepository ?? DriftProgressRepository(_database));
 
   late final AppBootstrapService _bootstrapService =
       widget._injectedBootstrapService ??
@@ -214,15 +215,41 @@ class _DanbRhsPrepAppState extends State<DanbRhsPrepApp> {
             PracticeSummaryScreen.route: (_) => const PracticeSummaryScreen(),
             MockExamResultsScreen.route: (_) => const MockExamResultsScreen(),
             MockExamScreen.route: (_) => const MockExamScreen(),
-            ProfileSettingsScreen.route: (context) => ProfileSettingsScreen(
+            ProfileSettingsScreen.route: (context) {
+              final argument = ModalRoute.of(context)?.settings.arguments;
+              final session =
+                  argument is BootstrapSessionController ? argument : null;
+              return ProfileSettingsScreen(
                 themeModeController: _themeModeController,
-                session: ModalRoute.of(context)?.settings.arguments
-                        is BootstrapSessionController
-                    ? ModalRoute.of(context)!.settings.arguments
-                        as BootstrapSessionController
-                    : null,
+                session: session,
                 localStore: _localStore,
-                userSettingsRepository: _userSettingsRepository),
+                userSettingsRepository: _userSettingsRepository,
+                onResetProgress: session != null &&
+                        _effectiveProgressRepository.supportsReset
+                    ? () async {
+                        final next = await _effectiveProgressRepository
+                            .reset(session.snapshot.selectedExamId);
+                        _effectiveProgressRepository = next;
+                        session.replaceProgressRepository(next);
+                        if (!context.mounted) return;
+                        Navigator.of(context, rootNavigator: true)
+                            .pushAndRemoveUntil(
+                          MaterialPageRoute<void>(
+                            settings:
+                                const RouteSettings(name: MainShell.route),
+                            builder: (_) => BootstrapSessionScope(
+                              controller: session,
+                              child: MainShell(
+                                  analytics: widget.analytics,
+                                  progressRepository: next),
+                            ),
+                          ),
+                          (_) => false,
+                        );
+                      }
+                    : null,
+              );
+            },
           },
         );
       },
