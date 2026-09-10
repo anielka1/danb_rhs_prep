@@ -1,3 +1,4 @@
+import '../../domain/repositories/progress_reset_repository.dart';
 import 'dart:convert';
 
 import 'package:drift/drift.dart';
@@ -22,10 +23,33 @@ import '../local/app_database.dart';
 /// enum is stored by its stable `.name`. [recordAnswerAttempt] is genuinely
 /// idempotent (PREP-664) — see that method's own doc comment — never a
 /// plain `INSERT` that fails on any id collision regardless of content.
-class DriftProgressRepository implements ProgressRepository {
+class DriftProgressRepository
+    implements ProgressRepository, ProgressResetRepository {
   DriftProgressRepository(this._db);
 
   final AppDatabase _db;
+
+  @override
+  Future<void> resetProgressForExam(String examId) {
+    if (examId.trim().isEmpty) throw ArgumentError.value(examId, 'examId');
+    return _db.transaction(() async {
+      await (_db.delete(_db.answerAttempts)
+            ..where((t) => t.examId.equals(examId)))
+          .go();
+      await (_db.delete(_db.questionStates)
+            ..where((t) => t.examId.equals(examId)))
+          .go();
+      await (_db.delete(_db.practiceSessions)
+            ..where((t) => t.examId.equals(examId)))
+          .go();
+      await (_db.delete(_db.mockAttempts)
+            ..where((t) => t.examId.equals(examId)))
+          .go();
+      await (_db.delete(_db.readinessSnapshots)
+            ..where((t) => t.examId.equals(examId)))
+          .go();
+    });
+  }
 
   // ---- Answer attempts (append-only) ----
 
