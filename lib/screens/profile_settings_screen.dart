@@ -8,6 +8,7 @@ import '../domain/repositories/user_settings_repository.dart';
 import '../services/theme_mode_controller.dart';
 import '../theme/app_theme.dart';
 import '../widgets/app_card.dart';
+import '../widgets/app_dialog.dart';
 import '../widgets/app_scaffold.dart';
 import '../widgets/primary_button.dart';
 import 'exam_date_screen.dart';
@@ -21,17 +22,58 @@ class ProfileSettingsScreen extends StatefulWidget {
       required this.themeModeController,
       this.session,
       this.localStore,
-      this.userSettingsRepository});
+      this.userSettingsRepository,
+      this.onResetProgress});
   final ThemeModeController themeModeController;
   final BootstrapSessionController? session;
   final BootstrapLocalStore? localStore;
   final UserSettingsRepository? userSettingsRepository;
+  final Future<void> Function()? onResetProgress;
 
   @override
   State<ProfileSettingsScreen> createState() => _ProfileSettingsScreenState();
 }
 
 class _ProfileSettingsScreenState extends State<ProfileSettingsScreen> {
+  bool _resetting = false;
+  bool _confirmingReset = false;
+  bool _resetFailed = false;
+
+  Future<void> _reset() async {
+    if (_resetting || _confirmingReset) return;
+    _confirmingReset = true;
+    final confirmed = await AppDialog.show<bool>(
+      context: context,
+      title: 'Reset study progress?',
+      message: 'This deletes answers, saved questions, unfinished sessions, '
+          'mock exam history and progress for this exam on this device. '
+          'Your study plan and appearance stay unchanged. This cannot be undone.',
+      actions: const [
+        AppDialogAction(
+            label: 'Keep my progress',
+            value: false,
+            style: AppDialogActionStyle.cancel),
+        AppDialogAction(
+            label: 'Reset progress',
+            value: true,
+            style: AppDialogActionStyle.destructive),
+      ],
+    );
+    _confirmingReset = false;
+    if (!mounted || confirmed != true) return;
+    setState(() {
+      _resetting = true;
+      _resetFailed = false;
+    });
+    try {
+      await widget.onResetProgress!();
+    } catch (_) {
+      if (mounted) setState(() => _resetFailed = true);
+    } finally {
+      if (mounted) setState(() => _resetting = false);
+    }
+  }
+
   Future<void> _edit(bool date) async {
     final session = widget.session!;
     await Navigator.of(context).push(MaterialPageRoute<void>(
@@ -68,127 +110,157 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen> {
   @override
   Widget build(BuildContext context) {
     final styles = context.textStyles;
-    return AppScaffold(
-      leading: CircleIconButton(
-        icon: Icons.chevron_left_rounded,
-        onPressed: () => Navigator.of(context).maybePop(),
-        semanticLabel: 'Back',
-      ),
-      title: 'Settings',
-      body: SingleChildScrollView(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const SizedBox(height: AppSpacing.lg),
-            Text('Make it yours.', style: styles.h1),
-            const SizedBox(height: AppSpacing.sm),
-            Text('Your study plan. Your pace.', style: styles.body),
-            if (widget.session != null && widget.localStore != null) ...[
-              const SizedBox(height: AppSpacing.xxxl),
-              Text('YOUR STUDY PLAN', style: styles.label),
-              const SizedBox(height: AppSpacing.md),
-              AppCard(
-                padding: EdgeInsets.zero,
-                child: Column(children: [
-                  ListTile(
-                    leading: const Icon(Icons.event_outlined),
-                    title: const Text('Exam timeframe'),
-                    subtitle: Text(_dateLabel(context)),
-                    trailing: const Icon(Icons.chevron_right_rounded),
-                    onTap: () => _edit(true),
+    return PopScope(
+      canPop: !_resetting,
+      child: AppScaffold(
+        leading: CircleIconButton(
+          icon: Icons.chevron_left_rounded,
+          onPressed: _resetting ? null : () => Navigator.of(context).maybePop(),
+          semanticLabel: 'Back',
+        ),
+        title: 'Settings',
+        body: AbsorbPointer(
+          absorbing: _resetting,
+          child: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const SizedBox(height: AppSpacing.lg),
+                Text('Make it yours.', style: styles.h1),
+                const SizedBox(height: AppSpacing.sm),
+                Text('Your study plan. Your pace.', style: styles.body),
+                if (widget.session != null && widget.localStore != null) ...[
+                  const SizedBox(height: AppSpacing.xxxl),
+                  Text('YOUR STUDY PLAN', style: styles.label),
+                  const SizedBox(height: AppSpacing.md),
+                  AppCard(
+                    padding: EdgeInsets.zero,
+                    child: Column(children: [
+                      ListTile(
+                        leading: const Icon(Icons.event_outlined),
+                        title: const Text('Exam timeframe'),
+                        subtitle: Text(_dateLabel(context)),
+                        trailing: const Icon(Icons.chevron_right_rounded),
+                        onTap: () => _edit(true),
+                      ),
+                      Divider(color: context.colors.outlineVariant),
+                      ListTile(
+                        leading: const Icon(Icons.school_outlined),
+                        title: const Text('Study experience'),
+                        subtitle: Text(
+                            switch (widget.session!.snapshot.experienceLevel) {
+                          ExperienceLevel.justStarting => 'Just starting',
+                          ExperienceLevel.studyingAlready => 'Studying already',
+                          ExperienceLevel.retakingExam =>
+                            'Taking the exam again',
+                          null => 'Choose your experience',
+                        }),
+                        trailing: const Icon(Icons.chevron_right_rounded),
+                        onTap: () => _edit(false),
+                      ),
+                    ]),
                   ),
-                  Divider(color: context.colors.outlineVariant),
-                  ListTile(
-                    leading: const Icon(Icons.school_outlined),
-                    title: const Text('Study experience'),
-                    subtitle:
-                        Text(switch (widget.session!.snapshot.experienceLevel) {
-                      ExperienceLevel.justStarting => 'Just starting',
-                      ExperienceLevel.studyingAlready => 'Studying already',
-                      ExperienceLevel.retakingExam => 'Taking the exam again',
-                      null => 'Choose your experience',
-                    }),
-                    trailing: const Icon(Icons.chevron_right_rounded),
-                    onTap: () => _edit(false),
+                ],
+                const SizedBox(height: AppSpacing.xxxl),
+                Text('LOOK & FEEL', style: styles.label),
+                const SizedBox(height: AppSpacing.md),
+                AppCard(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const _SectionHeading(
+                        icon: Icons.contrast_rounded,
+                        title: 'Appearance',
+                        subtitle: 'Easy on your eyes',
+                      ),
+                      const SizedBox(height: AppSpacing.lg),
+                      ValueListenableBuilder<ThemeMode>(
+                        valueListenable: widget.themeModeController,
+                        builder: (context, mode, _) => Wrap(
+                          spacing: AppSpacing.sm,
+                          runSpacing: AppSpacing.sm,
+                          children: [
+                            for (final entry in const {
+                              ThemeMode.system: 'System',
+                              ThemeMode.light: 'Light',
+                              ThemeMode.dark: 'Dark',
+                            }.entries)
+                              ChoiceChip(
+                                label: Text(entry.value),
+                                selected: mode == entry.key,
+                                onSelected: (_) => widget
+                                    .themeModeController.value = entry.key,
+                              ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: AppSpacing.sm),
+                      Text('Applies throughout the app.',
+                          style: styles.bodySmall),
+                    ],
                   ),
-                ]),
-              ),
-            ],
-            const SizedBox(height: AppSpacing.xxxl),
-            Text('LOOK & FEEL', style: styles.label),
-            const SizedBox(height: AppSpacing.md),
-            AppCard(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const _SectionHeading(
-                    icon: Icons.contrast_rounded,
-                    title: 'Appearance',
-                    subtitle: 'Easy on your eyes',
+                ),
+                const SizedBox(height: AppSpacing.xxxl),
+                Text('HELP & YOUR DATA', style: styles.label),
+                const SizedBox(height: AppSpacing.md),
+                AppCard(
+                  padding: EdgeInsets.zero,
+                  child: Column(
+                    children: [
+                      const _InformationSection(
+                        icon: Icons.help_outline_rounded,
+                        title: 'Study help',
+                        text: 'Use Practice for questions with explanations. '
+                            'Mock Exam saves explanations for the end. '
+                            'You can return to an unfinished session from Home.',
+                      ),
+                      Divider(color: context.colors.outlineVariant),
+                      const _InformationSection(
+                        icon: Icons.shield_outlined,
+                        title: 'Your data',
+                        text: 'No account is needed. Study progress is stored '
+                            'locally in the standard app. The debug demo uses '
+                            'temporary data that resets when it restarts.',
+                      ),
+                      Divider(color: context.colors.outlineVariant),
+                      const _InformationSection(
+                        icon: Icons.info_outline_rounded,
+                        title: 'About RHS Prep',
+                        text: 'An independent study tool, not affiliated with '
+                            'or endorsed by DANB. Practice results are educational '
+                            'estimates, not official exam results.',
+                      ),
+                    ],
                   ),
-                  const SizedBox(height: AppSpacing.lg),
-                  ValueListenableBuilder<ThemeMode>(
-                    valueListenable: widget.themeModeController,
-                    builder: (context, mode, _) => Wrap(
-                      spacing: AppSpacing.sm,
-                      runSpacing: AppSpacing.sm,
-                      children: [
-                        for (final entry in const {
-                          ThemeMode.system: 'System',
-                          ThemeMode.light: 'Light',
-                          ThemeMode.dark: 'Dark',
-                        }.entries)
-                          ChoiceChip(
-                            label: Text(entry.value),
-                            selected: mode == entry.key,
-                            onSelected: (_) =>
-                                widget.themeModeController.value = entry.key,
-                          ),
-                      ],
-                    ),
-                  ),
+                ),
+                const SizedBox(height: AppSpacing.xxxl),
+                if (widget.onResetProgress != null) ...[
+                  Text('START FRESH', style: styles.label),
                   const SizedBox(height: AppSpacing.sm),
-                  Text('Applies throughout the app.', style: styles.bodySmall),
+                  Text(
+                      'Clear study progress for this exam. Keep your plan and appearance.',
+                      style: styles.body),
+                  const SizedBox(height: AppSpacing.md),
+                  if (_resetFailed) ...[
+                    Semantics(
+                        liveRegion: true,
+                        child: const Text(
+                            'Could not reset progress. Your saved data is unchanged. Try again.')),
+                    const SizedBox(height: AppSpacing.sm),
+                  ],
+                  SecondaryButton(
+                    label: _resetting
+                        ? 'Resetting progress…'
+                        : 'Reset study progress',
+                    onPressed: _resetting ? null : _reset,
+                  ),
+                  const SizedBox(height: AppSpacing.xxxl),
                 ],
-              ),
+                Center(child: Text('RHS PREP', style: styles.label)),
+                const SizedBox(height: AppSpacing.huge),
+              ],
             ),
-            const SizedBox(height: AppSpacing.xxxl),
-            Text('HELP & YOUR DATA', style: styles.label),
-            const SizedBox(height: AppSpacing.md),
-            AppCard(
-              padding: EdgeInsets.zero,
-              child: Column(
-                children: [
-                  const _InformationSection(
-                    icon: Icons.help_outline_rounded,
-                    title: 'Study help',
-                    text: 'Use Practice for questions with explanations. '
-                        'Mock Exam saves explanations for the end. '
-                        'You can return to an unfinished session from Home.',
-                  ),
-                  Divider(color: context.colors.outlineVariant),
-                  const _InformationSection(
-                    icon: Icons.shield_outlined,
-                    title: 'Your data',
-                    text: 'No account is needed. Study progress is stored '
-                        'locally in the standard app. The debug demo uses '
-                        'temporary data that resets when it restarts.',
-                  ),
-                  Divider(color: context.colors.outlineVariant),
-                  const _InformationSection(
-                    icon: Icons.info_outline_rounded,
-                    title: 'About RHS Prep',
-                    text: 'An independent study tool, not affiliated with '
-                        'or endorsed by DANB. Practice results are educational '
-                        'estimates, not official exam results.',
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: AppSpacing.xxxl),
-            Center(child: Text('RHS PREP', style: styles.label)),
-            const SizedBox(height: AppSpacing.huge),
-          ],
+          ),
         ),
       ),
     );
