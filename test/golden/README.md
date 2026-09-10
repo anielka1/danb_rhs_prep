@@ -46,6 +46,12 @@ by [update-goldens run 34375367854](https://github.com/anielka1/danb_rhs_prep/ac
 from commit `3818ddd047da209cdf55ecd7f5adaa1d9ef2a1be`.
 Artifact `10113655121` was visually reviewed before copying the PNGs.
 
+Settings and Progress normal-text baselines were updated from Linux run
+`34515886774`, commit `780c2b5174a5050dfdff3dd9d6728c8b33dabedb`,
+artifact `10167663178` (ZIP SHA-256
+`051b19e73b848ec4f8c0fe74c4debe4575ee3a3d7bd88149ea1b5ed123fc0965`).
+All four changed images were visually reviewed; the other 28 images were byte-identical.
+
 Linux CI is authoritative for exact pixel comparisons. macOS rendering
 produced differences across all 32 images despite the same Flutter version,
 fonts and viewport. Do not replace these baselines with macOS output or
@@ -58,6 +64,10 @@ with the Linux quality job before merging.
 
 **Prefer regenerating on Linux (matching what CI actually enforces),
 not locally on a different OS:**
+
+UI pull requests now generate the same `golden-images` review artifact automatically.
+The workflow never writes baselines back; review and commit the intended changes.
+Manual generation remains available:
 
 1. Go to this repository's GitHub Actions tab -> `update-goldens`
    workflow -> "Run workflow" (manual `workflow_dispatch`, `main` or

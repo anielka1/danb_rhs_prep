@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:danb_rhs_prep/main.dart';
+import 'package:danb_rhs_prep/widgets/app_card.dart';
 import 'package:danb_rhs_prep/services/theme_mode_controller.dart';
 
 import '../support/app_bootstrap_test_support.dart';
@@ -37,18 +38,24 @@ void main() {
     // Starts at System (the controller's default).
     expect(controller.value, ThemeMode.system);
 
+    await tester.ensureVisible(find.text('Dark'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Dark'));
     await tester.pumpAndSettle();
     expect(controller.value, ThemeMode.dark);
     expect(Theme.of(tester.element(find.text('Settings'))).brightness,
         Brightness.dark);
 
+    await tester.ensureVisible(find.text('Light'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Light'));
     await tester.pumpAndSettle();
     expect(controller.value, ThemeMode.light);
     expect(Theme.of(tester.element(find.text('Settings'))).brightness,
         Brightness.light);
 
+    await tester.ensureVisible(find.text('System'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('System'));
     await tester.pumpAndSettle();
     expect(controller.value, ThemeMode.system);
@@ -61,6 +68,8 @@ void main() {
     await launchToHome(tester, controller);
     await openSettings(tester);
 
+    await tester.ensureVisible(find.text('Dark'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Dark'));
     await tester.pumpAndSettle();
     expect(controller.value, ThemeMode.dark);
@@ -75,8 +84,10 @@ void main() {
     await openSettings(tester);
 
     expect(controller.value, ThemeMode.dark);
-    final ChoiceChip selected =
-        tester.widget(find.widgetWithText(ChoiceChip, 'Dark'));
+    final AppCard selected = tester.widget(find.ancestor(
+        of: find.text('Dark'),
+        matching:
+            find.byWidgetPredicate((w) => w is AppCard && w.selected != null)));
     expect(selected.selected, isTrue);
     // And the app is still actually dark, not just the stored value.
     expect(Theme.of(tester.element(find.text('Settings'))).brightness,
@@ -89,6 +100,8 @@ void main() {
     final controller = ThemeModeController();
     await launchToHome(tester, controller);
     await openSettings(tester);
+    await tester.ensureVisible(find.text('Dark'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Dark'));
     await tester.pumpAndSettle();
 

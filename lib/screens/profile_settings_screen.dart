@@ -13,6 +13,7 @@ import '../widgets/app_scaffold.dart';
 import '../widgets/primary_button.dart';
 import 'exam_date_screen.dart';
 import 'experience_level_screen.dart';
+import 'study_help_screen.dart';
 
 /// Accountless settings. Only controls backed by working behavior are shown.
 class ProfileSettingsScreen extends StatefulWidget {
@@ -136,26 +137,24 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen> {
                   AppCard(
                     padding: EdgeInsets.zero,
                     child: Column(children: [
-                      ListTile(
-                        leading: const Icon(Icons.event_outlined),
-                        title: const Text('Exam timeframe'),
-                        subtitle: Text(_dateLabel(context)),
-                        trailing: const Icon(Icons.chevron_right_rounded),
+                      _SettingsAction(
+                        icon: Icons.event_rounded,
+                        title: 'Exam timeframe',
+                        subtitle: _dateLabel(context),
                         onTap: () => _edit(true),
                       ),
                       Divider(color: context.colors.outlineVariant),
-                      ListTile(
-                        leading: const Icon(Icons.school_outlined),
-                        title: const Text('Study experience'),
-                        subtitle: Text(
-                            switch (widget.session!.snapshot.experienceLevel) {
+                      _SettingsAction(
+                        icon: Icons.school_rounded,
+                        title: 'Study experience',
+                        subtitle: switch (
+                            widget.session!.snapshot.experienceLevel) {
                           ExperienceLevel.justStarting => 'Just starting',
                           ExperienceLevel.studyingAlready => 'Studying already',
                           ExperienceLevel.retakingExam =>
                             'Taking the exam again',
                           null => 'Choose your experience',
-                        }),
-                        trailing: const Icon(Icons.chevron_right_rounded),
+                        },
                         onTap: () => _edit(false),
                       ),
                     ]),
@@ -185,11 +184,34 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen> {
                               ThemeMode.light: 'Light',
                               ThemeMode.dark: 'Dark',
                             }.entries)
-                              ChoiceChip(
-                                label: Text(entry.value),
+                              AppCard(
                                 selected: mode == entry.key,
-                                onSelected: (_) => widget
-                                    .themeModeController.value = entry.key,
+                                backgroundColor: mode == entry.key
+                                    ? context.colors.primaryContainer
+                                    : context.colors.surface,
+                                onTap: () => widget.themeModeController.value =
+                                    entry.key,
+                                child: Row(children: [
+                                  Icon(
+                                      switch (entry.key) {
+                                        ThemeMode.system =>
+                                          Icons.brightness_auto_rounded,
+                                        ThemeMode.light =>
+                                          Icons.light_mode_rounded,
+                                        ThemeMode.dark =>
+                                          Icons.dark_mode_rounded,
+                                      },
+                                      color: context.colors.onSurface),
+                                  const SizedBox(width: AppSpacing.md),
+                                  Expanded(
+                                      child:
+                                          Text(entry.value, style: styles.h3)),
+                                  Icon(
+                                      mode == entry.key
+                                          ? Icons.check_circle_rounded
+                                          : Icons.circle_outlined,
+                                      color: context.colors.primary),
+                                ]),
                               ),
                           ],
                         ),
@@ -207,12 +229,14 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen> {
                   padding: EdgeInsets.zero,
                   child: Column(
                     children: [
-                      const _InformationSection(
-                        icon: Icons.help_outline_rounded,
+                      _SettingsAction(
+                        icon: Icons.auto_stories_rounded,
                         title: 'Study help',
-                        text: 'Use Practice for questions with explanations. '
-                            'Mock Exam saves explanations for the end. '
-                            'You can return to an unfinished session from Home.',
+                        subtitle: 'Answers, progress & getting started',
+                        onTap: () =>
+                            Navigator.of(context).push(MaterialPageRoute<void>(
+                          builder: (_) => const StudyHelpScreen(),
+                        )),
                       ),
                       Divider(color: context.colors.outlineVariant),
                       const _InformationSection(
@@ -248,7 +272,10 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen> {
                             'Could not reset progress. Your saved data is unchanged. Try again.')),
                     const SizedBox(height: AppSpacing.sm),
                   ],
-                  SecondaryButton(
+                  PrimaryButton(
+                    color: context.colors.errorContainer,
+                    textColor: context.colors.onErrorContainer,
+                    trailingIcon: Icons.restart_alt_rounded,
                     label: _resetting
                         ? 'Resetting progress…'
                         : 'Reset study progress',
@@ -316,5 +343,50 @@ class _InformationSection extends StatelessWidget {
         collapsedShape: const Border(),
         childrenPadding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
         children: [Text(text, style: context.textStyles.body)],
+      );
+}
+
+class _SettingsAction extends StatelessWidget {
+  const _SettingsAction(
+      {required this.icon,
+      required this.title,
+      required this.subtitle,
+      required this.onTap});
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) => Semantics(
+        button: true,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(AppRadii.card),
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.all(AppSpacing.xl),
+            child:
+                Row(crossAxisAlignment: CrossAxisAlignment.center, children: [
+              Container(
+                padding: const EdgeInsets.all(AppSpacing.md),
+                decoration: BoxDecoration(
+                    color: context.colors.primaryContainer,
+                    borderRadius: BorderRadius.circular(AppRadii.smallIcon)),
+                child: Icon(icon, color: context.colors.onPrimaryContainer),
+              ),
+              const SizedBox(width: AppSpacing.md),
+              Expanded(
+                  child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                    Text(title, style: context.textStyles.h3),
+                    const SizedBox(height: AppSpacing.xs),
+                    Text(subtitle, style: context.textStyles.bodySmall),
+                  ])),
+              const SizedBox(width: AppSpacing.sm),
+              Icon(Icons.arrow_forward_rounded, color: context.colors.primary),
+            ]),
+          ),
+        ),
       );
 }

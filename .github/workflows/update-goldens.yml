@@ -1,15 +1,16 @@
 name: update-goldens
 
-# Manual only: regenerates the PREP-658 golden screenshot matrix
-# (test/golden/goldens/*.png) on the same platform the `quality` job in
-# ci.yml actually enforces them on (ubuntu-latest, this exact pinned
-# Flutter version) — see test/golden/README.md for why goldens should be
-# regenerated here rather than locally on a different OS, and for the
-# rest of this procedure. This workflow only uploads an artifact; it
-# never pushes a commit, so a golden change always goes through a
-# reviewed PR rather than a silent, unreviewed baseline update.
+# Generate review artifacts for visual changes; never commit baselines automatically.
+# The quality job still checks committed baselines independently.
 on:
   workflow_dispatch: {}
+  pull_request:
+    paths:
+      - 'lib/screens/**'
+      - 'lib/widgets/**'
+      - 'lib/theme/**'
+      - 'test/golden/**'
+      - '.github/workflows/update-goldens.yml'
 
 permissions:
   contents: read
