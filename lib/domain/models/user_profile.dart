@@ -1,3 +1,4 @@
+import 'study_plan_preferences.dart';
 import 'exam_date_precision.dart';
 import 'exam_date_selection.dart';
 import 'experience_level.dart';
@@ -24,6 +25,7 @@ class UserProfile {
     required this.experienceLevel,
     required this.examDatePrecision,
     this.examDate,
+    this.studyPlanPreferences,
     required this.dailyGoalQuestions,
     required this.notificationsEnabled,
     required this.themePreference,
@@ -77,6 +79,7 @@ class UserProfile {
       examDate: localDate == null
           ? null
           : DateTime.utc(localDate.year, localDate.month, localDate.day),
+      studyPlanPreferences: existing?.studyPlanPreferences,
       dailyGoalQuestions:
           existing?.dailyGoalQuestions ?? kDefaultDailyGoalQuestions,
       notificationsEnabled: existing?.notificationsEnabled ?? false,
@@ -91,6 +94,7 @@ class UserProfile {
   final ExperienceLevel experienceLevel;
   final ExamDatePrecision examDatePrecision;
   final DateTime? examDate;
+  final StudyPlanPreferences? studyPlanPreferences;
   final int dailyGoalQuestions;
   final bool notificationsEnabled;
   final ThemePreference themePreference;
@@ -104,6 +108,7 @@ class UserProfile {
     ExamDatePrecision? examDatePrecision,
     DateTime? examDate,
     bool clearExamDate = false,
+    StudyPlanPreferences? studyPlanPreferences,
     int? dailyGoalQuestions,
     bool? notificationsEnabled,
     ThemePreference? themePreference,
@@ -116,6 +121,7 @@ class UserProfile {
       experienceLevel: experienceLevel ?? this.experienceLevel,
       examDatePrecision: examDatePrecision ?? this.examDatePrecision,
       examDate: clearExamDate ? null : (examDate ?? this.examDate),
+      studyPlanPreferences: studyPlanPreferences ?? this.studyPlanPreferences,
       dailyGoalQuestions: dailyGoalQuestions ?? this.dailyGoalQuestions,
       notificationsEnabled: notificationsEnabled ?? this.notificationsEnabled,
       themePreference: themePreference ?? this.themePreference,
@@ -133,6 +139,7 @@ class UserProfile {
         other.experienceLevel == experienceLevel &&
         other.examDatePrecision == examDatePrecision &&
         other.examDate == examDate &&
+        other.studyPlanPreferences == studyPlanPreferences &&
         other.dailyGoalQuestions == dailyGoalQuestions &&
         other.notificationsEnabled == notificationsEnabled &&
         other.themePreference == themePreference &&
@@ -147,6 +154,7 @@ class UserProfile {
         experienceLevel,
         examDatePrecision,
         examDate,
+        studyPlanPreferences,
         dailyGoalQuestions,
         notificationsEnabled,
         themePreference,

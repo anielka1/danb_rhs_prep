@@ -131,7 +131,7 @@ void main() {
     // whatever `AppDatabase.schemaVersion` currently is, the same way
     // `app_database_test.dart`'s own "fresh install schema version is
     // N" test does, and needs the same one-line update on a future bump.
-    expect(db.schemaVersion, 3);
+    expect(db.schemaVersion, 4);
     final rows = await db.select(db.answerAttempts).get();
     expect(rows, isEmpty);
   });

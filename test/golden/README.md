@@ -115,3 +115,10 @@ from commit `238e992ad9611887f79f8d4b1fb672e5b04fcba1`. Before regeneration,
 all other 28 Linux CI baselines matched exactly. After regeneration, all
 32 golden checks passed in a fresh full-suite process with the exact comparator.
 This local workflow avoids paid GitHub Actions; no macOS baselines were used.
+
+### Adaptive study plan refresh (2026-09-10)
+
+Eight normal-text baselines (Home, settings, practice question and mock result,
+light/dark) were regenerated in local Ubuntu 24.04 with Flutter 3.41.2 and visually
+reviewed. They cover availability setup, optional confidence, and stored pre-mock
+exposure. AX5 baselines remain unchanged. No hosted Actions run was requested.

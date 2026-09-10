@@ -1,3 +1,4 @@
+import '../../domain/models/study_plan_preferences.dart';
 import 'package:drift/drift.dart';
 
 import '../../domain/models/exam_date_precision.dart';
@@ -32,6 +33,8 @@ class DriftUserSettingsRepository implements UserSettingsRepository {
   Future<void> saveProfile(UserProfile profile) async {
     await _db.into(_db.userProfiles).insertOnConflictUpdate(
           UserProfilesCompanion.insert(
+            studyPlanPreferencesJson:
+                Value(profile.studyPlanPreferences?.encode()),
             examId: profile.examId,
             experienceLevel: profile.experienceLevel.name,
             examDatePrecision: profile.examDatePrecision.name,
@@ -48,6 +51,8 @@ class DriftUserSettingsRepository implements UserSettingsRepository {
 
   UserProfile _toDomain(UserProfileRow row) {
     return UserProfile(
+      studyPlanPreferences:
+          StudyPlanPreferences.decode(row.studyPlanPreferencesJson),
       examId: row.examId,
       experienceLevel: ExperienceLevel.values.firstWhere(
         (value) => value.name == row.experienceLevel,

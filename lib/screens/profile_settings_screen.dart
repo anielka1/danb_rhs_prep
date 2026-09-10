@@ -1,3 +1,4 @@
+import 'study_availability_screen.dart';
 import 'package:flutter/material.dart';
 import '../bootstrap/bootstrap_session_controller.dart';
 import '../bootstrap/bootstrap_session_scope.dart';
@@ -149,6 +150,18 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen> {
               if (widget.session != null && widget.localStore != null) ...[
                 const SizedBox(height: AppSpacing.xxxl),
                 Text('YOUR STUDY PLAN', style: styles.label),
+                const SizedBox(height: AppSpacing.md),
+                _SettingsAction(
+                    icon: Icons.calendar_month_rounded,
+                    title: 'Study availability',
+                    subtitle: 'Days, minutes and learning stage',
+                    onTap: () async {
+                      await Navigator.of(context).push(MaterialPageRoute(
+                          builder: (_) => StudyAvailabilityScreen(
+                              session: widget.session!,
+                              repository: widget.userSettingsRepository)));
+                      if (mounted) setState(() {});
+                    }),
                 const SizedBox(height: AppSpacing.md),
                 _SettingsAction(
                     icon: Icons.event_rounded,

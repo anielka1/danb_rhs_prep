@@ -69,6 +69,7 @@ class _MockExamScreenState extends State<MockExamScreen> {
       final controller = MockExamController(
           blueprint: MockExamBlueprint.fromPackage(_content!),
           repository: _repository!,
+          entitlement: _entitlement,
           now: widget.now ?? DateTime.now);
       await controller.load();
       if (!mounted) return;

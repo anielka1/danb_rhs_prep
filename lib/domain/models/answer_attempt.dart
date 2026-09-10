@@ -22,7 +22,17 @@ class AnswerAttempt {
     this.questionVersion,
     this.correctAnswerId,
     this.explanation,
+    this.confident,
+    this.activeDurationSeconds,
+    this.localAnsweredDate,
   });
+
+  /// Null means not measured/declared, including all pre-migration attempts.
+  final bool? confident;
+  final int? activeDurationSeconds;
+
+  /// ISO calendar date captured at submission, independent of later timezone changes.
+  final String? localAnsweredDate;
 
   final String id;
   final String examId;
@@ -91,7 +101,10 @@ class AnswerAttempt {
         other.contentVersion == contentVersion &&
         other.questionVersion == questionVersion &&
         other.correctAnswerId == correctAnswerId &&
-        other.explanation == explanation;
+        other.explanation == explanation &&
+        other.confident == confident &&
+        other.activeDurationSeconds == activeDurationSeconds &&
+        other.localAnsweredDate == localAnsweredDate;
   }
 
   @override
@@ -111,5 +124,8 @@ class AnswerAttempt {
         questionVersion,
         correctAnswerId,
         explanation,
+        confident,
+        activeDurationSeconds,
+        localAnsweredDate,
       );
 }

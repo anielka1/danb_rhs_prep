@@ -244,7 +244,8 @@ class DebugDemoEnvironment {
     freeTier: FreeTierConfig(
       dailyPracticeQuestions: 10,
       diagnosticQuestions: 2,
-      includedMockExams: 0,
+      // Two seeded historical mocks plus one interactive demo attempt.
+      includedMockExams: 3,
     ),
     disclaimer: 'This is synthetic demo content, not a real exam.',
   );

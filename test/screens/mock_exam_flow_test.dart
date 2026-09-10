@@ -1,3 +1,4 @@
+import '../study_plan/onboarding_helper.dart';
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -214,6 +215,7 @@ void main() {
     await tapText(tester, 'Continue');
     await tapText(tester, 'Just starting');
     await tapText(tester, 'Continue');
+    await selectAvailability(tester);
     expect(find.byType(MainShell), findsOneWidget);
     await tapText(tester, 'Mock Exam');
     await tapText(tester, 'Start Mock Exam');

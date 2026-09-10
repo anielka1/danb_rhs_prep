@@ -1,3 +1,5 @@
+import '../../domain/models/study_schedule.dart';
+import '../../domain/repositories/study_schedule_repository.dart';
 import '../../domain/repositories/progress_reset_repository.dart';
 import 'dart:convert';
 
@@ -24,7 +26,10 @@ import '../local/app_database.dart';
 /// idempotent (PREP-664) — see that method's own doc comment — never a
 /// plain `INSERT` that fails on any id collision regardless of content.
 class DriftProgressRepository
-    implements ProgressRepository, ProgressResetRepository {
+    implements
+        ProgressRepository,
+        ProgressResetRepository,
+        StudyScheduleRepository {
   DriftProgressRepository(this._db);
 
   final AppDatabase _db;
@@ -33,6 +38,9 @@ class DriftProgressRepository
   Future<void> resetProgressForExam(String examId) {
     if (examId.trim().isEmpty) throw ArgumentError.value(examId, 'examId');
     return _db.transaction(() async {
+      await (_db.delete(_db.studySchedules)
+            ..where((t) => t.examId.equals(examId)))
+          .go();
       await (_db.delete(_db.answerAttempts)
             ..where((t) => t.examId.equals(examId)))
           .go();
@@ -105,6 +113,9 @@ class DriftProgressRepository
               questionVersion: Value(canonical.questionVersion),
               correctAnswerId: Value(canonical.correctAnswerId),
               explanation: Value(canonical.explanation),
+              confident: Value(canonical.confident),
+              activeDurationSeconds: Value(canonical.activeDurationSeconds),
+              localAnsweredDate: Value(canonical.localAnsweredDate),
             ),
           );
       // Reuses questionState/saveQuestionState below rather than
@@ -181,6 +192,9 @@ class DriftProgressRepository
       questionVersion: row.questionVersion,
       correctAnswerId: row.correctAnswerId,
       explanation: row.explanation,
+      confident: row.confident,
+      activeDurationSeconds: row.activeDurationSeconds,
+      localAnsweredDate: row.localAnsweredDate,
     );
   }
 
@@ -251,6 +265,8 @@ class DriftProgressRepository
             id: session.id,
             examId: session.examId,
             mode: session.mode.name,
+            planDate: Value(session.planDate),
+            reviewQuestionIdsJson: Value(jsonEncode(session.reviewQuestionIds)),
             questionIdsJson: jsonEncode(session.questionIds),
             status: session.status.name,
             startedAt: session.startedAt.toUtc(),
@@ -268,23 +284,72 @@ class DriftProgressRepository
               t.status.equals(SessionStatus.inProgress.name)))
         .getSingleOrNull();
     if (row == null) return null;
-    return PracticeSession(
-      id: row.id,
-      examId: row.examId,
-      mode: PracticeMode.values.firstWhere(
-        (value) => value.name == row.mode,
-        orElse: () => PracticeMode.quickPractice,
-      ),
-      questionIds: List<String>.from(jsonDecode(row.questionIdsJson) as List),
-      status: SessionStatus.values.firstWhere(
-        (value) => value.name == row.status,
-        orElse: () => SessionStatus.inProgress,
-      ),
-      startedAt: row.startedAt.toUtc(),
-      completedAt: row.completedAt?.toUtc(),
-      contentVersion: row.contentVersion,
-    );
+    return _sessionToDomain(row);
   }
+
+  PracticeSession _sessionToDomain(PracticeSessionRow row) => PracticeSession(
+        id: row.id,
+        examId: row.examId,
+        mode: PracticeMode.values.firstWhere(
+          (value) => value.name == row.mode,
+          orElse: () => PracticeMode.quickPractice,
+        ),
+        planDate: row.planDate,
+        reviewQuestionIds: row.reviewQuestionIdsJson == null
+            ? const []
+            : List<String>.from(jsonDecode(row.reviewQuestionIdsJson!) as List),
+        questionIds: List<String>.from(jsonDecode(row.questionIdsJson) as List),
+        status: SessionStatus.values.firstWhere(
+          (value) => value.name == row.status,
+          orElse: () => SessionStatus.inProgress,
+        ),
+        startedAt: row.startedAt.toUtc(),
+        completedAt: row.completedAt?.toUtc(),
+        contentVersion: row.contentVersion,
+      );
+
+  @override
+  Future<List<PracticeSession>> practiceSessionsForExam(String examId) async =>
+      (await (_db.select(_db.practiceSessions)
+                ..where((t) => t.examId.equals(examId)))
+              .get())
+          .map(_sessionToDomain)
+          .toList();
+
+  @override
+  Future<List<StudyScheduleEntry>> studySchedule(String examId) async =>
+      (await (_db.select(_db.studySchedules)
+                ..where((t) => t.examId.equals(examId)))
+              .get())
+          .map((r) => StudyScheduleEntry(
+              examId: r.examId,
+              date: r.date,
+              kind: r.kind,
+              minutes: r.minutes,
+              reservedQuestionIds: List<String>.from(
+                  jsonDecode(r.reservedQuestionIdsJson) as List)))
+          .toList();
+
+  @override
+  Future<void> saveStudySchedule(
+          String examId, List<StudyScheduleEntry> entries) =>
+      _db.transaction(() async {
+        if (entries.any((e) => e.examId != examId)) {
+          throw ArgumentError('Wrong exam');
+        }
+        await (_db.delete(_db.studySchedules)
+              ..where((t) => t.examId.equals(examId)))
+            .go();
+        for (final e in entries) {
+          await _db.into(_db.studySchedules).insert(
+              StudySchedulesCompanion.insert(
+                  examId: e.examId,
+                  date: e.date,
+                  kind: e.kind,
+                  minutes: Value(e.minutes),
+                  reservedQuestionIdsJson: jsonEncode(e.reservedQuestionIds)));
+        }
+      });
 
   // ---- Mock attempts ----
 
@@ -301,6 +366,7 @@ class DriftProgressRepository
             status: attempt.status.name,
             startedAt: attempt.startedAt.toUtc(),
             durationMinutes: attempt.durationMinutes,
+            seenBeforeStartCount: Value(attempt.seenBeforeStartCount),
             currentQuestionIndex: Value(attempt.currentQuestionIndex),
             contentVersion: Value(attempt.contentVersion),
             completedAt: Value(attempt.completedAt?.toUtc()),
@@ -341,6 +407,7 @@ class DriftProgressRepository
       ),
       startedAt: row.startedAt.toUtc(),
       durationMinutes: row.durationMinutes,
+      seenBeforeStartCount: row.seenBeforeStartCount,
       currentQuestionIndex: row.currentQuestionIndex,
       contentVersion: row.contentVersion,
       completedAt: row.completedAt?.toUtc(),

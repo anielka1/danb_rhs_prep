@@ -1,3 +1,4 @@
+import '../domain/models/study_plan_preferences.dart';
 import '../domain/models/entitlement.dart';
 import '../domain/models/exam_date_selection.dart';
 import '../domain/models/experience_level.dart';
@@ -49,6 +50,10 @@ final class BootstrapReady extends BootstrapResult {
   /// fresh install, before onboarding has completed once, or whenever
   /// [userSettingsRepository] itself is null.
   final UserProfile? profile;
+
+  /// One durable source of availability; legacy profiles remain explicitly unset.
+  StudyPlanPreferences? get studyPlanPreferences =>
+      profile?.studyPlanPreferences;
 
   final ThemePreference themePreference;
 

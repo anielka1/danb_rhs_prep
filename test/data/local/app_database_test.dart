@@ -28,7 +28,7 @@ void main() {
         'correctAnswerId/explanation)', () async {
       final AppDatabase db = AppDatabase.forTesting(NativeDatabase.memory());
       addTearDown(db.close);
-      expect(db.schemaVersion, 3);
+      expect(db.schemaVersion, 4);
     });
   });
 
@@ -286,7 +286,7 @@ void main() {
       addTearDown(db.close);
 
       await expectLater(
-        () => db.migration.onUpgrade(db.createMigrator(), 3, 4),
+        () => db.migration.onUpgrade(db.createMigrator(), 4, 5),
         throwsStateError,
       );
     });

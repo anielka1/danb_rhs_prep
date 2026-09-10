@@ -1,3 +1,5 @@
+import '../models/study_schedule.dart';
+import 'study_schedule_repository.dart';
 import '../models/answer_attempt.dart';
 import '../models/mock_attempt.dart';
 import '../models/practice_session.dart';
@@ -9,7 +11,8 @@ import 'progress_reset_repository.dart';
 /// A repository lease for one live UI generation. Reset drains accepted writes,
 /// blocks new ones, then permanently retires this lease after successful deletion.
 /// Old controllers therefore cannot recreate deleted progress, even after retry.
-class ProgressSessionRepository implements ProgressRepository {
+class ProgressSessionRepository
+    implements ProgressRepository, StudyScheduleRepository {
   ProgressSessionRepository(this._storage);
   final ProgressRepository _storage;
   Future<void> _writes = Future.value();
@@ -57,6 +60,28 @@ class ProgressSessionRepository implements ProgressRepository {
       _resetting = false;
     }
   }
+
+  @override
+  Future<List<StudyScheduleEntry>> studySchedule(String examId) =>
+      _read(() async => _storage is StudyScheduleRepository
+          ? await (_storage as StudyScheduleRepository).studySchedule(examId)
+          : const []);
+  @override
+  Future<List<PracticeSession>> practiceSessionsForExam(String examId) =>
+      _read(() async => _storage is StudyScheduleRepository
+          ? await (_storage as StudyScheduleRepository)
+              .practiceSessionsForExam(examId)
+          : const []);
+  @override
+  Future<void> saveStudySchedule(
+          String examId, List<StudyScheduleEntry> entries) =>
+      _write(() async {
+        if (_storage is! StudyScheduleRepository) {
+          throw UnsupportedError('Calendar storage unavailable');
+        }
+        await (_storage as StudyScheduleRepository)
+            .saveStudySchedule(examId, entries);
+      });
 
   @override
   Future<void> recordAnswerAttempt(AnswerAttempt value) =>

@@ -1,3 +1,4 @@
+import '../study_plan/onboarding_helper.dart';
 import 'package:danb_rhs_prep/screens/practice_question_screen.dart';
 import 'package:danb_rhs_prep/practice_session/practice_session_scope.dart';
 import 'dart:async';
@@ -37,6 +38,7 @@ void main() {
     ]) {
       await tap(tester, label);
     }
+    await selectAvailability(tester);
     final oldShell = tester.state(find.byType(MainShell));
     final oldContext = tester.element(find.byType(MainShell));
     final session = BootstrapSessionScope.maybeControllerOf(oldContext)!;

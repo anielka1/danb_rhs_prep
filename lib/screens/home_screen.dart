@@ -1,3 +1,4 @@
+import '../widgets/study_plan_panel.dart';
 import 'package:flutter/material.dart';
 import '../bootstrap/bootstrap_session_scope.dart';
 import '../domain/models/practice_session.dart';
@@ -29,6 +30,7 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   Future<PracticeSession?>? _session;
   bool _wasActive = false;
+  int _planRevision = 0;
 
   @override
   void didChangeDependencies() {
@@ -37,6 +39,7 @@ class _HomeScreenState extends State<HomeScreen> {
     if (widget.progressRepository != null &&
         (_session == null || (active && !_wasActive))) {
       _session = _loadSession();
+      _planRevision++;
     }
     _wasActive = active;
   }
@@ -62,6 +65,7 @@ class _HomeScreenState extends State<HomeScreen> {
       final next = _loadSession();
       setState(() {
         _session = next;
+        _planRevision++;
       });
     }
   }
@@ -90,7 +94,7 @@ class _HomeScreenState extends State<HomeScreen> {
             const SizedBox(height: AppSpacing.md),
             StudyPageHeading(
               title: 'Small steps.\nSteady progress.',
-              subtitle: 'Your next study session is ready.',
+              subtitle: 'A little practice, at your pace.',
               icon: Icons.settings_rounded,
               trailing: Tooltip(
                 message: 'Settings',
@@ -100,15 +104,28 @@ class _HomeScreenState extends State<HomeScreen> {
                   child: CircleIconButton(
                     icon: Icons.settings_rounded,
                     semanticLabel: 'Settings',
-                    onPressed: () => Navigator.of(context, rootNavigator: true)
-                        .pushNamed(ProfileSettingsScreen.route,
-                            arguments: BootstrapSessionScope.maybeControllerOf(
-                                context)),
+                    onPressed: () async {
+                      await Navigator.of(context, rootNavigator: true)
+                          .pushNamed(ProfileSettingsScreen.route,
+                              arguments:
+                                  BootstrapSessionScope.maybeControllerOf(
+                                      context));
+                      if (mounted) setState(() => _planRevision++);
+                    },
                   ),
                 ),
               ),
             ),
             const SizedBox(height: AppSpacing.xxl),
+            if (BootstrapSessionScope.maybeControllerOf(context) != null &&
+                widget.progressRepository != null) ...[
+              StudyPlanPanel(
+                  key: ValueKey(_planRevision),
+                  session: BootstrapSessionScope.controllerOf(context),
+                  repository: widget.progressRepository!,
+                  now: widget.now),
+              const SizedBox(height: AppSpacing.xxl),
+            ],
             FutureBuilder<PracticeSession?>(
               future: _session,
               builder: (context, snapshot) {

@@ -15,7 +15,8 @@ class MockExamUnavailable implements Exception {
 class MockExamBlueprint {
   MockExamBlueprint._(this.package, this.isDemo, this.quotas, this.questions);
 
-  factory MockExamBlueprint.fromPackage(ContentPackage package) {
+  factory MockExamBlueprint.fromPackage(ContentPackage package,
+      {Set<String> preferredQuestionIds = const {}}) {
     final validation = const ContentValidator().validate(package);
     if (!validation.isValid ||
         !package.exam.mockExam.practicePassingPercent.isFinite ||
@@ -59,7 +60,11 @@ class MockExamBlueprint {
     final selected = <Question>[];
     for (final domain in domains) {
       final pool = eligible.where((q) => q.domainId == domain.id).toList()
-        ..sort((a, b) => a.id.compareTo(b.id));
+        ..sort((a, b) {
+          final pa = preferredQuestionIds.contains(a.id),
+              pb = preferredQuestionIds.contains(b.id);
+          return pa != pb ? (pa ? -1 : 1) : a.id.compareTo(b.id);
+        });
       if (pool.length < quotas[domain.id]!) {
         throw const MockExamUnavailable(
             'There are not enough eligible questions for the configured mock exam.');

@@ -1,3 +1,4 @@
+import '../study_plan/study_schedule_service.dart';
 import 'package:flutter/material.dart';
 import '../domain/models/entitlement.dart';
 import '../domain/models/practice_session.dart';
@@ -234,6 +235,13 @@ class _ExamOverviewScreenState extends State<ExamOverviewScreen> {
       try {
         generator = PracticeGenerator.select(
           package: package,
+          excludedQuestionIds: repository != null && widget.entitlement != null
+              ? await effectiveMockReserve(
+                  repository: repository,
+                  package: package,
+                  entitlement: widget.entitlement!,
+                  now: nowFn())
+              : const {},
           questionStates: _focus == PracticeFocus.any || repository == null
               ? const []
               : await repository.questionStatesForExam(examId),

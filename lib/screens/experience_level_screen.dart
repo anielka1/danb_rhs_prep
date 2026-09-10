@@ -1,3 +1,5 @@
+import 'diagnostic_screen.dart';
+import 'study_availability_screen.dart';
 import 'package:flutter/material.dart';
 
 import '../bootstrap/app_bootstrap_service.dart';
@@ -163,7 +165,28 @@ class _ExperienceLevelScreenState extends State<ExperienceLevelScreen> {
       return;
     }
 
+    if (!mounted) return;
     bool completed = true;
+    if (controller.userSettingsRepository != null ||
+        widget.userSettingsRepository != null) {
+      final saved = await Navigator.of(context).push<bool>(MaterialPageRoute(
+          builder: (_) => StudyAvailabilityScreen(
+              session: controller,
+              repository: widget.userSettingsRepository,
+              now: _now)));
+      if (!mounted) return;
+      if (saved != true) {
+        setState(() => _busy = false);
+        return;
+      }
+    }
+    if (!mounted) return;
+    if (controller.userSettingsRepository != null ||
+        widget.userSettingsRepository != null) {
+      await Navigator.of(context).push(MaterialPageRoute(
+          builder: (_) => DiagnosticScreen(session: controller)));
+      if (!mounted) return;
+    }
     try {
       await widget.localStore.writeOnboardingComplete(true);
     } on Object {
@@ -254,7 +277,7 @@ class _ExperienceLevelScreenState extends State<ExperienceLevelScreen> {
   /// sole, root route, so a system Back gesture/button has nothing left
   /// to pop to and can never reveal Welcome, Exam Date, or Splash again.
   /// `MainShell` receives the same shared controller — never a new one.
-  void _navigateToMainShell(BootstrapSessionController controller) {
+  void _navigateToMainShell(BootstrapSessionController controller) async {
     Navigator.of(context).pushAndRemoveUntil(
       MaterialPageRoute(
         settings: const RouteSettings(name: MainShell.route),

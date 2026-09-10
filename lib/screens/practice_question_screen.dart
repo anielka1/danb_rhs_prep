@@ -21,13 +21,19 @@ class PracticeQuestionScreen extends StatefulWidget {
   State<PracticeQuestionScreen> createState() => _PracticeQuestionScreenState();
 }
 
-class _PracticeQuestionScreenState extends State<PracticeQuestionScreen> {
+class _PracticeQuestionScreenState extends State<PracticeQuestionScreen>
+    with WidgetsBindingObserver {
   /// The tap not yet submitted for the current (unanswered) question —
   /// local UI-only state; a submitted answer lives on
   /// [PracticeSessionController] instead, keyed by question id, so it
   /// survives navigating away and back via Previous/Next.
   String? _pendingSelection;
   bool _submitting = false;
+  bool _guessed = false;
+  bool _confident = false;
+  bool _answerVisible = true;
+  String? _timedQuestionId;
+  final Stopwatch _activeTime = Stopwatch();
 
   /// Rebuilds once a second purely so the elapsed-time display
   /// (`controller.elapsed`) actually counts up on screen — this
@@ -40,6 +46,8 @@ class _PracticeQuestionScreenState extends State<PracticeQuestionScreen> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    _activeTime.start();
     _elapsedTicker = Timer.periodic(const Duration(seconds: 1), (_) {
       if (mounted) setState(() {});
     });
@@ -47,8 +55,19 @@ class _PracticeQuestionScreenState extends State<PracticeQuestionScreen> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _activeTime.stop();
     _elapsedTicker?.cancel();
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed && _answerVisible) {
+      _activeTime.start();
+    } else {
+      _activeTime.stop();
+    }
   }
 
   /// Which question's bookmark state has already been requested from
@@ -83,7 +102,11 @@ class _PracticeQuestionScreenState extends State<PracticeQuestionScreen> {
     final String? answerId = _pendingSelection;
     if (answerId == null || _submitting) return;
     setState(() => _submitting = true);
-    await controller.submitAnswer(answerId);
+    _answerVisible = false;
+    _activeTime.stop();
+    await controller.submitAnswer(answerId,
+        confident: _guessed ? false : (_confident ? true : null),
+        activeDurationSeconds: _activeTime.elapsed.inSeconds);
     if (!mounted) return;
     setState(() {
       _submitting = false;
@@ -106,6 +129,11 @@ class _PracticeQuestionScreenState extends State<PracticeQuestionScreen> {
     // class doc comment), so nothing else marks it dirty when the
     // controller's current question changes out from under it this way.
     if (!mounted) return;
+    _answerVisible = true;
+    _activeTime.reset();
+    _activeTime.start();
+    _guessed = false;
+    _confident = false;
     setState(() {});
   }
 
@@ -147,6 +175,12 @@ class _PracticeQuestionScreenState extends State<PracticeQuestionScreen> {
     final PracticeSessionController? controller =
         PracticeSessionScope.maybeOf(context);
     if (controller == null) return const _NoActiveSessionView();
+    if (_timedQuestionId != controller.currentQuestion.id) {
+      _timedQuestionId = controller.currentQuestion.id;
+      _activeTime.reset();
+      _guessed = false;
+      _confident = false;
+    }
 
     final colors = context.colors;
     final textStyles = context.textStyles;
@@ -246,6 +280,28 @@ class _PracticeQuestionScreenState extends State<PracticeQuestionScreen> {
                   ),
               ],
             ),
+            if (!alreadyAnswered)
+              CheckboxListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: const Text('I knew this answer'),
+                  value: _confident,
+                  onChanged: _submitting
+                      ? null
+                      : (v) => setState(() {
+                            _confident = v ?? false;
+                            if (_confident) _guessed = false;
+                          })),
+            if (!alreadyAnswered)
+              CheckboxListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: const Text("I guessed"),
+                  value: _guessed,
+                  onChanged: _submitting
+                      ? null
+                      : (v) => setState(() {
+                            _guessed = v ?? false;
+                            if (_guessed) _confident = false;
+                          })),
             PrimaryButton(
               label: alreadyAnswered ? 'View Explanation' : 'Submit Answer',
               isLoading: _submitting,

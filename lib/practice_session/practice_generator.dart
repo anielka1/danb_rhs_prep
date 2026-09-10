@@ -103,6 +103,7 @@ class PracticeGenerator {
     String? domainId,
     String? topicId,
     PracticeFocus focus = PracticeFocus.any,
+    Set<String> excludedQuestionIds = const {},
   }) {
     if (requestedCount <= 0) {
       throw ArgumentError.value(
@@ -139,7 +140,8 @@ class PracticeGenerator {
     final List<Question> eligible =
         isDemo ? package.questions : package.approvedQuestions;
 
-    Iterable<Question> pool = eligible;
+    Iterable<Question> pool =
+        eligible.where((q) => !excludedQuestionIds.contains(q.id));
     if (domainId != null) {
       pool = pool.where((q) => q.domainId == domainId);
     }
