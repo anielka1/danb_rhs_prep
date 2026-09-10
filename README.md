@@ -177,7 +177,12 @@ flutter run
 
 ## Debug demo environment
 
-Run `flutter run -t lib/main_demo.dart` for an offline, accountless demo.
+Run `./run_demo.command` (or double-click it on macOS) for the full offline demo.
+In VS Code, choose **Full app demo (clickable practice)** and Run.
+The equivalent command is `flutter run -t lib/main_demo.dart`.
+Complete onboarding, open **Practice**, then tap **Start Practice Exam**.
+All screens and normal navigation remain available. Plain `flutter run` uses
+production content, whose draft questions are not eligible for practice yet.
 The entrypoint injects synthetic content, profile and readiness through the
 existing bootstrap/repository contracts. IDs use a separate `demo_exam`
 namespace; questions are marked `[Demo]`, tagged `demo`, and remain `draft`.
