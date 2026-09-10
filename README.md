@@ -177,20 +177,34 @@ flutter run
 
 ## Debug demo environment
 
-Run `flutter run -t lib/main_demo.dart` for an offline, accountless demo.
-The entrypoint injects synthetic content, profile and readiness through the
-existing bootstrap/repository contracts. IDs use a separate `demo_exam`
-namespace; questions are marked `[Demo]`, tagged `demo`, and remain `draft`.
-No device preferences or production data are read or written. Changes last
-only for the process lifetime; restarting restores the deterministic fixtures.
+Run `flutter run -t lib/main_demo_practice.dart` for an offline, accountless demo.
+It opens **Practice** directly, without onboarding or a seeded unfinished
+session. Tap **Start Practice Exam**, choose an answer, then **Submit Answer**
+to see its explanation. The other tabs, including Mock Exam, remain available.
+With an iPhone simulator already open, use:
 
-`DebugDemoEnvironment.buildProgressRepository()` also provides independent
-seeded practice/mock history for repository consumers and tests. After accountless
-onboarding, the Mock Exam tab supports instructions, saved answers and flags,
-question navigation, confirmation, and a result calculated from the attempt.
-It uses only `Above practice threshold` / `Below practice threshold`, always
-with the practice-estimate disclaimer. See [PREP-650](docs/MOCK_EXAM_FLOW.md)
-for selection, persistence, release gates and verification details.
+```bash
+flutter run -t lib/main_demo_practice.dart -d <simulator-id>
+```
+
+Find the device ID with `flutter devices`. Run from this repository's root.
+The normal `flutter run` uses production content, which may be unavailable
+until the approved question bank is ready; it does not enable demo questions.
+
+The demo injects synthetic content/profile through the existing contracts.
+IDs use a separate `demo_exam` namespace; questions are marked `[Demo]`, tagged
+`demo`, and remain `draft`. No device preferences or production data are read
+or written. Practice history starts empty and resets when the demo restarts.
+
+The full demo onboarding walkthrough remains available with
+`flutter run -t lib/main_demo.dart`.
+
+Tests and walkthroughs can call `createDebugDemoApp()` to retain the complete
+onboarding flow and seeded progress; `createDebugDemoApp(startInPractice: true)`
+uses the fresh Practice launch. Both paths retain the same release/profile gates.
+`DebugDemoEnvironment.buildProgressRepository()` remains available for tests
+that explicitly need seeded history. See [mock exam flow](docs/MOCK_EXAM_FLOW.md)
+for selection, persistence and release isolation details.
 
 Production `lib/main.dart` does not import the demo environment. Even an explicit
 release/profile build targeting `lib/main_demo.dart` refuses to start. Fixture

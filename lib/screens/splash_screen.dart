@@ -10,6 +10,7 @@ import '../theme/app_theme.dart';
 import '../widgets/error_state.dart';
 import '../widgets/radiation_icon.dart';
 import 'main_shell.dart';
+import '../widgets/app_bottom_navigation.dart';
 import 'welcome_screen.dart';
 
 /// The app's entry screen: drives real startup ([AppBootstrapService])
@@ -26,12 +27,14 @@ class SplashScreen extends StatefulWidget {
     this.analytics = const NoOpAnalyticsService(),
     this.onReady,
     this.progressRepository,
+    this.initialTab = AppTab.home,
   });
 
   final AppBootstrapService bootstrapService;
   final BootstrapLocalStore localStore;
   final AnalyticsService analytics;
   final ProgressRepository? progressRepository;
+  final AppTab initialTab;
 
   /// Called once, synchronously, with a [BootstrapReady] result before
   /// this screen navigates away — the app shell's hook for applying
@@ -90,7 +93,7 @@ class _SplashScreenState extends State<SplashScreen> {
         progressRepository: widget.progressRepository);
 
     final Widget screen = ready.onboardingComplete
-        ? MainShell(analytics: widget.analytics)
+        ? MainShell(analytics: widget.analytics, initialTab: widget.initialTab)
         : WelcomeScreen(
             localStore: widget.localStore,
             analytics: widget.analytics,
