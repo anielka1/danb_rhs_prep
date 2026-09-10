@@ -57,8 +57,7 @@ class _StudyCardsPainter extends CustomPainter {
     canvas.rotate(0.12);
     final card = RRect.fromRectAndRadius(
         const Rect.fromLTWH(0, 0, 145, 146), const Radius.circular(25));
-    canvas.drawShadow(
-        Path()..addRRect(card), primary.withValues(alpha: 0.18), 12, false);
+    _paintLift(canvas, card, primary);
     canvas.drawRRect(card, paint..color = paper);
     for (var i = 0; i < 3; i++) {
       final y = 39.0 + i * 33;
@@ -83,8 +82,7 @@ class _StudyCardsPainter extends CustomPainter {
     canvas.restore();
     final tile = RRect.fromRectAndRadius(
         const Rect.fromLTWH(-118, 70, 87, 87), const Radius.circular(24));
-    canvas.drawShadow(
-        Path()..addRRect(tile), primary.withValues(alpha: 0.25), 10, false);
+    _paintLift(canvas, tile, primary);
     canvas.drawRRect(tile, paint..color = primary);
     final book = Paint()
       ..color = paper
@@ -103,6 +101,17 @@ class _StudyCardsPainter extends CustomPainter {
           ..lineTo(-75, 132),
         book);
     canvas.restore();
+  }
+
+  // Explicit translucent layers keep the illustration's lift while avoiding
+  // renderer-dependent path-shadow blur in otherwise identical golden runs.
+  void _paintLift(Canvas canvas, RRect shape, Color color) {
+    for (var layer = 3; layer >= 1; layer--) {
+      canvas.drawRRect(
+        shape.shift(Offset(0, layer * 3.0)),
+        Paint()..color = color.withValues(alpha: 0.025),
+      );
+    }
   }
 
   @override

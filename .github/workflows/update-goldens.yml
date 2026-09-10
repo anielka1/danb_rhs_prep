@@ -41,6 +41,9 @@ jobs:
       - name: Regenerate golden images
         run: flutter test --update-goldens test/golden/
 
+      - name: Verify regenerated images in a fresh test process
+        run: flutter test test/golden/
+
       - name: Upload regenerated goldens
         uses: actions/upload-artifact@v4
         with:
