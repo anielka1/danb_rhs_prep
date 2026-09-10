@@ -4,6 +4,7 @@ import '../domain/models/practice_session.dart';
 import '../domain/repositories/progress_repository.dart';
 import '../theme/app_theme.dart';
 import '../widgets/app_card.dart';
+import '../widgets/study_page_heading.dart';
 import '../widgets/app_scaffold.dart';
 import '../widgets/loading_state.dart';
 import '../widgets/primary_button.dart';
@@ -98,9 +99,11 @@ class _HomeScreenState extends State<HomeScreen> {
           children: [
             Text('RHS PREP', style: styles.label),
             const SizedBox(height: AppSpacing.md),
-            Text('Small steps.\nSteady progress.', style: styles.h1),
-            const SizedBox(height: AppSpacing.sm),
-            Text('Your next study session is ready.', style: styles.body),
+            const StudyPageHeading(
+              title: 'Small steps.\nSteady progress.',
+              subtitle: 'Your next study session is ready.',
+              icon: Icons.wb_sunny_outlined,
+            ),
             const SizedBox(height: AppSpacing.xxl),
             FutureBuilder<PracticeSession?>(
               future: _session,

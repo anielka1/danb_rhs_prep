@@ -102,3 +102,9 @@ artifact `10169486947` (ZIP SHA-256
 The illustration now uses explicit translucent layers instead of path-shadow
 blur. The workflow verifies generated images in a fresh test process before
 uploading them; the pixel comparator remains exact.
+
+Home (light/dark × normal/AX5) and Settings (light/dark normal) baselines
+were reviewed for the soft study-screen redesign from Linux run `34522797485`,
+commit `25486975569577306a122f0e2457a7f6a9cf566a`, artifact `10170365672`.
+ZIP SHA-256: `3cd7c151e23e7366dd40198bdef9f423114e212aca353453dbb9051f12682889`.
+The other 26 images were byte-identical and remain unchanged.

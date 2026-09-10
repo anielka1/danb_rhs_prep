@@ -123,170 +123,132 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen> {
         body: AbsorbPointer(
           absorbing: _resetting,
           child: SingleChildScrollView(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const SizedBox(height: AppSpacing.lg),
-                Text('Make it yours.', style: styles.h1),
-                const SizedBox(height: AppSpacing.sm),
-                Text('Your study plan. Your pace.', style: styles.body),
-                if (widget.session != null && widget.localStore != null) ...[
-                  const SizedBox(height: AppSpacing.xxxl),
-                  Text('YOUR STUDY PLAN', style: styles.label),
-                  const SizedBox(height: AppSpacing.md),
-                  AppCard(
-                    padding: EdgeInsets.zero,
-                    child: Column(children: [
-                      _SettingsAction(
-                        icon: Icons.event_rounded,
-                        title: 'Exam timeframe',
-                        subtitle: _dateLabel(context),
-                        onTap: () => _edit(true),
-                      ),
-                      Divider(color: context.colors.outlineVariant),
-                      _SettingsAction(
-                        icon: Icons.school_rounded,
-                        title: 'Study experience',
-                        subtitle: switch (
-                            widget.session!.snapshot.experienceLevel) {
-                          ExperienceLevel.justStarting => 'Just starting',
-                          ExperienceLevel.studyingAlready => 'Studying already',
-                          ExperienceLevel.retakingExam =>
-                            'Taking the exam again',
-                          null => 'Choose your experience',
-                        },
-                        onTap: () => _edit(false),
-                      ),
-                    ]),
-                  ),
-                ],
-                const SizedBox(height: AppSpacing.xxxl),
-                Text('LOOK & FEEL', style: styles.label),
-                const SizedBox(height: AppSpacing.md),
-                AppCard(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const _SectionHeading(
-                        icon: Icons.contrast_rounded,
-                        title: 'Appearance',
-                        subtitle: 'Easy on your eyes',
-                      ),
-                      const SizedBox(height: AppSpacing.lg),
-                      ValueListenableBuilder<ThemeMode>(
-                        valueListenable: widget.themeModeController,
-                        builder: (context, mode, _) => Wrap(
-                          spacing: AppSpacing.sm,
-                          runSpacing: AppSpacing.sm,
+            child:
+                Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              const SizedBox(height: AppSpacing.lg),
+              Text('Make it yours.', style: styles.h1),
+              const SizedBox(height: AppSpacing.sm),
+              Text('Your study plan. Your pace.', style: styles.body),
+              const SizedBox(height: AppSpacing.xxl),
+              AppCard(
+                backgroundColor: context.colors.primaryContainer,
+                child: Row(children: [
+                  const _IconBadge(icon: Icons.auto_stories_rounded),
+                  const SizedBox(width: AppSpacing.lg),
+                  Expanded(
+                      child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            for (final entry in const {
-                              ThemeMode.system: 'System',
-                              ThemeMode.light: 'Light',
-                              ThemeMode.dark: 'Dark',
-                            }.entries)
-                              AppCard(
-                                selected: mode == entry.key,
-                                backgroundColor: mode == entry.key
-                                    ? context.colors.primaryContainer
-                                    : context.colors.surface,
-                                onTap: () => widget.themeModeController.value =
-                                    entry.key,
-                                child: Row(children: [
-                                  Icon(
-                                      switch (entry.key) {
-                                        ThemeMode.system =>
-                                          Icons.brightness_auto_rounded,
-                                        ThemeMode.light =>
-                                          Icons.light_mode_rounded,
-                                        ThemeMode.dark =>
-                                          Icons.dark_mode_rounded,
-                                      },
-                                      color: context.colors.onSurface),
-                                  const SizedBox(width: AppSpacing.md),
-                                  Expanded(
-                                      child:
-                                          Text(entry.value, style: styles.h3)),
-                                  Icon(
-                                      mode == entry.key
-                                          ? Icons.check_circle_rounded
-                                          : Icons.circle_outlined,
-                                      color: context.colors.primary),
-                                ]),
-                              ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: AppSpacing.sm),
-                      Text('Applies throughout the app.',
-                          style: styles.bodySmall),
-                    ],
-                  ),
-                ),
+                        Text('Your study space', style: styles.h3),
+                        const SizedBox(height: AppSpacing.xs),
+                        Text('Small adjustments. A better routine.',
+                            style: styles.bodySmall),
+                      ])),
+                ]),
+              ),
+              if (widget.session != null && widget.localStore != null) ...[
                 const SizedBox(height: AppSpacing.xxxl),
-                Text('HELP & YOUR DATA', style: styles.label),
+                Text('YOUR STUDY PLAN', style: styles.label),
+                const SizedBox(height: AppSpacing.md),
+                _SettingsAction(
+                    icon: Icons.event_rounded,
+                    title: 'Exam timeframe',
+                    subtitle: _dateLabel(context),
+                    onTap: () => _edit(true)),
+                const SizedBox(height: AppSpacing.md),
+                _SettingsAction(
+                    icon: Icons.school_rounded,
+                    title: 'Study experience',
+                    subtitle: switch (
+                        widget.session!.snapshot.experienceLevel) {
+                      ExperienceLevel.justStarting => 'Just starting',
+                      ExperienceLevel.studyingAlready => 'Studying already',
+                      ExperienceLevel.retakingExam => 'Taking the exam again',
+                      null => 'Choose your experience',
+                    },
+                    onTap: () => _edit(false)),
+              ],
+              const SizedBox(height: AppSpacing.xxxl),
+              Text('LOOK & FEEL', style: styles.label),
+              const SizedBox(height: AppSpacing.md),
+              AppCard(
+                  child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                    Row(children: [
+                      const _IconBadge(icon: Icons.contrast_rounded),
+                      const SizedBox(width: AppSpacing.md),
+                      Expanded(
+                          child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                            Text('Appearance', style: styles.h3),
+                            Text('Easy on your eyes', style: styles.bodySmall),
+                          ])),
+                    ]),
+                    const SizedBox(height: AppSpacing.xl),
+                    _AppearanceChoices(controller: widget.themeModeController),
+                    const SizedBox(height: AppSpacing.md),
+                    Text('Applies throughout the app.',
+                        style: styles.bodySmall),
+                  ])),
+              const SizedBox(height: AppSpacing.xxxl),
+              Text('HELP & YOUR DATA', style: styles.label),
+              const SizedBox(height: AppSpacing.md),
+              _SettingsAction(
+                  icon: Icons.auto_stories_rounded,
+                  title: 'Study help',
+                  subtitle: 'Answers, progress & getting started',
+                  onTap: () => Navigator.of(context).push(
+                      MaterialPageRoute<void>(
+                          builder: (_) => const StudyHelpScreen()))),
+              const SizedBox(height: AppSpacing.md),
+              const _InformationSection(
+                  icon: Icons.shield_outlined,
+                  title: 'Your data',
+                  text:
+                      'No account is needed. Study progress is stored locally in the standard app. The debug demo uses temporary data that resets when it restarts.'),
+              const SizedBox(height: AppSpacing.md),
+              const _InformationSection(
+                  icon: Icons.info_outline_rounded,
+                  title: 'About RHS Prep',
+                  text:
+                      'An independent study tool, not affiliated with or endorsed by DANB. Practice results are educational estimates, not official exam results.'),
+              const SizedBox(height: AppSpacing.xxxl),
+              if (widget.onResetProgress != null) ...[
+                Text('START FRESH', style: styles.label),
                 const SizedBox(height: AppSpacing.md),
                 AppCard(
-                  padding: EdgeInsets.zero,
-                  child: Column(
-                    children: [
-                      _SettingsAction(
-                        icon: Icons.auto_stories_rounded,
-                        title: 'Study help',
-                        subtitle: 'Answers, progress & getting started',
-                        onTap: () =>
-                            Navigator.of(context).push(MaterialPageRoute<void>(
-                          builder: (_) => const StudyHelpScreen(),
-                        )),
-                      ),
-                      Divider(color: context.colors.outlineVariant),
-                      const _InformationSection(
-                        icon: Icons.shield_outlined,
-                        title: 'Your data',
-                        text: 'No account is needed. Study progress is stored '
-                            'locally in the standard app. The debug demo uses '
-                            'temporary data that resets when it restarts.',
-                      ),
-                      Divider(color: context.colors.outlineVariant),
-                      const _InformationSection(
-                        icon: Icons.info_outline_rounded,
-                        title: 'About RHS Prep',
-                        text: 'An independent study tool, not affiliated with '
-                            'or endorsed by DANB. Practice results are educational '
-                            'estimates, not official exam results.',
-                      ),
-                    ],
-                  ),
-                ),
+                    child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                      Text('A fresh start', style: styles.h3),
+                      const SizedBox(height: AppSpacing.sm),
+                      Text(
+                          'Clear study progress for this exam. Keep your plan and appearance.',
+                          style: styles.body),
+                      const SizedBox(height: AppSpacing.lg),
+                      if (_resetFailed) ...[
+                        Semantics(
+                            liveRegion: true,
+                            child: const Text(
+                                'Could not reset progress. Your saved data is unchanged. Try again.')),
+                        const SizedBox(height: AppSpacing.sm),
+                      ],
+                      PrimaryButton(
+                          color: context.colors.errorContainer,
+                          textColor: context.colors.onErrorContainer,
+                          trailingIcon: Icons.restart_alt_rounded,
+                          label: _resetting
+                              ? 'Resetting progress…'
+                              : 'Reset study progress',
+                          onPressed: _resetting ? null : _reset),
+                    ])),
                 const SizedBox(height: AppSpacing.xxxl),
-                if (widget.onResetProgress != null) ...[
-                  Text('START FRESH', style: styles.label),
-                  const SizedBox(height: AppSpacing.sm),
-                  Text(
-                      'Clear study progress for this exam. Keep your plan and appearance.',
-                      style: styles.body),
-                  const SizedBox(height: AppSpacing.md),
-                  if (_resetFailed) ...[
-                    Semantics(
-                        liveRegion: true,
-                        child: const Text(
-                            'Could not reset progress. Your saved data is unchanged. Try again.')),
-                    const SizedBox(height: AppSpacing.sm),
-                  ],
-                  PrimaryButton(
-                    color: context.colors.errorContainer,
-                    textColor: context.colors.onErrorContainer,
-                    trailingIcon: Icons.restart_alt_rounded,
-                    label: _resetting
-                        ? 'Resetting progress…'
-                        : 'Reset study progress',
-                    onPressed: _resetting ? null : _reset,
-                  ),
-                  const SizedBox(height: AppSpacing.xxxl),
-                ],
-                Center(child: Text('RHS PREP', style: styles.label)),
-                const SizedBox(height: AppSpacing.huge),
               ],
-            ),
+              Center(child: Text('RHS PREP', style: styles.label)),
+              const SizedBox(height: AppSpacing.huge),
+            ]),
           ),
         ),
       ),
@@ -294,55 +256,16 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen> {
   }
 }
 
-class _SectionHeading extends StatelessWidget {
-  const _SectionHeading(
-      {required this.icon, required this.title, required this.subtitle});
+class _IconBadge extends StatelessWidget {
+  const _IconBadge({required this.icon});
   final IconData icon;
-  final String title;
-  final String subtitle;
-
   @override
-  Widget build(BuildContext context) => Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(AppSpacing.md),
-            decoration: BoxDecoration(
-              color: context.colors.primaryContainer,
-              borderRadius: BorderRadius.circular(AppRadii.smallIcon),
-            ),
-            child: Icon(icon, color: context.colors.onPrimaryContainer),
-          ),
-          const SizedBox(width: AppSpacing.md),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(title, style: context.textStyles.h3),
-                Text(subtitle, style: context.textStyles.bodySmall),
-              ],
-            ),
-          ),
-        ],
-      );
-}
-
-class _InformationSection extends StatelessWidget {
-  const _InformationSection(
-      {required this.icon, required this.title, required this.text});
-  final IconData icon;
-  final String title;
-  final String text;
-
-  @override
-  Widget build(BuildContext context) => ExpansionTile(
-        leading: Icon(icon, color: context.colors.secondary),
-        title: Text(title,
-            style: context.textStyles.body.copyWith(
-                fontWeight: FontWeight.w700, color: context.colors.onSurface)),
-        shape: const Border(),
-        collapsedShape: const Border(),
-        childrenPadding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
-        children: [Text(text, style: context.textStyles.body)],
+  Widget build(BuildContext context) => Container(
+        padding: const EdgeInsets.all(AppSpacing.lg),
+        decoration: BoxDecoration(
+            color: context.colors.surface,
+            borderRadius: BorderRadius.circular(20)),
+        child: Icon(icon, color: context.colors.primary, size: 25),
       );
 }
 
@@ -353,40 +276,100 @@ class _SettingsAction extends StatelessWidget {
       required this.subtitle,
       required this.onTap});
   final IconData icon;
-  final String title;
-  final String subtitle;
+  final String title, subtitle;
   final VoidCallback onTap;
-
   @override
-  Widget build(BuildContext context) => Semantics(
-        button: true,
-        child: InkWell(
-          borderRadius: BorderRadius.circular(AppRadii.card),
-          onTap: onTap,
-          child: Padding(
-            padding: const EdgeInsets.all(AppSpacing.xl),
-            child:
-                Row(crossAxisAlignment: CrossAxisAlignment.center, children: [
-              Container(
-                padding: const EdgeInsets.all(AppSpacing.md),
-                decoration: BoxDecoration(
-                    color: context.colors.primaryContainer,
-                    borderRadius: BorderRadius.circular(AppRadii.smallIcon)),
-                child: Icon(icon, color: context.colors.onPrimaryContainer),
-              ),
-              const SizedBox(width: AppSpacing.md),
-              Expanded(
-                  child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                    Text(title, style: context.textStyles.h3),
-                    const SizedBox(height: AppSpacing.xs),
-                    Text(subtitle, style: context.textStyles.bodySmall),
-                  ])),
-              const SizedBox(width: AppSpacing.sm),
-              Icon(Icons.arrow_forward_rounded, color: context.colors.primary),
-            ]),
-          ),
+  Widget build(BuildContext context) => AppCard(
+        onTap: onTap,
+        padding: const EdgeInsets.all(AppSpacing.xl),
+        child: Row(children: [
+          _IconBadge(icon: icon),
+          const SizedBox(width: AppSpacing.lg),
+          Expanded(
+              child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                Text(title, style: context.textStyles.h3),
+                const SizedBox(height: AppSpacing.xs),
+                Text(subtitle, style: context.textStyles.bodySmall),
+              ])),
+          const SizedBox(width: AppSpacing.sm),
+          Icon(Icons.chevron_right_rounded,
+              color: context.colors.onSurfaceVariant),
+        ]),
+      );
+}
+
+class _InformationSection extends StatelessWidget {
+  const _InformationSection(
+      {required this.icon, required this.title, required this.text});
+  final IconData icon;
+  final String title, text;
+  @override
+  Widget build(BuildContext context) => AppCard(
+        padding: EdgeInsets.zero,
+        child: ExpansionTile(
+          tilePadding: const EdgeInsets.all(AppSpacing.xl),
+          leading: _IconBadge(icon: icon),
+          title: Text(title, style: context.textStyles.h3),
+          shape: const Border(),
+          collapsedShape: const Border(),
+          childrenPadding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+          children: [Text(text, style: context.textStyles.body)],
         ),
+      );
+}
+
+class _AppearanceChoices extends StatelessWidget {
+  const _AppearanceChoices({required this.controller});
+  final ThemeModeController controller;
+  @override
+  Widget build(BuildContext context) => ValueListenableBuilder<ThemeMode>(
+        valueListenable: controller,
+        builder: (context, mode, _) =>
+            LayoutBuilder(builder: (context, constraints) {
+          final stacked = MediaQuery.textScalerOf(context).scale(16) > 22 ||
+              constraints.maxWidth < 260;
+          final choices = <Widget>[
+            for (final entry in const {
+              ThemeMode.system: 'System',
+              ThemeMode.light: 'Light',
+              ThemeMode.dark: 'Dark'
+            }.entries)
+              SizedBox(
+                width: stacked
+                    ? constraints.maxWidth
+                    : (constraints.maxWidth - 16) / 3,
+                child: AppCard(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 16),
+                  selected: mode == entry.key,
+                  backgroundColor: mode == entry.key
+                      ? context.colors.surfaceContainer
+                      : context.colors.primaryContainer,
+                  onTap: () => controller.value = entry.key,
+                  child: Column(mainAxisSize: MainAxisSize.min, children: [
+                    Icon(
+                        mode == entry.key
+                            ? Icons.check_circle_rounded
+                            : switch (entry.key) {
+                                ThemeMode.system =>
+                                  Icons.brightness_auto_rounded,
+                                ThemeMode.light => Icons.light_mode_outlined,
+                                ThemeMode.dark => Icons.dark_mode_outlined,
+                              },
+                        color: context.colors.primary),
+                    const SizedBox(height: AppSpacing.sm),
+                    Text(entry.value,
+                        textAlign: TextAlign.center,
+                        style: context.textStyles.body.copyWith(
+                            color: context.colors.onSurface,
+                            fontWeight: FontWeight.w700)),
+                  ]),
+                ),
+              ),
+          ];
+          return Wrap(spacing: 8, runSpacing: 8, children: choices);
+        }),
       );
 }

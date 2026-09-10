@@ -56,6 +56,11 @@ void main() {
         await tester.tap(find.bySemanticsLabel('Back').last);
         await tester.pumpAndSettle();
         expect(find.byType(ProfileSettingsScreen), findsOneWidget);
+        await tap('Your data');
+        expect(find.textContaining('No account is needed.'), findsOneWidget);
+        await tap('About RHS Prep');
+        expect(
+            find.textContaining('An independent study tool'), findsOneWidget);
         await tap('Reset study progress');
         await tap('Keep my progress');
         expect(find.text('Reset study progress?'), findsNothing);

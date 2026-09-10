@@ -10,6 +10,7 @@ import '../practice_session/practice_session_scope.dart';
 import '../theme/app_theme.dart';
 import '../widgets/app_scaffold.dart';
 import '../widgets/app_card.dart';
+import '../widgets/study_page_heading.dart';
 import '../widgets/app_dialog.dart';
 import '../widgets/error_state.dart';
 import '../widgets/primary_button.dart';
@@ -366,16 +367,31 @@ class _ExamOverviewScreenState extends State<ExamOverviewScreen> {
           children: [
             Text('MAKE IT YOURS', style: textStyles.label),
             const SizedBox(height: AppSpacing.md),
-            Text('Let’s practice.', style: textStyles.h1),
-            const SizedBox(height: AppSpacing.sm),
-            Text('Choose a short session that fits your day.',
-                style: textStyles.body),
+            const StudyPageHeading(
+              title: 'Let’s practice.',
+              subtitle: 'Choose a short session that fits your day.',
+              icon: Icons.auto_stories_rounded,
+            ),
             const SizedBox(height: AppSpacing.xxl),
             Text('Session length', style: textStyles.h3),
             const SizedBox(height: AppSpacing.md),
             Wrap(spacing: AppSpacing.sm, runSpacing: AppSpacing.sm, children: [
               for (final count in [5, 10, 20])
                 ChoiceChip(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 12, vertical: 10),
+                    selectedColor: colors.primaryContainer,
+                    checkmarkColor: colors.onPrimaryContainer,
+                    labelStyle: textStyles.body.copyWith(
+                      color: _requestedCount == count
+                          ? colors.onPrimaryContainer
+                          : colors.onSurface,
+                      fontWeight: FontWeight.w700,
+                    ),
+                    backgroundColor: colors.surfaceContainer,
+                    side: BorderSide(color: colors.outlineVariant),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(18)),
                     label: Text('$count questions'),
                     selected: _requestedCount == count,
                     onSelected: _starting
@@ -393,18 +409,39 @@ class _ExamOverviewScreenState extends State<ExamOverviewScreen> {
               PracticeFocus.bookmarkedQuestions: 'Saved questions',
             }.entries) ...[
               AppCard(
+                  backgroundColor: _focus == entry.key
+                      ? colors.primaryContainer
+                      : colors.surfaceContainer,
                   selected: _focus == entry.key,
                   onTap: _starting
                       ? null
                       : () => _updateSelection(() => _focus = entry.key),
                   child: Row(children: [
+                    Container(
+                      padding: const EdgeInsets.all(AppSpacing.md),
+                      decoration: BoxDecoration(
+                          color: colors.surface,
+                          borderRadius:
+                              BorderRadius.circular(AppRadii.smallIcon)),
+                      child: Icon(
+                          switch (entry.key) {
+                            PracticeFocus.any => Icons.auto_stories_outlined,
+                            PracticeFocus.weakAreas => Icons.insights_rounded,
+                            PracticeFocus.incorrectQuestions =>
+                              Icons.replay_rounded,
+                            PracticeFocus.bookmarkedQuestions =>
+                              Icons.bookmark_border_rounded,
+                          },
+                          color: colors.primary),
+                    ),
+                    const SizedBox(width: AppSpacing.md),
+                    Expanded(child: Text(entry.value, style: textStyles.h3)),
+                    const SizedBox(width: AppSpacing.sm),
                     Icon(
                         _focus == entry.key
                             ? Icons.check_circle_rounded
                             : Icons.circle_outlined,
-                        color: colors.secondary),
-                    const SizedBox(width: AppSpacing.md),
-                    Expanded(child: Text(entry.value, style: textStyles.h3)),
+                        color: colors.primary),
                   ])),
               const SizedBox(height: AppSpacing.sm),
             ],
