@@ -1,3 +1,5 @@
+import '../domain/models/entitlement.dart';
+import '../study_plan/study_schedule_service.dart';
 import '../domain/models/mock_attempt.dart';
 import '../domain/repositories/progress_repository.dart';
 import '../features/questions/domain/question.dart';
@@ -10,9 +12,11 @@ class MockExamController {
   MockExamController(
       {required this.blueprint,
       required this.repository,
+      this.entitlement,
       DateTime Function() now = DateTime.now})
       : _now = now;
 
+  final Entitlement? entitlement;
   final MockExamBlueprint blueprint;
   final ProgressRepository repository;
   final DateTime Function() _now;
@@ -65,10 +69,40 @@ class MockExamController {
         do {
           id = '${blueprint.package.exam.id}-mock-${sequence++}';
         } while (_usedIds.contains(id));
+        final previous =
+            await repository.mockAttemptsForExam(blueprint.package.exam.id);
+        if (entitlement != null &&
+            !entitlement!.isActiveAt(_now()) &&
+            previous.length >=
+                blueprint.package.exam.freeTier.includedMockExams) {
+          throw const MockExamUnavailable(
+              'Your included mock exam allowance has been used.');
+        }
+        final seen =
+            (await repository.answerAttemptsForExam(blueprint.package.exam.id))
+                .map((a) => a.questionId)
+                .toSet();
+        for (final attempt in previous) {
+          seen.addAll(attempt.answers.keys);
+        }
+        var selection = blueprint.questions;
+        final reserved = await effectiveMockReserve(
+            repository: repository,
+            package: blueprint.package,
+            entitlement:
+                entitlement ?? Entitlement.free(lastVerifiedAt: _now()),
+            now: _now());
+        if (reserved.isNotEmpty) {
+          selection = MockExamBlueprint.fromPackage(blueprint.package,
+                  preferredQuestionIds: reserved)
+              .questions;
+        }
         final next = MockAttempt(
             id: id,
             examId: blueprint.package.exam.id,
-            questionIds: blueprint.questions.map((q) => q.id).toList(),
+            questionIds: selection.map((q) => q.id).toList(),
+            seenBeforeStartCount:
+                selection.where((q) => seen.contains(q.id)).length,
             answers: const {},
             flaggedQuestionIds: const {},
             status: MockAttemptStatus.inProgress,
@@ -77,7 +111,7 @@ class MockExamController {
             contentVersion: blueprint.package.contentVersion);
         await _save(next);
         _usedIds.add(id);
-        _restoredQuestions = null;
+        _restoredQuestions = selection;
       });
 
   Future<void> answer(String answerId) => _exclusive(() async {

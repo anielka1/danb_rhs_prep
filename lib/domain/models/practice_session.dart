@@ -8,6 +8,7 @@ enum PracticeMode {
   browseDomain,
   customQuiz,
   diagnostic,
+  planned,
 }
 
 /// Lifecycle state of a [PracticeSession].
@@ -29,7 +30,10 @@ class PracticeSession {
     required this.startedAt,
     this.completedAt,
     this.contentVersion,
-  }) : questionIds = List.unmodifiable(questionIds) {
+    this.planDate,
+    List<String> reviewQuestionIds = const [],
+  })  : questionIds = List.unmodifiable(questionIds),
+        reviewQuestionIds = List.unmodifiable(reviewQuestionIds) {
     if ((completedAt != null) != (status == SessionStatus.completed)) {
       throw ArgumentError(
         'completedAt must be set if and only if the session is completed.',
@@ -37,6 +41,8 @@ class PracticeSession {
     }
   }
 
+  final String? planDate;
+  final List<String> reviewQuestionIds;
   final String id;
   final String examId;
   final PracticeMode mode;
@@ -71,6 +77,8 @@ class PracticeSession {
       startedAt: startedAt ?? this.startedAt,
       completedAt: completedAt ?? this.completedAt,
       contentVersion: contentVersion,
+      planDate: planDate,
+      reviewQuestionIds: reviewQuestionIds,
     );
   }
 
@@ -85,7 +93,9 @@ class PracticeSession {
         other.status == status &&
         other.startedAt == startedAt &&
         other.completedAt == completedAt &&
-        other.contentVersion == contentVersion;
+        other.contentVersion == contentVersion &&
+        other.planDate == planDate &&
+        _listEquals(other.reviewQuestionIds, reviewQuestionIds);
   }
 
   @override
@@ -98,6 +108,8 @@ class PracticeSession {
         startedAt,
         completedAt,
         contentVersion,
+        planDate,
+        Object.hashAll(reviewQuestionIds),
       );
 }
 

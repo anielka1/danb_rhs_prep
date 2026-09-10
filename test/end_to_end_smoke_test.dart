@@ -1,3 +1,4 @@
+import 'study_plan/onboarding_helper.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -39,6 +40,7 @@ Future<void> _completeOnboarding(WidgetTester tester) async {
   await _tapText(tester, 'Continue');
   await _tapText(tester, 'Just starting');
   await _tapText(tester, 'Continue');
+  await selectAvailability(tester);
   expect(find.byType(MainShell), findsOneWidget);
 }
 
@@ -105,6 +107,7 @@ void main() {
         ? find.text('Continue')
         : find.text('Start Practicing');
     expect(homeAction, findsOneWidget);
+    await tester.ensureVisible(homeAction);
     await tester.tap(homeAction);
     await tester.pumpAndSettle();
 

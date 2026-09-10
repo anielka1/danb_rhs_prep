@@ -1,3 +1,4 @@
+import 'study_plan/onboarding_helper.dart';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -40,6 +41,7 @@ Future<void> _clickThroughOnboarding(WidgetTester tester) async {
   await tester.pumpAndSettle();
   await tester.tap(find.text('Continue'));
   await tester.pumpAndSettle();
+  await selectAvailability(tester);
   expect(tester.takeException(), isNull);
 }
 
@@ -56,7 +58,11 @@ void main() {
     expect(find.byType(MainShell), findsOneWidget);
     final snapshot = BootstrapSessionScope.snapshotOf(
         tester.element(find.byType(MainShell)));
-    expect(snapshot.profile, DebugDemoEnvironment.demoProfile);
+    expect(snapshot.profile!.examId, DebugDemoEnvironment.demoProfile.examId);
+    expect(snapshot.profile!.studyPlanPreferences!.minutes, 30);
+    expect(snapshot.profile!.studyPlanPreferences!.weekdays, {1});
+    expect(snapshot.profile!.dailyGoalQuestions,
+        DebugDemoEnvironment.demoProfile.dailyGoalQuestions);
     expect(
         snapshot.readinessSnapshot, DebugDemoEnvironment.demoReadinessSnapshot);
     expect(snapshot.selectedExamId, DebugDemoEnvironment.demoExamId);

@@ -24,6 +24,7 @@ class MockAttempt {
     this.correctCount,
     this.currentQuestionIndex = 0,
     this.contentVersion,
+    this.seenBeforeStartCount,
   })  : questionIds = List.unmodifiable(questionIds),
         answers = Map.unmodifiable(answers),
         flaggedQuestionIds = Set.unmodifiable(flaggedQuestionIds) {
@@ -65,6 +66,8 @@ class MockAttempt {
     }
   }
 
+  /// Null for historical attempts with no pre-start measurement.
+  final int? seenBeforeStartCount;
   final String id;
   final String examId;
   final List<String> questionIds;
@@ -109,6 +112,7 @@ class MockAttempt {
       correctCount: correctCount ?? this.correctCount,
       currentQuestionIndex: currentQuestionIndex ?? this.currentQuestionIndex,
       contentVersion: contentVersion,
+      seenBeforeStartCount: seenBeforeStartCount,
     );
   }
 
@@ -126,6 +130,7 @@ class MockAttempt {
         other.durationMinutes == durationMinutes &&
         other.currentQuestionIndex == currentQuestionIndex &&
         other.contentVersion == contentVersion &&
+        other.seenBeforeStartCount == seenBeforeStartCount &&
         other.completedAt == completedAt &&
         other.correctCount == correctCount;
   }
@@ -144,6 +149,7 @@ class MockAttempt {
         durationMinutes,
         currentQuestionIndex,
         contentVersion,
+        seenBeforeStartCount,
         completedAt,
         correctCount,
       );

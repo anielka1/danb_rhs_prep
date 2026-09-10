@@ -1,3 +1,4 @@
+import '../study_plan/onboarding_helper.dart';
 import 'dart:async';
 
 import 'package:drift/native.dart';
@@ -494,6 +495,7 @@ void main() {
       await tester.pump();
       await tester.tap(find.text('Continue'));
       await tester.pumpAndSettle();
+      await selectAvailability(tester);
 
       final UserProfile? saved =
           await userSettingsRepository.loadProfile('danb_rhs');
@@ -530,8 +532,7 @@ void main() {
     });
 
     testWidgets(
-        'a saveProfile failure is best-effort: onboarding still completes '
-        'and reaches MainShell normally, exactly like a null repository',
+        'availability save failure stays retryable and does not claim completion',
         (tester) async {
       final userSettingsRepository = _ThrowingSaveUserSettingsRepository();
 
@@ -546,9 +547,12 @@ void main() {
       await tester.pump();
       await tester.tap(find.text('Continue'));
       await tester.pumpAndSettle();
+      await selectAvailability(tester, skipDiagnostic: false);
 
       expect(tester.takeException(), isNull);
-      expect(find.byType(MainShell), findsOneWidget);
+      expect(find.byType(MainShell), findsNothing);
+      expect(find.text('Could not save your availability. Please try again.'),
+          findsOneWidget);
       expect(userSettingsRepository.saveAttempts, 1);
     });
 
@@ -585,6 +589,7 @@ void main() {
       await tester.pump();
       await tester.tap(find.text('Continue'));
       await tester.pumpAndSettle();
+      await selectAvailability(tester);
 
       final UserProfile? saved =
           await userSettingsRepository.loadProfile('danb_rhs');
@@ -621,6 +626,7 @@ void main() {
       await tester.pump();
       await tester.tap(find.text('Continue'));
       await tester.pumpAndSettle();
+      await selectAvailability(tester);
 
       // A fresh repository instance over the *same* database — the way
       // the next app launch's AppBootstrapService would construct one —

@@ -87,11 +87,14 @@ class _SplashScreenState extends State<SplashScreen> {
     // instance; none of them ever constructs another one.
     final BootstrapSessionController controller = BootstrapSessionController(
         ready,
-        progressRepository: widget.progressRepository);
+        progressRepository: widget.progressRepository,
+        userSettingsRepository: widget.bootstrapService.userSettingsRepository);
 
     final Widget screen = ready.onboardingComplete
         ? MainShell(analytics: widget.analytics)
         : WelcomeScreen(
+            userSettingsRepository:
+                widget.bootstrapService.userSettingsRepository,
             localStore: widget.localStore,
             analytics: widget.analytics,
           );

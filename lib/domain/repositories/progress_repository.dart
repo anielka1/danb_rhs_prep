@@ -57,6 +57,9 @@ AnswerAttempt canonicalizeAnswerAttempt(AnswerAttempt attempt) {
     questionVersion: attempt.questionVersion,
     correctAnswerId: attempt.correctAnswerId,
     explanation: attempt.explanation,
+    confident: attempt.confident,
+    activeDurationSeconds: attempt.activeDurationSeconds,
+    localAnsweredDate: attempt.localAnsweredDate,
   );
 }
 

@@ -1,3 +1,4 @@
+import '../domain/repositories/user_settings_repository.dart';
 import 'app_bootstrap_service.dart';
 import '../domain/repositories/progress_repository.dart';
 
@@ -25,9 +26,11 @@ import '../domain/repositories/progress_repository.dart';
 /// ever forwards the instance it was given.
 class BootstrapSessionController {
   BootstrapSessionController(BootstrapReady initial,
-      {ProgressRepository? progressRepository})
+      {ProgressRepository? progressRepository, this.userSettingsRepository})
       : _snapshot = initial,
         _progressRepository = progressRepository;
+
+  final UserSettingsRepository? userSettingsRepository;
 
   /// The injected repository follows the session through pushed onboarding routes.
   ProgressRepository? _progressRepository;

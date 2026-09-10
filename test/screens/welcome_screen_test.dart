@@ -1,3 +1,4 @@
+import '../study_plan/onboarding_helper.dart';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -317,6 +318,7 @@ void main() {
       await tester.tap(find.text('Continue'));
       await tester.pumpAndSettle();
 
+      await selectAvailability(tester);
       expect(find.byType(MainShell), findsOneWidget);
       final UserProfile? saved =
           await userSettingsRepository.loadProfile(kDefaultExamId);

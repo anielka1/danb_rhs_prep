@@ -9,6 +9,27 @@ class $AnswerAttemptsTable extends AnswerAttempts
   final GeneratedDatabase attachedDatabase;
   final String? _alias;
   $AnswerAttemptsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _confidentMeta =
+      const VerificationMeta('confident');
+  @override
+  late final GeneratedColumn<bool> confident = GeneratedColumn<bool>(
+      'confident', aliasedName, true,
+      type: DriftSqlType.bool,
+      requiredDuringInsert: false,
+      defaultConstraints:
+          GeneratedColumn.constraintIsAlways('CHECK ("confident" IN (0, 1))'));
+  static const VerificationMeta _activeDurationSecondsMeta =
+      const VerificationMeta('activeDurationSeconds');
+  @override
+  late final GeneratedColumn<int> activeDurationSeconds = GeneratedColumn<int>(
+      'active_duration_seconds', aliasedName, true,
+      type: DriftSqlType.int, requiredDuringInsert: false);
+  static const VerificationMeta _localAnsweredDateMeta =
+      const VerificationMeta('localAnsweredDate');
+  @override
+  late final GeneratedColumn<String> localAnsweredDate =
+      GeneratedColumn<String>('local_answered_date', aliasedName, true,
+          type: DriftSqlType.string, requiredDuringInsert: false);
   static const VerificationMeta _idMeta = const VerificationMeta('id');
   @override
   late final GeneratedColumn<String> id = GeneratedColumn<String>(
@@ -102,6 +123,9 @@ class $AnswerAttemptsTable extends AnswerAttempts
       type: DriftSqlType.string, requiredDuringInsert: false);
   @override
   List<GeneratedColumn> get $columns => [
+        confident,
+        activeDurationSeconds,
+        localAnsweredDate,
         id,
         examId,
         questionId,
@@ -128,6 +152,22 @@ class $AnswerAttemptsTable extends AnswerAttempts
       {bool isInserting = false}) {
     final context = VerificationContext();
     final data = instance.toColumns(true);
+    if (data.containsKey('confident')) {
+      context.handle(_confidentMeta,
+          confident.isAcceptableOrUnknown(data['confident']!, _confidentMeta));
+    }
+    if (data.containsKey('active_duration_seconds')) {
+      context.handle(
+          _activeDurationSecondsMeta,
+          activeDurationSeconds.isAcceptableOrUnknown(
+              data['active_duration_seconds']!, _activeDurationSecondsMeta));
+    }
+    if (data.containsKey('local_answered_date')) {
+      context.handle(
+          _localAnsweredDateMeta,
+          localAnsweredDate.isAcceptableOrUnknown(
+              data['local_answered_date']!, _localAnsweredDateMeta));
+    }
     if (data.containsKey('id')) {
       context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
     } else if (isInserting) {
@@ -236,6 +276,12 @@ class $AnswerAttemptsTable extends AnswerAttempts
   AnswerAttemptRow map(Map<String, dynamic> data, {String? tablePrefix}) {
     final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
     return AnswerAttemptRow(
+      confident: attachedDatabase.typeMapping
+          .read(DriftSqlType.bool, data['${effectivePrefix}confident']),
+      activeDurationSeconds: attachedDatabase.typeMapping.read(
+          DriftSqlType.int, data['${effectivePrefix}active_duration_seconds']),
+      localAnsweredDate: attachedDatabase.typeMapping.read(
+          DriftSqlType.string, data['${effectivePrefix}local_answered_date']),
       id: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}id'])!,
       examId: attachedDatabase.typeMapping
@@ -277,6 +323,9 @@ class $AnswerAttemptsTable extends AnswerAttempts
 
 class AnswerAttemptRow extends DataClass
     implements Insertable<AnswerAttemptRow> {
+  final bool? confident;
+  final int? activeDurationSeconds;
+  final String? localAnsweredDate;
   final String id;
   final String examId;
   final String questionId;
@@ -313,7 +362,10 @@ class AnswerAttemptRow extends DataClass
   /// doc comment.
   final String? explanation;
   const AnswerAttemptRow(
-      {required this.id,
+      {this.confident,
+      this.activeDurationSeconds,
+      this.localAnsweredDate,
+      required this.id,
       required this.examId,
       required this.questionId,
       required this.domainId,
@@ -331,6 +383,15 @@ class AnswerAttemptRow extends DataClass
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
+    if (!nullToAbsent || confident != null) {
+      map['confident'] = Variable<bool>(confident);
+    }
+    if (!nullToAbsent || activeDurationSeconds != null) {
+      map['active_duration_seconds'] = Variable<int>(activeDurationSeconds);
+    }
+    if (!nullToAbsent || localAnsweredDate != null) {
+      map['local_answered_date'] = Variable<String>(localAnsweredDate);
+    }
     map['id'] = Variable<String>(id);
     map['exam_id'] = Variable<String>(examId);
     map['question_id'] = Variable<String>(questionId);
@@ -359,6 +420,15 @@ class AnswerAttemptRow extends DataClass
 
   AnswerAttemptsCompanion toCompanion(bool nullToAbsent) {
     return AnswerAttemptsCompanion(
+      confident: confident == null && nullToAbsent
+          ? const Value.absent()
+          : Value(confident),
+      activeDurationSeconds: activeDurationSeconds == null && nullToAbsent
+          ? const Value.absent()
+          : Value(activeDurationSeconds),
+      localAnsweredDate: localAnsweredDate == null && nullToAbsent
+          ? const Value.absent()
+          : Value(localAnsweredDate),
       id: Value(id),
       examId: Value(examId),
       questionId: Value(questionId),
@@ -389,6 +459,11 @@ class AnswerAttemptRow extends DataClass
       {ValueSerializer? serializer}) {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return AnswerAttemptRow(
+      confident: serializer.fromJson<bool?>(json['confident']),
+      activeDurationSeconds:
+          serializer.fromJson<int?>(json['activeDurationSeconds']),
+      localAnsweredDate:
+          serializer.fromJson<String?>(json['localAnsweredDate']),
       id: serializer.fromJson<String>(json['id']),
       examId: serializer.fromJson<String>(json['examId']),
       questionId: serializer.fromJson<String>(json['questionId']),
@@ -410,6 +485,9 @@ class AnswerAttemptRow extends DataClass
   Map<String, dynamic> toJson({ValueSerializer? serializer}) {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return <String, dynamic>{
+      'confident': serializer.toJson<bool?>(confident),
+      'activeDurationSeconds': serializer.toJson<int?>(activeDurationSeconds),
+      'localAnsweredDate': serializer.toJson<String?>(localAnsweredDate),
       'id': serializer.toJson<String>(id),
       'examId': serializer.toJson<String>(examId),
       'questionId': serializer.toJson<String>(questionId),
@@ -429,7 +507,10 @@ class AnswerAttemptRow extends DataClass
   }
 
   AnswerAttemptRow copyWith(
-          {String? id,
+          {Value<bool?> confident = const Value.absent(),
+          Value<int?> activeDurationSeconds = const Value.absent(),
+          Value<String?> localAnsweredDate = const Value.absent(),
+          String? id,
           String? examId,
           String? questionId,
           String? domainId,
@@ -445,6 +526,13 @@ class AnswerAttemptRow extends DataClass
           Value<String?> correctAnswerId = const Value.absent(),
           Value<String?> explanation = const Value.absent()}) =>
       AnswerAttemptRow(
+        confident: confident.present ? confident.value : this.confident,
+        activeDurationSeconds: activeDurationSeconds.present
+            ? activeDurationSeconds.value
+            : this.activeDurationSeconds,
+        localAnsweredDate: localAnsweredDate.present
+            ? localAnsweredDate.value
+            : this.localAnsweredDate,
         id: id ?? this.id,
         examId: examId ?? this.examId,
         questionId: questionId ?? this.questionId,
@@ -468,6 +556,13 @@ class AnswerAttemptRow extends DataClass
       );
   AnswerAttemptRow copyWithCompanion(AnswerAttemptsCompanion data) {
     return AnswerAttemptRow(
+      confident: data.confident.present ? data.confident.value : this.confident,
+      activeDurationSeconds: data.activeDurationSeconds.present
+          ? data.activeDurationSeconds.value
+          : this.activeDurationSeconds,
+      localAnsweredDate: data.localAnsweredDate.present
+          ? data.localAnsweredDate.value
+          : this.localAnsweredDate,
       id: data.id.present ? data.id.value : this.id,
       examId: data.examId.present ? data.examId.value : this.examId,
       questionId:
@@ -502,6 +597,9 @@ class AnswerAttemptRow extends DataClass
   @override
   String toString() {
     return (StringBuffer('AnswerAttemptRow(')
+          ..write('confident: $confident, ')
+          ..write('activeDurationSeconds: $activeDurationSeconds, ')
+          ..write('localAnsweredDate: $localAnsweredDate, ')
           ..write('id: $id, ')
           ..write('examId: $examId, ')
           ..write('questionId: $questionId, ')
@@ -523,6 +621,9 @@ class AnswerAttemptRow extends DataClass
 
   @override
   int get hashCode => Object.hash(
+      confident,
+      activeDurationSeconds,
+      localAnsweredDate,
       id,
       examId,
       questionId,
@@ -542,6 +643,9 @@ class AnswerAttemptRow extends DataClass
   bool operator ==(Object other) =>
       identical(this, other) ||
       (other is AnswerAttemptRow &&
+          other.confident == this.confident &&
+          other.activeDurationSeconds == this.activeDurationSeconds &&
+          other.localAnsweredDate == this.localAnsweredDate &&
           other.id == this.id &&
           other.examId == this.examId &&
           other.questionId == this.questionId &&
@@ -560,6 +664,9 @@ class AnswerAttemptRow extends DataClass
 }
 
 class AnswerAttemptsCompanion extends UpdateCompanion<AnswerAttemptRow> {
+  final Value<bool?> confident;
+  final Value<int?> activeDurationSeconds;
+  final Value<String?> localAnsweredDate;
   final Value<String> id;
   final Value<String> examId;
   final Value<String> questionId;
@@ -577,6 +684,9 @@ class AnswerAttemptsCompanion extends UpdateCompanion<AnswerAttemptRow> {
   final Value<String?> explanation;
   final Value<int> rowid;
   const AnswerAttemptsCompanion({
+    this.confident = const Value.absent(),
+    this.activeDurationSeconds = const Value.absent(),
+    this.localAnsweredDate = const Value.absent(),
     this.id = const Value.absent(),
     this.examId = const Value.absent(),
     this.questionId = const Value.absent(),
@@ -595,6 +705,9 @@ class AnswerAttemptsCompanion extends UpdateCompanion<AnswerAttemptRow> {
     this.rowid = const Value.absent(),
   });
   AnswerAttemptsCompanion.insert({
+    this.confident = const Value.absent(),
+    this.activeDurationSeconds = const Value.absent(),
+    this.localAnsweredDate = const Value.absent(),
     required String id,
     required String examId,
     required String questionId,
@@ -623,6 +736,9 @@ class AnswerAttemptsCompanion extends UpdateCompanion<AnswerAttemptRow> {
         isCorrect = Value(isCorrect),
         answeredAt = Value(answeredAt);
   static Insertable<AnswerAttemptRow> custom({
+    Expression<bool>? confident,
+    Expression<int>? activeDurationSeconds,
+    Expression<String>? localAnsweredDate,
     Expression<String>? id,
     Expression<String>? examId,
     Expression<String>? questionId,
@@ -641,6 +757,10 @@ class AnswerAttemptsCompanion extends UpdateCompanion<AnswerAttemptRow> {
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
+      if (confident != null) 'confident': confident,
+      if (activeDurationSeconds != null)
+        'active_duration_seconds': activeDurationSeconds,
+      if (localAnsweredDate != null) 'local_answered_date': localAnsweredDate,
       if (id != null) 'id': id,
       if (examId != null) 'exam_id': examId,
       if (questionId != null) 'question_id': questionId,
@@ -661,7 +781,10 @@ class AnswerAttemptsCompanion extends UpdateCompanion<AnswerAttemptRow> {
   }
 
   AnswerAttemptsCompanion copyWith(
-      {Value<String>? id,
+      {Value<bool?>? confident,
+      Value<int?>? activeDurationSeconds,
+      Value<String?>? localAnsweredDate,
+      Value<String>? id,
       Value<String>? examId,
       Value<String>? questionId,
       Value<String>? domainId,
@@ -678,6 +801,10 @@ class AnswerAttemptsCompanion extends UpdateCompanion<AnswerAttemptRow> {
       Value<String?>? explanation,
       Value<int>? rowid}) {
     return AnswerAttemptsCompanion(
+      confident: confident ?? this.confident,
+      activeDurationSeconds:
+          activeDurationSeconds ?? this.activeDurationSeconds,
+      localAnsweredDate: localAnsweredDate ?? this.localAnsweredDate,
       id: id ?? this.id,
       examId: examId ?? this.examId,
       questionId: questionId ?? this.questionId,
@@ -700,6 +827,16 @@ class AnswerAttemptsCompanion extends UpdateCompanion<AnswerAttemptRow> {
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
+    if (confident.present) {
+      map['confident'] = Variable<bool>(confident.value);
+    }
+    if (activeDurationSeconds.present) {
+      map['active_duration_seconds'] =
+          Variable<int>(activeDurationSeconds.value);
+    }
+    if (localAnsweredDate.present) {
+      map['local_answered_date'] = Variable<String>(localAnsweredDate.value);
+    }
     if (id.present) {
       map['id'] = Variable<String>(id.value);
     }
@@ -754,6 +891,9 @@ class AnswerAttemptsCompanion extends UpdateCompanion<AnswerAttemptRow> {
   @override
   String toString() {
     return (StringBuffer('AnswerAttemptsCompanion(')
+          ..write('confident: $confident, ')
+          ..write('activeDurationSeconds: $activeDurationSeconds, ')
+          ..write('localAnsweredDate: $localAnsweredDate, ')
           ..write('id: $id, ')
           ..write('examId: $examId, ')
           ..write('questionId: $questionId, ')
@@ -1233,6 +1373,18 @@ class $PracticeSessionsTable extends PracticeSessions
   final GeneratedDatabase attachedDatabase;
   final String? _alias;
   $PracticeSessionsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _planDateMeta =
+      const VerificationMeta('planDate');
+  @override
+  late final GeneratedColumn<String> planDate = GeneratedColumn<String>(
+      'plan_date', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _reviewQuestionIdsJsonMeta =
+      const VerificationMeta('reviewQuestionIdsJson');
+  @override
+  late final GeneratedColumn<String> reviewQuestionIdsJson =
+      GeneratedColumn<String>('review_question_ids_json', aliasedName, true,
+          type: DriftSqlType.string, requiredDuringInsert: false);
   static const VerificationMeta _idMeta = const VerificationMeta('id');
   @override
   late final GeneratedColumn<String> id = GeneratedColumn<String>(
@@ -1279,6 +1431,8 @@ class $PracticeSessionsTable extends PracticeSessions
       type: DriftSqlType.string, requiredDuringInsert: false);
   @override
   List<GeneratedColumn> get $columns => [
+        planDate,
+        reviewQuestionIdsJson,
         id,
         examId,
         mode,
@@ -1298,6 +1452,16 @@ class $PracticeSessionsTable extends PracticeSessions
       {bool isInserting = false}) {
     final context = VerificationContext();
     final data = instance.toColumns(true);
+    if (data.containsKey('plan_date')) {
+      context.handle(_planDateMeta,
+          planDate.isAcceptableOrUnknown(data['plan_date']!, _planDateMeta));
+    }
+    if (data.containsKey('review_question_ids_json')) {
+      context.handle(
+          _reviewQuestionIdsJsonMeta,
+          reviewQuestionIdsJson.isAcceptableOrUnknown(
+              data['review_question_ids_json']!, _reviewQuestionIdsJsonMeta));
+    }
     if (data.containsKey('id')) {
       context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
     } else if (isInserting) {
@@ -1356,6 +1520,11 @@ class $PracticeSessionsTable extends PracticeSessions
   PracticeSessionRow map(Map<String, dynamic> data, {String? tablePrefix}) {
     final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
     return PracticeSessionRow(
+      planDate: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}plan_date']),
+      reviewQuestionIdsJson: attachedDatabase.typeMapping.read(
+          DriftSqlType.string,
+          data['${effectivePrefix}review_question_ids_json']),
       id: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}id'])!,
       examId: attachedDatabase.typeMapping
@@ -1383,6 +1552,8 @@ class $PracticeSessionsTable extends PracticeSessions
 
 class PracticeSessionRow extends DataClass
     implements Insertable<PracticeSessionRow> {
+  final String? planDate;
+  final String? reviewQuestionIdsJson;
   final String id;
   final String examId;
   final String mode;
@@ -1397,7 +1568,9 @@ class PracticeSessionRow extends DataClass
   /// backfill it from.
   final String? contentVersion;
   const PracticeSessionRow(
-      {required this.id,
+      {this.planDate,
+      this.reviewQuestionIdsJson,
+      required this.id,
       required this.examId,
       required this.mode,
       required this.questionIdsJson,
@@ -1408,6 +1581,12 @@ class PracticeSessionRow extends DataClass
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
+    if (!nullToAbsent || planDate != null) {
+      map['plan_date'] = Variable<String>(planDate);
+    }
+    if (!nullToAbsent || reviewQuestionIdsJson != null) {
+      map['review_question_ids_json'] = Variable<String>(reviewQuestionIdsJson);
+    }
     map['id'] = Variable<String>(id);
     map['exam_id'] = Variable<String>(examId);
     map['mode'] = Variable<String>(mode);
@@ -1425,6 +1604,12 @@ class PracticeSessionRow extends DataClass
 
   PracticeSessionsCompanion toCompanion(bool nullToAbsent) {
     return PracticeSessionsCompanion(
+      planDate: planDate == null && nullToAbsent
+          ? const Value.absent()
+          : Value(planDate),
+      reviewQuestionIdsJson: reviewQuestionIdsJson == null && nullToAbsent
+          ? const Value.absent()
+          : Value(reviewQuestionIdsJson),
       id: Value(id),
       examId: Value(examId),
       mode: Value(mode),
@@ -1444,6 +1629,9 @@ class PracticeSessionRow extends DataClass
       {ValueSerializer? serializer}) {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return PracticeSessionRow(
+      planDate: serializer.fromJson<String?>(json['planDate']),
+      reviewQuestionIdsJson:
+          serializer.fromJson<String?>(json['reviewQuestionIdsJson']),
       id: serializer.fromJson<String>(json['id']),
       examId: serializer.fromJson<String>(json['examId']),
       mode: serializer.fromJson<String>(json['mode']),
@@ -1458,6 +1646,9 @@ class PracticeSessionRow extends DataClass
   Map<String, dynamic> toJson({ValueSerializer? serializer}) {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return <String, dynamic>{
+      'planDate': serializer.toJson<String?>(planDate),
+      'reviewQuestionIdsJson':
+          serializer.toJson<String?>(reviewQuestionIdsJson),
       'id': serializer.toJson<String>(id),
       'examId': serializer.toJson<String>(examId),
       'mode': serializer.toJson<String>(mode),
@@ -1470,7 +1661,9 @@ class PracticeSessionRow extends DataClass
   }
 
   PracticeSessionRow copyWith(
-          {String? id,
+          {Value<String?> planDate = const Value.absent(),
+          Value<String?> reviewQuestionIdsJson = const Value.absent(),
+          String? id,
           String? examId,
           String? mode,
           String? questionIdsJson,
@@ -1479,6 +1672,10 @@ class PracticeSessionRow extends DataClass
           Value<DateTime?> completedAt = const Value.absent(),
           Value<String?> contentVersion = const Value.absent()}) =>
       PracticeSessionRow(
+        planDate: planDate.present ? planDate.value : this.planDate,
+        reviewQuestionIdsJson: reviewQuestionIdsJson.present
+            ? reviewQuestionIdsJson.value
+            : this.reviewQuestionIdsJson,
         id: id ?? this.id,
         examId: examId ?? this.examId,
         mode: mode ?? this.mode,
@@ -1491,6 +1688,10 @@ class PracticeSessionRow extends DataClass
       );
   PracticeSessionRow copyWithCompanion(PracticeSessionsCompanion data) {
     return PracticeSessionRow(
+      planDate: data.planDate.present ? data.planDate.value : this.planDate,
+      reviewQuestionIdsJson: data.reviewQuestionIdsJson.present
+          ? data.reviewQuestionIdsJson.value
+          : this.reviewQuestionIdsJson,
       id: data.id.present ? data.id.value : this.id,
       examId: data.examId.present ? data.examId.value : this.examId,
       mode: data.mode.present ? data.mode.value : this.mode,
@@ -1510,6 +1711,8 @@ class PracticeSessionRow extends DataClass
   @override
   String toString() {
     return (StringBuffer('PracticeSessionRow(')
+          ..write('planDate: $planDate, ')
+          ..write('reviewQuestionIdsJson: $reviewQuestionIdsJson, ')
           ..write('id: $id, ')
           ..write('examId: $examId, ')
           ..write('mode: $mode, ')
@@ -1523,12 +1726,14 @@ class PracticeSessionRow extends DataClass
   }
 
   @override
-  int get hashCode => Object.hash(id, examId, mode, questionIdsJson, status,
-      startedAt, completedAt, contentVersion);
+  int get hashCode => Object.hash(planDate, reviewQuestionIdsJson, id, examId,
+      mode, questionIdsJson, status, startedAt, completedAt, contentVersion);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
       (other is PracticeSessionRow &&
+          other.planDate == this.planDate &&
+          other.reviewQuestionIdsJson == this.reviewQuestionIdsJson &&
           other.id == this.id &&
           other.examId == this.examId &&
           other.mode == this.mode &&
@@ -1540,6 +1745,8 @@ class PracticeSessionRow extends DataClass
 }
 
 class PracticeSessionsCompanion extends UpdateCompanion<PracticeSessionRow> {
+  final Value<String?> planDate;
+  final Value<String?> reviewQuestionIdsJson;
   final Value<String> id;
   final Value<String> examId;
   final Value<String> mode;
@@ -1550,6 +1757,8 @@ class PracticeSessionsCompanion extends UpdateCompanion<PracticeSessionRow> {
   final Value<String?> contentVersion;
   final Value<int> rowid;
   const PracticeSessionsCompanion({
+    this.planDate = const Value.absent(),
+    this.reviewQuestionIdsJson = const Value.absent(),
     this.id = const Value.absent(),
     this.examId = const Value.absent(),
     this.mode = const Value.absent(),
@@ -1561,6 +1770,8 @@ class PracticeSessionsCompanion extends UpdateCompanion<PracticeSessionRow> {
     this.rowid = const Value.absent(),
   });
   PracticeSessionsCompanion.insert({
+    this.planDate = const Value.absent(),
+    this.reviewQuestionIdsJson = const Value.absent(),
     required String id,
     required String examId,
     required String mode,
@@ -1577,6 +1788,8 @@ class PracticeSessionsCompanion extends UpdateCompanion<PracticeSessionRow> {
         status = Value(status),
         startedAt = Value(startedAt);
   static Insertable<PracticeSessionRow> custom({
+    Expression<String>? planDate,
+    Expression<String>? reviewQuestionIdsJson,
     Expression<String>? id,
     Expression<String>? examId,
     Expression<String>? mode,
@@ -1588,6 +1801,9 @@ class PracticeSessionsCompanion extends UpdateCompanion<PracticeSessionRow> {
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
+      if (planDate != null) 'plan_date': planDate,
+      if (reviewQuestionIdsJson != null)
+        'review_question_ids_json': reviewQuestionIdsJson,
       if (id != null) 'id': id,
       if (examId != null) 'exam_id': examId,
       if (mode != null) 'mode': mode,
@@ -1601,7 +1817,9 @@ class PracticeSessionsCompanion extends UpdateCompanion<PracticeSessionRow> {
   }
 
   PracticeSessionsCompanion copyWith(
-      {Value<String>? id,
+      {Value<String?>? planDate,
+      Value<String?>? reviewQuestionIdsJson,
+      Value<String>? id,
       Value<String>? examId,
       Value<String>? mode,
       Value<String>? questionIdsJson,
@@ -1611,6 +1829,9 @@ class PracticeSessionsCompanion extends UpdateCompanion<PracticeSessionRow> {
       Value<String?>? contentVersion,
       Value<int>? rowid}) {
     return PracticeSessionsCompanion(
+      planDate: planDate ?? this.planDate,
+      reviewQuestionIdsJson:
+          reviewQuestionIdsJson ?? this.reviewQuestionIdsJson,
       id: id ?? this.id,
       examId: examId ?? this.examId,
       mode: mode ?? this.mode,
@@ -1626,6 +1847,13 @@ class PracticeSessionsCompanion extends UpdateCompanion<PracticeSessionRow> {
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
+    if (planDate.present) {
+      map['plan_date'] = Variable<String>(planDate.value);
+    }
+    if (reviewQuestionIdsJson.present) {
+      map['review_question_ids_json'] =
+          Variable<String>(reviewQuestionIdsJson.value);
+    }
     if (id.present) {
       map['id'] = Variable<String>(id.value);
     }
@@ -1659,6 +1887,8 @@ class PracticeSessionsCompanion extends UpdateCompanion<PracticeSessionRow> {
   @override
   String toString() {
     return (StringBuffer('PracticeSessionsCompanion(')
+          ..write('planDate: $planDate, ')
+          ..write('reviewQuestionIdsJson: $reviewQuestionIdsJson, ')
           ..write('id: $id, ')
           ..write('examId: $examId, ')
           ..write('mode: $mode, ')
@@ -1679,6 +1909,12 @@ class $MockAttemptsTable extends MockAttempts
   final GeneratedDatabase attachedDatabase;
   final String? _alias;
   $MockAttemptsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _seenBeforeStartCountMeta =
+      const VerificationMeta('seenBeforeStartCount');
+  @override
+  late final GeneratedColumn<int> seenBeforeStartCount = GeneratedColumn<int>(
+      'seen_before_start_count', aliasedName, true,
+      type: DriftSqlType.int, requiredDuringInsert: false);
   static const VerificationMeta _idMeta = const VerificationMeta('id');
   @override
   late final GeneratedColumn<String> id = GeneratedColumn<String>(
@@ -1752,6 +1988,7 @@ class $MockAttemptsTable extends MockAttempts
       type: DriftSqlType.int, requiredDuringInsert: false);
   @override
   List<GeneratedColumn> get $columns => [
+        seenBeforeStartCount,
         id,
         examId,
         questionIdsJson,
@@ -1775,6 +2012,12 @@ class $MockAttemptsTable extends MockAttempts
       {bool isInserting = false}) {
     final context = VerificationContext();
     final data = instance.toColumns(true);
+    if (data.containsKey('seen_before_start_count')) {
+      context.handle(
+          _seenBeforeStartCountMeta,
+          seenBeforeStartCount.isAcceptableOrUnknown(
+              data['seen_before_start_count']!, _seenBeforeStartCountMeta));
+    }
     if (data.containsKey('id')) {
       context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
     } else if (isInserting) {
@@ -1863,6 +2106,8 @@ class $MockAttemptsTable extends MockAttempts
   MockAttemptRow map(Map<String, dynamic> data, {String? tablePrefix}) {
     final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
     return MockAttemptRow(
+      seenBeforeStartCount: attachedDatabase.typeMapping.read(
+          DriftSqlType.int, data['${effectivePrefix}seen_before_start_count']),
       id: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}id'])!,
       examId: attachedDatabase.typeMapping
@@ -1898,6 +2143,7 @@ class $MockAttemptsTable extends MockAttempts
 }
 
 class MockAttemptRow extends DataClass implements Insertable<MockAttemptRow> {
+  final int? seenBeforeStartCount;
   final String id;
   final String examId;
   final String questionIdsJson;
@@ -1911,7 +2157,8 @@ class MockAttemptRow extends DataClass implements Insertable<MockAttemptRow> {
   final DateTime? completedAt;
   final int? correctCount;
   const MockAttemptRow(
-      {required this.id,
+      {this.seenBeforeStartCount,
+      required this.id,
       required this.examId,
       required this.questionIdsJson,
       required this.answersJson,
@@ -1926,6 +2173,9 @@ class MockAttemptRow extends DataClass implements Insertable<MockAttemptRow> {
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
+    if (!nullToAbsent || seenBeforeStartCount != null) {
+      map['seen_before_start_count'] = Variable<int>(seenBeforeStartCount);
+    }
     map['id'] = Variable<String>(id);
     map['exam_id'] = Variable<String>(examId);
     map['question_ids_json'] = Variable<String>(questionIdsJson);
@@ -1949,6 +2199,9 @@ class MockAttemptRow extends DataClass implements Insertable<MockAttemptRow> {
 
   MockAttemptsCompanion toCompanion(bool nullToAbsent) {
     return MockAttemptsCompanion(
+      seenBeforeStartCount: seenBeforeStartCount == null && nullToAbsent
+          ? const Value.absent()
+          : Value(seenBeforeStartCount),
       id: Value(id),
       examId: Value(examId),
       questionIdsJson: Value(questionIdsJson),
@@ -1974,6 +2227,8 @@ class MockAttemptRow extends DataClass implements Insertable<MockAttemptRow> {
       {ValueSerializer? serializer}) {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return MockAttemptRow(
+      seenBeforeStartCount:
+          serializer.fromJson<int?>(json['seenBeforeStartCount']),
       id: serializer.fromJson<String>(json['id']),
       examId: serializer.fromJson<String>(json['examId']),
       questionIdsJson: serializer.fromJson<String>(json['questionIdsJson']),
@@ -1994,6 +2249,7 @@ class MockAttemptRow extends DataClass implements Insertable<MockAttemptRow> {
   Map<String, dynamic> toJson({ValueSerializer? serializer}) {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return <String, dynamic>{
+      'seenBeforeStartCount': serializer.toJson<int?>(seenBeforeStartCount),
       'id': serializer.toJson<String>(id),
       'examId': serializer.toJson<String>(examId),
       'questionIdsJson': serializer.toJson<String>(questionIdsJson),
@@ -2011,7 +2267,8 @@ class MockAttemptRow extends DataClass implements Insertable<MockAttemptRow> {
   }
 
   MockAttemptRow copyWith(
-          {String? id,
+          {Value<int?> seenBeforeStartCount = const Value.absent(),
+          String? id,
           String? examId,
           String? questionIdsJson,
           String? answersJson,
@@ -2024,6 +2281,9 @@ class MockAttemptRow extends DataClass implements Insertable<MockAttemptRow> {
           Value<DateTime?> completedAt = const Value.absent(),
           Value<int?> correctCount = const Value.absent()}) =>
       MockAttemptRow(
+        seenBeforeStartCount: seenBeforeStartCount.present
+            ? seenBeforeStartCount.value
+            : this.seenBeforeStartCount,
         id: id ?? this.id,
         examId: examId ?? this.examId,
         questionIdsJson: questionIdsJson ?? this.questionIdsJson,
@@ -2042,6 +2302,9 @@ class MockAttemptRow extends DataClass implements Insertable<MockAttemptRow> {
       );
   MockAttemptRow copyWithCompanion(MockAttemptsCompanion data) {
     return MockAttemptRow(
+      seenBeforeStartCount: data.seenBeforeStartCount.present
+          ? data.seenBeforeStartCount.value
+          : this.seenBeforeStartCount,
       id: data.id.present ? data.id.value : this.id,
       examId: data.examId.present ? data.examId.value : this.examId,
       questionIdsJson: data.questionIdsJson.present
@@ -2074,6 +2337,7 @@ class MockAttemptRow extends DataClass implements Insertable<MockAttemptRow> {
   @override
   String toString() {
     return (StringBuffer('MockAttemptRow(')
+          ..write('seenBeforeStartCount: $seenBeforeStartCount, ')
           ..write('id: $id, ')
           ..write('examId: $examId, ')
           ..write('questionIdsJson: $questionIdsJson, ')
@@ -2092,6 +2356,7 @@ class MockAttemptRow extends DataClass implements Insertable<MockAttemptRow> {
 
   @override
   int get hashCode => Object.hash(
+      seenBeforeStartCount,
       id,
       examId,
       questionIdsJson,
@@ -2108,6 +2373,7 @@ class MockAttemptRow extends DataClass implements Insertable<MockAttemptRow> {
   bool operator ==(Object other) =>
       identical(this, other) ||
       (other is MockAttemptRow &&
+          other.seenBeforeStartCount == this.seenBeforeStartCount &&
           other.id == this.id &&
           other.examId == this.examId &&
           other.questionIdsJson == this.questionIdsJson &&
@@ -2123,6 +2389,7 @@ class MockAttemptRow extends DataClass implements Insertable<MockAttemptRow> {
 }
 
 class MockAttemptsCompanion extends UpdateCompanion<MockAttemptRow> {
+  final Value<int?> seenBeforeStartCount;
   final Value<String> id;
   final Value<String> examId;
   final Value<String> questionIdsJson;
@@ -2137,6 +2404,7 @@ class MockAttemptsCompanion extends UpdateCompanion<MockAttemptRow> {
   final Value<int?> correctCount;
   final Value<int> rowid;
   const MockAttemptsCompanion({
+    this.seenBeforeStartCount = const Value.absent(),
     this.id = const Value.absent(),
     this.examId = const Value.absent(),
     this.questionIdsJson = const Value.absent(),
@@ -2152,6 +2420,7 @@ class MockAttemptsCompanion extends UpdateCompanion<MockAttemptRow> {
     this.rowid = const Value.absent(),
   });
   MockAttemptsCompanion.insert({
+    this.seenBeforeStartCount = const Value.absent(),
     required String id,
     required String examId,
     required String questionIdsJson,
@@ -2174,6 +2443,7 @@ class MockAttemptsCompanion extends UpdateCompanion<MockAttemptRow> {
         startedAt = Value(startedAt),
         durationMinutes = Value(durationMinutes);
   static Insertable<MockAttemptRow> custom({
+    Expression<int>? seenBeforeStartCount,
     Expression<String>? id,
     Expression<String>? examId,
     Expression<String>? questionIdsJson,
@@ -2189,6 +2459,8 @@ class MockAttemptsCompanion extends UpdateCompanion<MockAttemptRow> {
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
+      if (seenBeforeStartCount != null)
+        'seen_before_start_count': seenBeforeStartCount,
       if (id != null) 'id': id,
       if (examId != null) 'exam_id': examId,
       if (questionIdsJson != null) 'question_ids_json': questionIdsJson,
@@ -2208,7 +2480,8 @@ class MockAttemptsCompanion extends UpdateCompanion<MockAttemptRow> {
   }
 
   MockAttemptsCompanion copyWith(
-      {Value<String>? id,
+      {Value<int?>? seenBeforeStartCount,
+      Value<String>? id,
       Value<String>? examId,
       Value<String>? questionIdsJson,
       Value<String>? answersJson,
@@ -2222,6 +2495,7 @@ class MockAttemptsCompanion extends UpdateCompanion<MockAttemptRow> {
       Value<int?>? correctCount,
       Value<int>? rowid}) {
     return MockAttemptsCompanion(
+      seenBeforeStartCount: seenBeforeStartCount ?? this.seenBeforeStartCount,
       id: id ?? this.id,
       examId: examId ?? this.examId,
       questionIdsJson: questionIdsJson ?? this.questionIdsJson,
@@ -2242,6 +2516,10 @@ class MockAttemptsCompanion extends UpdateCompanion<MockAttemptRow> {
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
+    if (seenBeforeStartCount.present) {
+      map['seen_before_start_count'] =
+          Variable<int>(seenBeforeStartCount.value);
+    }
     if (id.present) {
       map['id'] = Variable<String>(id.value);
     }
@@ -2288,6 +2566,7 @@ class MockAttemptsCompanion extends UpdateCompanion<MockAttemptRow> {
   @override
   String toString() {
     return (StringBuffer('MockAttemptsCompanion(')
+          ..write('seenBeforeStartCount: $seenBeforeStartCount, ')
           ..write('id: $id, ')
           ..write('examId: $examId, ')
           ..write('questionIdsJson: $questionIdsJson, ')
@@ -2984,6 +3263,12 @@ class $UserProfilesTable extends UserProfiles
   final GeneratedDatabase attachedDatabase;
   final String? _alias;
   $UserProfilesTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _studyPlanPreferencesJsonMeta =
+      const VerificationMeta('studyPlanPreferencesJson');
+  @override
+  late final GeneratedColumn<String> studyPlanPreferencesJson =
+      GeneratedColumn<String>('study_plan_preferences_json', aliasedName, true,
+          type: DriftSqlType.string, requiredDuringInsert: false);
   static const VerificationMeta _examIdMeta = const VerificationMeta('examId');
   @override
   late final GeneratedColumn<String> examId = GeneratedColumn<String>(
@@ -3051,6 +3336,7 @@ class $UserProfilesTable extends UserProfiles
       type: DriftSqlType.dateTime, requiredDuringInsert: true);
   @override
   List<GeneratedColumn> get $columns => [
+        studyPlanPreferencesJson,
         examId,
         experienceLevel,
         examDatePrecision,
@@ -3072,6 +3358,13 @@ class $UserProfilesTable extends UserProfiles
       {bool isInserting = false}) {
     final context = VerificationContext();
     final data = instance.toColumns(true);
+    if (data.containsKey('study_plan_preferences_json')) {
+      context.handle(
+          _studyPlanPreferencesJsonMeta,
+          studyPlanPreferencesJson.isAcceptableOrUnknown(
+              data['study_plan_preferences_json']!,
+              _studyPlanPreferencesJsonMeta));
+    }
     if (data.containsKey('exam_id')) {
       context.handle(_examIdMeta,
           examId.isAcceptableOrUnknown(data['exam_id']!, _examIdMeta));
@@ -3151,6 +3444,9 @@ class $UserProfilesTable extends UserProfiles
   UserProfileRow map(Map<String, dynamic> data, {String? tablePrefix}) {
     final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
     return UserProfileRow(
+      studyPlanPreferencesJson: attachedDatabase.typeMapping.read(
+          DriftSqlType.string,
+          data['${effectivePrefix}study_plan_preferences_json']),
       examId: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}exam_id'])!,
       experienceLevel: attachedDatabase.typeMapping.read(
@@ -3181,6 +3477,7 @@ class $UserProfilesTable extends UserProfiles
 }
 
 class UserProfileRow extends DataClass implements Insertable<UserProfileRow> {
+  final String? studyPlanPreferencesJson;
   final String examId;
   final String experienceLevel;
   final String examDatePrecision;
@@ -3192,7 +3489,8 @@ class UserProfileRow extends DataClass implements Insertable<UserProfileRow> {
   final DateTime createdAt;
   final DateTime updatedAt;
   const UserProfileRow(
-      {required this.examId,
+      {this.studyPlanPreferencesJson,
+      required this.examId,
       required this.experienceLevel,
       required this.examDatePrecision,
       this.examDate,
@@ -3205,6 +3503,10 @@ class UserProfileRow extends DataClass implements Insertable<UserProfileRow> {
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
+    if (!nullToAbsent || studyPlanPreferencesJson != null) {
+      map['study_plan_preferences_json'] =
+          Variable<String>(studyPlanPreferencesJson);
+    }
     map['exam_id'] = Variable<String>(examId);
     map['experience_level'] = Variable<String>(experienceLevel);
     map['exam_date_precision'] = Variable<String>(examDatePrecision);
@@ -3222,6 +3524,9 @@ class UserProfileRow extends DataClass implements Insertable<UserProfileRow> {
 
   UserProfilesCompanion toCompanion(bool nullToAbsent) {
     return UserProfilesCompanion(
+      studyPlanPreferencesJson: studyPlanPreferencesJson == null && nullToAbsent
+          ? const Value.absent()
+          : Value(studyPlanPreferencesJson),
       examId: Value(examId),
       experienceLevel: Value(experienceLevel),
       examDatePrecision: Value(examDatePrecision),
@@ -3241,6 +3546,8 @@ class UserProfileRow extends DataClass implements Insertable<UserProfileRow> {
       {ValueSerializer? serializer}) {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return UserProfileRow(
+      studyPlanPreferencesJson:
+          serializer.fromJson<String?>(json['studyPlanPreferencesJson']),
       examId: serializer.fromJson<String>(json['examId']),
       experienceLevel: serializer.fromJson<String>(json['experienceLevel']),
       examDatePrecision: serializer.fromJson<String>(json['examDatePrecision']),
@@ -3258,6 +3565,8 @@ class UserProfileRow extends DataClass implements Insertable<UserProfileRow> {
   Map<String, dynamic> toJson({ValueSerializer? serializer}) {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return <String, dynamic>{
+      'studyPlanPreferencesJson':
+          serializer.toJson<String?>(studyPlanPreferencesJson),
       'examId': serializer.toJson<String>(examId),
       'experienceLevel': serializer.toJson<String>(experienceLevel),
       'examDatePrecision': serializer.toJson<String>(examDatePrecision),
@@ -3272,7 +3581,8 @@ class UserProfileRow extends DataClass implements Insertable<UserProfileRow> {
   }
 
   UserProfileRow copyWith(
-          {String? examId,
+          {Value<String?> studyPlanPreferencesJson = const Value.absent(),
+          String? examId,
           String? experienceLevel,
           String? examDatePrecision,
           Value<DateTime?> examDate = const Value.absent(),
@@ -3283,6 +3593,9 @@ class UserProfileRow extends DataClass implements Insertable<UserProfileRow> {
           DateTime? createdAt,
           DateTime? updatedAt}) =>
       UserProfileRow(
+        studyPlanPreferencesJson: studyPlanPreferencesJson.present
+            ? studyPlanPreferencesJson.value
+            : this.studyPlanPreferencesJson,
         examId: examId ?? this.examId,
         experienceLevel: experienceLevel ?? this.experienceLevel,
         examDatePrecision: examDatePrecision ?? this.examDatePrecision,
@@ -3296,6 +3609,9 @@ class UserProfileRow extends DataClass implements Insertable<UserProfileRow> {
       );
   UserProfileRow copyWithCompanion(UserProfilesCompanion data) {
     return UserProfileRow(
+      studyPlanPreferencesJson: data.studyPlanPreferencesJson.present
+          ? data.studyPlanPreferencesJson.value
+          : this.studyPlanPreferencesJson,
       examId: data.examId.present ? data.examId.value : this.examId,
       experienceLevel: data.experienceLevel.present
           ? data.experienceLevel.value
@@ -3324,6 +3640,7 @@ class UserProfileRow extends DataClass implements Insertable<UserProfileRow> {
   @override
   String toString() {
     return (StringBuffer('UserProfileRow(')
+          ..write('studyPlanPreferencesJson: $studyPlanPreferencesJson, ')
           ..write('examId: $examId, ')
           ..write('experienceLevel: $experienceLevel, ')
           ..write('examDatePrecision: $examDatePrecision, ')
@@ -3340,6 +3657,7 @@ class UserProfileRow extends DataClass implements Insertable<UserProfileRow> {
 
   @override
   int get hashCode => Object.hash(
+      studyPlanPreferencesJson,
       examId,
       experienceLevel,
       examDatePrecision,
@@ -3354,6 +3672,7 @@ class UserProfileRow extends DataClass implements Insertable<UserProfileRow> {
   bool operator ==(Object other) =>
       identical(this, other) ||
       (other is UserProfileRow &&
+          other.studyPlanPreferencesJson == this.studyPlanPreferencesJson &&
           other.examId == this.examId &&
           other.experienceLevel == this.experienceLevel &&
           other.examDatePrecision == this.examDatePrecision &&
@@ -3367,6 +3686,7 @@ class UserProfileRow extends DataClass implements Insertable<UserProfileRow> {
 }
 
 class UserProfilesCompanion extends UpdateCompanion<UserProfileRow> {
+  final Value<String?> studyPlanPreferencesJson;
   final Value<String> examId;
   final Value<String> experienceLevel;
   final Value<String> examDatePrecision;
@@ -3379,6 +3699,7 @@ class UserProfilesCompanion extends UpdateCompanion<UserProfileRow> {
   final Value<DateTime> updatedAt;
   final Value<int> rowid;
   const UserProfilesCompanion({
+    this.studyPlanPreferencesJson = const Value.absent(),
     this.examId = const Value.absent(),
     this.experienceLevel = const Value.absent(),
     this.examDatePrecision = const Value.absent(),
@@ -3392,6 +3713,7 @@ class UserProfilesCompanion extends UpdateCompanion<UserProfileRow> {
     this.rowid = const Value.absent(),
   });
   UserProfilesCompanion.insert({
+    this.studyPlanPreferencesJson = const Value.absent(),
     required String examId,
     required String experienceLevel,
     required String examDatePrecision,
@@ -3413,6 +3735,7 @@ class UserProfilesCompanion extends UpdateCompanion<UserProfileRow> {
         createdAt = Value(createdAt),
         updatedAt = Value(updatedAt);
   static Insertable<UserProfileRow> custom({
+    Expression<String>? studyPlanPreferencesJson,
     Expression<String>? examId,
     Expression<String>? experienceLevel,
     Expression<String>? examDatePrecision,
@@ -3426,6 +3749,8 @@ class UserProfilesCompanion extends UpdateCompanion<UserProfileRow> {
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
+      if (studyPlanPreferencesJson != null)
+        'study_plan_preferences_json': studyPlanPreferencesJson,
       if (examId != null) 'exam_id': examId,
       if (experienceLevel != null) 'experience_level': experienceLevel,
       if (examDatePrecision != null) 'exam_date_precision': examDatePrecision,
@@ -3443,7 +3768,8 @@ class UserProfilesCompanion extends UpdateCompanion<UserProfileRow> {
   }
 
   UserProfilesCompanion copyWith(
-      {Value<String>? examId,
+      {Value<String?>? studyPlanPreferencesJson,
+      Value<String>? examId,
       Value<String>? experienceLevel,
       Value<String>? examDatePrecision,
       Value<DateTime?>? examDate,
@@ -3455,6 +3781,8 @@ class UserProfilesCompanion extends UpdateCompanion<UserProfileRow> {
       Value<DateTime>? updatedAt,
       Value<int>? rowid}) {
     return UserProfilesCompanion(
+      studyPlanPreferencesJson:
+          studyPlanPreferencesJson ?? this.studyPlanPreferencesJson,
       examId: examId ?? this.examId,
       experienceLevel: experienceLevel ?? this.experienceLevel,
       examDatePrecision: examDatePrecision ?? this.examDatePrecision,
@@ -3472,6 +3800,10 @@ class UserProfilesCompanion extends UpdateCompanion<UserProfileRow> {
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
+    if (studyPlanPreferencesJson.present) {
+      map['study_plan_preferences_json'] =
+          Variable<String>(studyPlanPreferencesJson.value);
+    }
     if (examId.present) {
       map['exam_id'] = Variable<String>(examId.value);
     }
@@ -3511,6 +3843,7 @@ class UserProfilesCompanion extends UpdateCompanion<UserProfileRow> {
   @override
   String toString() {
     return (StringBuffer('UserProfilesCompanion(')
+          ..write('studyPlanPreferencesJson: $studyPlanPreferencesJson, ')
           ..write('examId: $examId, ')
           ..write('experienceLevel: $experienceLevel, ')
           ..write('examDatePrecision: $examDatePrecision, ')
@@ -3521,6 +3854,330 @@ class UserProfilesCompanion extends UpdateCompanion<UserProfileRow> {
           ..write('onboardingComplete: $onboardingComplete, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $StudySchedulesTable extends StudySchedules
+    with TableInfo<$StudySchedulesTable, StudyScheduleRow> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $StudySchedulesTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _examIdMeta = const VerificationMeta('examId');
+  @override
+  late final GeneratedColumn<String> examId = GeneratedColumn<String>(
+      'exam_id', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _dateMeta = const VerificationMeta('date');
+  @override
+  late final GeneratedColumn<String> date = GeneratedColumn<String>(
+      'date', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _kindMeta = const VerificationMeta('kind');
+  @override
+  late final GeneratedColumn<String> kind = GeneratedColumn<String>(
+      'kind', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _minutesMeta =
+      const VerificationMeta('minutes');
+  @override
+  late final GeneratedColumn<int> minutes = GeneratedColumn<int>(
+      'minutes', aliasedName, true,
+      type: DriftSqlType.int, requiredDuringInsert: false);
+  static const VerificationMeta _reservedQuestionIdsJsonMeta =
+      const VerificationMeta('reservedQuestionIdsJson');
+  @override
+  late final GeneratedColumn<String> reservedQuestionIdsJson =
+      GeneratedColumn<String>('reserved_question_ids_json', aliasedName, false,
+          type: DriftSqlType.string, requiredDuringInsert: true);
+  @override
+  List<GeneratedColumn> get $columns =>
+      [examId, date, kind, minutes, reservedQuestionIdsJson];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'study_schedules';
+  @override
+  VerificationContext validateIntegrity(Insertable<StudyScheduleRow> instance,
+      {bool isInserting = false}) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('exam_id')) {
+      context.handle(_examIdMeta,
+          examId.isAcceptableOrUnknown(data['exam_id']!, _examIdMeta));
+    } else if (isInserting) {
+      context.missing(_examIdMeta);
+    }
+    if (data.containsKey('date')) {
+      context.handle(
+          _dateMeta, date.isAcceptableOrUnknown(data['date']!, _dateMeta));
+    } else if (isInserting) {
+      context.missing(_dateMeta);
+    }
+    if (data.containsKey('kind')) {
+      context.handle(
+          _kindMeta, kind.isAcceptableOrUnknown(data['kind']!, _kindMeta));
+    } else if (isInserting) {
+      context.missing(_kindMeta);
+    }
+    if (data.containsKey('minutes')) {
+      context.handle(_minutesMeta,
+          minutes.isAcceptableOrUnknown(data['minutes']!, _minutesMeta));
+    }
+    if (data.containsKey('reserved_question_ids_json')) {
+      context.handle(
+          _reservedQuestionIdsJsonMeta,
+          reservedQuestionIdsJson.isAcceptableOrUnknown(
+              data['reserved_question_ids_json']!,
+              _reservedQuestionIdsJsonMeta));
+    } else if (isInserting) {
+      context.missing(_reservedQuestionIdsJsonMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {examId, date};
+  @override
+  StudyScheduleRow map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return StudyScheduleRow(
+      examId: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}exam_id'])!,
+      date: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}date'])!,
+      kind: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}kind'])!,
+      minutes: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}minutes']),
+      reservedQuestionIdsJson: attachedDatabase.typeMapping.read(
+          DriftSqlType.string,
+          data['${effectivePrefix}reserved_question_ids_json'])!,
+    );
+  }
+
+  @override
+  $StudySchedulesTable createAlias(String alias) {
+    return $StudySchedulesTable(attachedDatabase, alias);
+  }
+}
+
+class StudyScheduleRow extends DataClass
+    implements Insertable<StudyScheduleRow> {
+  final String examId;
+  final String date;
+  final String kind;
+  final int? minutes;
+  final String reservedQuestionIdsJson;
+  const StudyScheduleRow(
+      {required this.examId,
+      required this.date,
+      required this.kind,
+      this.minutes,
+      required this.reservedQuestionIdsJson});
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['exam_id'] = Variable<String>(examId);
+    map['date'] = Variable<String>(date);
+    map['kind'] = Variable<String>(kind);
+    if (!nullToAbsent || minutes != null) {
+      map['minutes'] = Variable<int>(minutes);
+    }
+    map['reserved_question_ids_json'] =
+        Variable<String>(reservedQuestionIdsJson);
+    return map;
+  }
+
+  StudySchedulesCompanion toCompanion(bool nullToAbsent) {
+    return StudySchedulesCompanion(
+      examId: Value(examId),
+      date: Value(date),
+      kind: Value(kind),
+      minutes: minutes == null && nullToAbsent
+          ? const Value.absent()
+          : Value(minutes),
+      reservedQuestionIdsJson: Value(reservedQuestionIdsJson),
+    );
+  }
+
+  factory StudyScheduleRow.fromJson(Map<String, dynamic> json,
+      {ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return StudyScheduleRow(
+      examId: serializer.fromJson<String>(json['examId']),
+      date: serializer.fromJson<String>(json['date']),
+      kind: serializer.fromJson<String>(json['kind']),
+      minutes: serializer.fromJson<int?>(json['minutes']),
+      reservedQuestionIdsJson:
+          serializer.fromJson<String>(json['reservedQuestionIdsJson']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'examId': serializer.toJson<String>(examId),
+      'date': serializer.toJson<String>(date),
+      'kind': serializer.toJson<String>(kind),
+      'minutes': serializer.toJson<int?>(minutes),
+      'reservedQuestionIdsJson':
+          serializer.toJson<String>(reservedQuestionIdsJson),
+    };
+  }
+
+  StudyScheduleRow copyWith(
+          {String? examId,
+          String? date,
+          String? kind,
+          Value<int?> minutes = const Value.absent(),
+          String? reservedQuestionIdsJson}) =>
+      StudyScheduleRow(
+        examId: examId ?? this.examId,
+        date: date ?? this.date,
+        kind: kind ?? this.kind,
+        minutes: minutes.present ? minutes.value : this.minutes,
+        reservedQuestionIdsJson:
+            reservedQuestionIdsJson ?? this.reservedQuestionIdsJson,
+      );
+  StudyScheduleRow copyWithCompanion(StudySchedulesCompanion data) {
+    return StudyScheduleRow(
+      examId: data.examId.present ? data.examId.value : this.examId,
+      date: data.date.present ? data.date.value : this.date,
+      kind: data.kind.present ? data.kind.value : this.kind,
+      minutes: data.minutes.present ? data.minutes.value : this.minutes,
+      reservedQuestionIdsJson: data.reservedQuestionIdsJson.present
+          ? data.reservedQuestionIdsJson.value
+          : this.reservedQuestionIdsJson,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('StudyScheduleRow(')
+          ..write('examId: $examId, ')
+          ..write('date: $date, ')
+          ..write('kind: $kind, ')
+          ..write('minutes: $minutes, ')
+          ..write('reservedQuestionIdsJson: $reservedQuestionIdsJson')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode =>
+      Object.hash(examId, date, kind, minutes, reservedQuestionIdsJson);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is StudyScheduleRow &&
+          other.examId == this.examId &&
+          other.date == this.date &&
+          other.kind == this.kind &&
+          other.minutes == this.minutes &&
+          other.reservedQuestionIdsJson == this.reservedQuestionIdsJson);
+}
+
+class StudySchedulesCompanion extends UpdateCompanion<StudyScheduleRow> {
+  final Value<String> examId;
+  final Value<String> date;
+  final Value<String> kind;
+  final Value<int?> minutes;
+  final Value<String> reservedQuestionIdsJson;
+  final Value<int> rowid;
+  const StudySchedulesCompanion({
+    this.examId = const Value.absent(),
+    this.date = const Value.absent(),
+    this.kind = const Value.absent(),
+    this.minutes = const Value.absent(),
+    this.reservedQuestionIdsJson = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  StudySchedulesCompanion.insert({
+    required String examId,
+    required String date,
+    required String kind,
+    this.minutes = const Value.absent(),
+    required String reservedQuestionIdsJson,
+    this.rowid = const Value.absent(),
+  })  : examId = Value(examId),
+        date = Value(date),
+        kind = Value(kind),
+        reservedQuestionIdsJson = Value(reservedQuestionIdsJson);
+  static Insertable<StudyScheduleRow> custom({
+    Expression<String>? examId,
+    Expression<String>? date,
+    Expression<String>? kind,
+    Expression<int>? minutes,
+    Expression<String>? reservedQuestionIdsJson,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (examId != null) 'exam_id': examId,
+      if (date != null) 'date': date,
+      if (kind != null) 'kind': kind,
+      if (minutes != null) 'minutes': minutes,
+      if (reservedQuestionIdsJson != null)
+        'reserved_question_ids_json': reservedQuestionIdsJson,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  StudySchedulesCompanion copyWith(
+      {Value<String>? examId,
+      Value<String>? date,
+      Value<String>? kind,
+      Value<int?>? minutes,
+      Value<String>? reservedQuestionIdsJson,
+      Value<int>? rowid}) {
+    return StudySchedulesCompanion(
+      examId: examId ?? this.examId,
+      date: date ?? this.date,
+      kind: kind ?? this.kind,
+      minutes: minutes ?? this.minutes,
+      reservedQuestionIdsJson:
+          reservedQuestionIdsJson ?? this.reservedQuestionIdsJson,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (examId.present) {
+      map['exam_id'] = Variable<String>(examId.value);
+    }
+    if (date.present) {
+      map['date'] = Variable<String>(date.value);
+    }
+    if (kind.present) {
+      map['kind'] = Variable<String>(kind.value);
+    }
+    if (minutes.present) {
+      map['minutes'] = Variable<int>(minutes.value);
+    }
+    if (reservedQuestionIdsJson.present) {
+      map['reserved_question_ids_json'] =
+          Variable<String>(reservedQuestionIdsJson.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('StudySchedulesCompanion(')
+          ..write('examId: $examId, ')
+          ..write('date: $date, ')
+          ..write('kind: $kind, ')
+          ..write('minutes: $minutes, ')
+          ..write('reservedQuestionIdsJson: $reservedQuestionIdsJson, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -3538,6 +4195,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $ReadinessSnapshotsTable readinessSnapshots =
       $ReadinessSnapshotsTable(this);
   late final $UserProfilesTable userProfiles = $UserProfilesTable(this);
+  late final $StudySchedulesTable studySchedules = $StudySchedulesTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -3548,12 +4206,16 @@ abstract class _$AppDatabase extends GeneratedDatabase {
         practiceSessions,
         mockAttempts,
         readinessSnapshots,
-        userProfiles
+        userProfiles,
+        studySchedules
       ];
 }
 
 typedef $$AnswerAttemptsTableCreateCompanionBuilder = AnswerAttemptsCompanion
     Function({
+  Value<bool?> confident,
+  Value<int?> activeDurationSeconds,
+  Value<String?> localAnsweredDate,
   required String id,
   required String examId,
   required String questionId,
@@ -3573,6 +4235,9 @@ typedef $$AnswerAttemptsTableCreateCompanionBuilder = AnswerAttemptsCompanion
 });
 typedef $$AnswerAttemptsTableUpdateCompanionBuilder = AnswerAttemptsCompanion
     Function({
+  Value<bool?> confident,
+  Value<int?> activeDurationSeconds,
+  Value<String?> localAnsweredDate,
   Value<String> id,
   Value<String> examId,
   Value<String> questionId,
@@ -3600,6 +4265,17 @@ class $$AnswerAttemptsTableFilterComposer
     super.$addJoinBuilderToRootComposer,
     super.$removeJoinBuilderFromRootComposer,
   });
+  ColumnFilters<bool> get confident => $composableBuilder(
+      column: $table.confident, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get activeDurationSeconds => $composableBuilder(
+      column: $table.activeDurationSeconds,
+      builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get localAnsweredDate => $composableBuilder(
+      column: $table.localAnsweredDate,
+      builder: (column) => ColumnFilters(column));
+
   ColumnFilters<String> get id => $composableBuilder(
       column: $table.id, builder: (column) => ColumnFilters(column));
 
@@ -3659,6 +4335,17 @@ class $$AnswerAttemptsTableOrderingComposer
     super.$addJoinBuilderToRootComposer,
     super.$removeJoinBuilderFromRootComposer,
   });
+  ColumnOrderings<bool> get confident => $composableBuilder(
+      column: $table.confident, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get activeDurationSeconds => $composableBuilder(
+      column: $table.activeDurationSeconds,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get localAnsweredDate => $composableBuilder(
+      column: $table.localAnsweredDate,
+      builder: (column) => ColumnOrderings(column));
+
   ColumnOrderings<String> get id => $composableBuilder(
       column: $table.id, builder: (column) => ColumnOrderings(column));
 
@@ -3718,6 +4405,15 @@ class $$AnswerAttemptsTableAnnotationComposer
     super.$addJoinBuilderToRootComposer,
     super.$removeJoinBuilderFromRootComposer,
   });
+  GeneratedColumn<bool> get confident =>
+      $composableBuilder(column: $table.confident, builder: (column) => column);
+
+  GeneratedColumn<int> get activeDurationSeconds => $composableBuilder(
+      column: $table.activeDurationSeconds, builder: (column) => column);
+
+  GeneratedColumn<String> get localAnsweredDate => $composableBuilder(
+      column: $table.localAnsweredDate, builder: (column) => column);
+
   GeneratedColumn<String> get id =>
       $composableBuilder(column: $table.id, builder: (column) => column);
 
@@ -3791,6 +4487,9 @@ class $$AnswerAttemptsTableTableManager extends RootTableManager<
           createComputedFieldComposer: () =>
               $$AnswerAttemptsTableAnnotationComposer($db: db, $table: table),
           updateCompanionCallback: ({
+            Value<bool?> confident = const Value.absent(),
+            Value<int?> activeDurationSeconds = const Value.absent(),
+            Value<String?> localAnsweredDate = const Value.absent(),
             Value<String> id = const Value.absent(),
             Value<String> examId = const Value.absent(),
             Value<String> questionId = const Value.absent(),
@@ -3809,6 +4508,9 @@ class $$AnswerAttemptsTableTableManager extends RootTableManager<
             Value<int> rowid = const Value.absent(),
           }) =>
               AnswerAttemptsCompanion(
+            confident: confident,
+            activeDurationSeconds: activeDurationSeconds,
+            localAnsweredDate: localAnsweredDate,
             id: id,
             examId: examId,
             questionId: questionId,
@@ -3827,6 +4529,9 @@ class $$AnswerAttemptsTableTableManager extends RootTableManager<
             rowid: rowid,
           ),
           createCompanionCallback: ({
+            Value<bool?> confident = const Value.absent(),
+            Value<int?> activeDurationSeconds = const Value.absent(),
+            Value<String?> localAnsweredDate = const Value.absent(),
             required String id,
             required String examId,
             required String questionId,
@@ -3845,6 +4550,9 @@ class $$AnswerAttemptsTableTableManager extends RootTableManager<
             Value<int> rowid = const Value.absent(),
           }) =>
               AnswerAttemptsCompanion.insert(
+            confident: confident,
+            activeDurationSeconds: activeDurationSeconds,
+            localAnsweredDate: localAnsweredDate,
             id: id,
             examId: examId,
             questionId: questionId,
@@ -4112,6 +4820,8 @@ typedef $$QuestionStatesTableProcessedTableManager = ProcessedTableManager<
     PrefetchHooks Function()>;
 typedef $$PracticeSessionsTableCreateCompanionBuilder
     = PracticeSessionsCompanion Function({
+  Value<String?> planDate,
+  Value<String?> reviewQuestionIdsJson,
   required String id,
   required String examId,
   required String mode,
@@ -4124,6 +4834,8 @@ typedef $$PracticeSessionsTableCreateCompanionBuilder
 });
 typedef $$PracticeSessionsTableUpdateCompanionBuilder
     = PracticeSessionsCompanion Function({
+  Value<String?> planDate,
+  Value<String?> reviewQuestionIdsJson,
   Value<String> id,
   Value<String> examId,
   Value<String> mode,
@@ -4144,6 +4856,13 @@ class $$PracticeSessionsTableFilterComposer
     super.$addJoinBuilderToRootComposer,
     super.$removeJoinBuilderFromRootComposer,
   });
+  ColumnFilters<String> get planDate => $composableBuilder(
+      column: $table.planDate, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get reviewQuestionIdsJson => $composableBuilder(
+      column: $table.reviewQuestionIdsJson,
+      builder: (column) => ColumnFilters(column));
+
   ColumnFilters<String> get id => $composableBuilder(
       column: $table.id, builder: (column) => ColumnFilters(column));
 
@@ -4180,6 +4899,13 @@ class $$PracticeSessionsTableOrderingComposer
     super.$addJoinBuilderToRootComposer,
     super.$removeJoinBuilderFromRootComposer,
   });
+  ColumnOrderings<String> get planDate => $composableBuilder(
+      column: $table.planDate, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get reviewQuestionIdsJson => $composableBuilder(
+      column: $table.reviewQuestionIdsJson,
+      builder: (column) => ColumnOrderings(column));
+
   ColumnOrderings<String> get id => $composableBuilder(
       column: $table.id, builder: (column) => ColumnOrderings(column));
 
@@ -4216,6 +4942,12 @@ class $$PracticeSessionsTableAnnotationComposer
     super.$addJoinBuilderToRootComposer,
     super.$removeJoinBuilderFromRootComposer,
   });
+  GeneratedColumn<String> get planDate =>
+      $composableBuilder(column: $table.planDate, builder: (column) => column);
+
+  GeneratedColumn<String> get reviewQuestionIdsJson => $composableBuilder(
+      column: $table.reviewQuestionIdsJson, builder: (column) => column);
+
   GeneratedColumn<String> get id =>
       $composableBuilder(column: $table.id, builder: (column) => column);
 
@@ -4268,6 +5000,8 @@ class $$PracticeSessionsTableTableManager extends RootTableManager<
           createComputedFieldComposer: () =>
               $$PracticeSessionsTableAnnotationComposer($db: db, $table: table),
           updateCompanionCallback: ({
+            Value<String?> planDate = const Value.absent(),
+            Value<String?> reviewQuestionIdsJson = const Value.absent(),
             Value<String> id = const Value.absent(),
             Value<String> examId = const Value.absent(),
             Value<String> mode = const Value.absent(),
@@ -4279,6 +5013,8 @@ class $$PracticeSessionsTableTableManager extends RootTableManager<
             Value<int> rowid = const Value.absent(),
           }) =>
               PracticeSessionsCompanion(
+            planDate: planDate,
+            reviewQuestionIdsJson: reviewQuestionIdsJson,
             id: id,
             examId: examId,
             mode: mode,
@@ -4290,6 +5026,8 @@ class $$PracticeSessionsTableTableManager extends RootTableManager<
             rowid: rowid,
           ),
           createCompanionCallback: ({
+            Value<String?> planDate = const Value.absent(),
+            Value<String?> reviewQuestionIdsJson = const Value.absent(),
             required String id,
             required String examId,
             required String mode,
@@ -4301,6 +5039,8 @@ class $$PracticeSessionsTableTableManager extends RootTableManager<
             Value<int> rowid = const Value.absent(),
           }) =>
               PracticeSessionsCompanion.insert(
+            planDate: planDate,
+            reviewQuestionIdsJson: reviewQuestionIdsJson,
             id: id,
             examId: examId,
             mode: mode,
@@ -4335,6 +5075,7 @@ typedef $$PracticeSessionsTableProcessedTableManager = ProcessedTableManager<
     PrefetchHooks Function()>;
 typedef $$MockAttemptsTableCreateCompanionBuilder = MockAttemptsCompanion
     Function({
+  Value<int?> seenBeforeStartCount,
   required String id,
   required String examId,
   required String questionIdsJson,
@@ -4351,6 +5092,7 @@ typedef $$MockAttemptsTableCreateCompanionBuilder = MockAttemptsCompanion
 });
 typedef $$MockAttemptsTableUpdateCompanionBuilder = MockAttemptsCompanion
     Function({
+  Value<int?> seenBeforeStartCount,
   Value<String> id,
   Value<String> examId,
   Value<String> questionIdsJson,
@@ -4375,6 +5117,10 @@ class $$MockAttemptsTableFilterComposer
     super.$addJoinBuilderToRootComposer,
     super.$removeJoinBuilderFromRootComposer,
   });
+  ColumnFilters<int> get seenBeforeStartCount => $composableBuilder(
+      column: $table.seenBeforeStartCount,
+      builder: (column) => ColumnFilters(column));
+
   ColumnFilters<String> get id => $composableBuilder(
       column: $table.id, builder: (column) => ColumnFilters(column));
 
@@ -4426,6 +5172,10 @@ class $$MockAttemptsTableOrderingComposer
     super.$addJoinBuilderToRootComposer,
     super.$removeJoinBuilderFromRootComposer,
   });
+  ColumnOrderings<int> get seenBeforeStartCount => $composableBuilder(
+      column: $table.seenBeforeStartCount,
+      builder: (column) => ColumnOrderings(column));
+
   ColumnOrderings<String> get id => $composableBuilder(
       column: $table.id, builder: (column) => ColumnOrderings(column));
 
@@ -4478,6 +5228,9 @@ class $$MockAttemptsTableAnnotationComposer
     super.$addJoinBuilderToRootComposer,
     super.$removeJoinBuilderFromRootComposer,
   });
+  GeneratedColumn<int> get seenBeforeStartCount => $composableBuilder(
+      column: $table.seenBeforeStartCount, builder: (column) => column);
+
   GeneratedColumn<String> get id =>
       $composableBuilder(column: $table.id, builder: (column) => column);
 
@@ -4541,6 +5294,7 @@ class $$MockAttemptsTableTableManager extends RootTableManager<
           createComputedFieldComposer: () =>
               $$MockAttemptsTableAnnotationComposer($db: db, $table: table),
           updateCompanionCallback: ({
+            Value<int?> seenBeforeStartCount = const Value.absent(),
             Value<String> id = const Value.absent(),
             Value<String> examId = const Value.absent(),
             Value<String> questionIdsJson = const Value.absent(),
@@ -4556,6 +5310,7 @@ class $$MockAttemptsTableTableManager extends RootTableManager<
             Value<int> rowid = const Value.absent(),
           }) =>
               MockAttemptsCompanion(
+            seenBeforeStartCount: seenBeforeStartCount,
             id: id,
             examId: examId,
             questionIdsJson: questionIdsJson,
@@ -4571,6 +5326,7 @@ class $$MockAttemptsTableTableManager extends RootTableManager<
             rowid: rowid,
           ),
           createCompanionCallback: ({
+            Value<int?> seenBeforeStartCount = const Value.absent(),
             required String id,
             required String examId,
             required String questionIdsJson,
@@ -4586,6 +5342,7 @@ class $$MockAttemptsTableTableManager extends RootTableManager<
             Value<int> rowid = const Value.absent(),
           }) =>
               MockAttemptsCompanion.insert(
+            seenBeforeStartCount: seenBeforeStartCount,
             id: id,
             examId: examId,
             questionIdsJson: questionIdsJson,
@@ -4922,6 +5679,7 @@ typedef $$ReadinessSnapshotsTableProcessedTableManager = ProcessedTableManager<
     PrefetchHooks Function()>;
 typedef $$UserProfilesTableCreateCompanionBuilder = UserProfilesCompanion
     Function({
+  Value<String?> studyPlanPreferencesJson,
   required String examId,
   required String experienceLevel,
   required String examDatePrecision,
@@ -4936,6 +5694,7 @@ typedef $$UserProfilesTableCreateCompanionBuilder = UserProfilesCompanion
 });
 typedef $$UserProfilesTableUpdateCompanionBuilder = UserProfilesCompanion
     Function({
+  Value<String?> studyPlanPreferencesJson,
   Value<String> examId,
   Value<String> experienceLevel,
   Value<String> examDatePrecision,
@@ -4958,6 +5717,10 @@ class $$UserProfilesTableFilterComposer
     super.$addJoinBuilderToRootComposer,
     super.$removeJoinBuilderFromRootComposer,
   });
+  ColumnFilters<String> get studyPlanPreferencesJson => $composableBuilder(
+      column: $table.studyPlanPreferencesJson,
+      builder: (column) => ColumnFilters(column));
+
   ColumnFilters<String> get examId => $composableBuilder(
       column: $table.examId, builder: (column) => ColumnFilters(column));
 
@@ -5004,6 +5767,10 @@ class $$UserProfilesTableOrderingComposer
     super.$addJoinBuilderToRootComposer,
     super.$removeJoinBuilderFromRootComposer,
   });
+  ColumnOrderings<String> get studyPlanPreferencesJson => $composableBuilder(
+      column: $table.studyPlanPreferencesJson,
+      builder: (column) => ColumnOrderings(column));
+
   ColumnOrderings<String> get examId => $composableBuilder(
       column: $table.examId, builder: (column) => ColumnOrderings(column));
 
@@ -5050,6 +5817,9 @@ class $$UserProfilesTableAnnotationComposer
     super.$addJoinBuilderToRootComposer,
     super.$removeJoinBuilderFromRootComposer,
   });
+  GeneratedColumn<String> get studyPlanPreferencesJson => $composableBuilder(
+      column: $table.studyPlanPreferencesJson, builder: (column) => column);
+
   GeneratedColumn<String> get examId =>
       $composableBuilder(column: $table.examId, builder: (column) => column);
 
@@ -5107,6 +5877,7 @@ class $$UserProfilesTableTableManager extends RootTableManager<
           createComputedFieldComposer: () =>
               $$UserProfilesTableAnnotationComposer($db: db, $table: table),
           updateCompanionCallback: ({
+            Value<String?> studyPlanPreferencesJson = const Value.absent(),
             Value<String> examId = const Value.absent(),
             Value<String> experienceLevel = const Value.absent(),
             Value<String> examDatePrecision = const Value.absent(),
@@ -5120,6 +5891,7 @@ class $$UserProfilesTableTableManager extends RootTableManager<
             Value<int> rowid = const Value.absent(),
           }) =>
               UserProfilesCompanion(
+            studyPlanPreferencesJson: studyPlanPreferencesJson,
             examId: examId,
             experienceLevel: experienceLevel,
             examDatePrecision: examDatePrecision,
@@ -5133,6 +5905,7 @@ class $$UserProfilesTableTableManager extends RootTableManager<
             rowid: rowid,
           ),
           createCompanionCallback: ({
+            Value<String?> studyPlanPreferencesJson = const Value.absent(),
             required String examId,
             required String experienceLevel,
             required String examDatePrecision,
@@ -5146,6 +5919,7 @@ class $$UserProfilesTableTableManager extends RootTableManager<
             Value<int> rowid = const Value.absent(),
           }) =>
               UserProfilesCompanion.insert(
+            studyPlanPreferencesJson: studyPlanPreferencesJson,
             examId: examId,
             experienceLevel: experienceLevel,
             examDatePrecision: examDatePrecision,
@@ -5180,6 +5954,182 @@ typedef $$UserProfilesTableProcessedTableManager = ProcessedTableManager<
     ),
     UserProfileRow,
     PrefetchHooks Function()>;
+typedef $$StudySchedulesTableCreateCompanionBuilder = StudySchedulesCompanion
+    Function({
+  required String examId,
+  required String date,
+  required String kind,
+  Value<int?> minutes,
+  required String reservedQuestionIdsJson,
+  Value<int> rowid,
+});
+typedef $$StudySchedulesTableUpdateCompanionBuilder = StudySchedulesCompanion
+    Function({
+  Value<String> examId,
+  Value<String> date,
+  Value<String> kind,
+  Value<int?> minutes,
+  Value<String> reservedQuestionIdsJson,
+  Value<int> rowid,
+});
+
+class $$StudySchedulesTableFilterComposer
+    extends Composer<_$AppDatabase, $StudySchedulesTable> {
+  $$StudySchedulesTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get examId => $composableBuilder(
+      column: $table.examId, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get date => $composableBuilder(
+      column: $table.date, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get kind => $composableBuilder(
+      column: $table.kind, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get minutes => $composableBuilder(
+      column: $table.minutes, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get reservedQuestionIdsJson => $composableBuilder(
+      column: $table.reservedQuestionIdsJson,
+      builder: (column) => ColumnFilters(column));
+}
+
+class $$StudySchedulesTableOrderingComposer
+    extends Composer<_$AppDatabase, $StudySchedulesTable> {
+  $$StudySchedulesTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get examId => $composableBuilder(
+      column: $table.examId, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get date => $composableBuilder(
+      column: $table.date, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get kind => $composableBuilder(
+      column: $table.kind, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get minutes => $composableBuilder(
+      column: $table.minutes, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get reservedQuestionIdsJson => $composableBuilder(
+      column: $table.reservedQuestionIdsJson,
+      builder: (column) => ColumnOrderings(column));
+}
+
+class $$StudySchedulesTableAnnotationComposer
+    extends Composer<_$AppDatabase, $StudySchedulesTable> {
+  $$StudySchedulesTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get examId =>
+      $composableBuilder(column: $table.examId, builder: (column) => column);
+
+  GeneratedColumn<String> get date =>
+      $composableBuilder(column: $table.date, builder: (column) => column);
+
+  GeneratedColumn<String> get kind =>
+      $composableBuilder(column: $table.kind, builder: (column) => column);
+
+  GeneratedColumn<int> get minutes =>
+      $composableBuilder(column: $table.minutes, builder: (column) => column);
+
+  GeneratedColumn<String> get reservedQuestionIdsJson => $composableBuilder(
+      column: $table.reservedQuestionIdsJson, builder: (column) => column);
+}
+
+class $$StudySchedulesTableTableManager extends RootTableManager<
+    _$AppDatabase,
+    $StudySchedulesTable,
+    StudyScheduleRow,
+    $$StudySchedulesTableFilterComposer,
+    $$StudySchedulesTableOrderingComposer,
+    $$StudySchedulesTableAnnotationComposer,
+    $$StudySchedulesTableCreateCompanionBuilder,
+    $$StudySchedulesTableUpdateCompanionBuilder,
+    (
+      StudyScheduleRow,
+      BaseReferences<_$AppDatabase, $StudySchedulesTable, StudyScheduleRow>
+    ),
+    StudyScheduleRow,
+    PrefetchHooks Function()> {
+  $$StudySchedulesTableTableManager(
+      _$AppDatabase db, $StudySchedulesTable table)
+      : super(TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$StudySchedulesTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$StudySchedulesTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$StudySchedulesTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback: ({
+            Value<String> examId = const Value.absent(),
+            Value<String> date = const Value.absent(),
+            Value<String> kind = const Value.absent(),
+            Value<int?> minutes = const Value.absent(),
+            Value<String> reservedQuestionIdsJson = const Value.absent(),
+            Value<int> rowid = const Value.absent(),
+          }) =>
+              StudySchedulesCompanion(
+            examId: examId,
+            date: date,
+            kind: kind,
+            minutes: minutes,
+            reservedQuestionIdsJson: reservedQuestionIdsJson,
+            rowid: rowid,
+          ),
+          createCompanionCallback: ({
+            required String examId,
+            required String date,
+            required String kind,
+            Value<int?> minutes = const Value.absent(),
+            required String reservedQuestionIdsJson,
+            Value<int> rowid = const Value.absent(),
+          }) =>
+              StudySchedulesCompanion.insert(
+            examId: examId,
+            date: date,
+            kind: kind,
+            minutes: minutes,
+            reservedQuestionIdsJson: reservedQuestionIdsJson,
+            rowid: rowid,
+          ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ));
+}
+
+typedef $$StudySchedulesTableProcessedTableManager = ProcessedTableManager<
+    _$AppDatabase,
+    $StudySchedulesTable,
+    StudyScheduleRow,
+    $$StudySchedulesTableFilterComposer,
+    $$StudySchedulesTableOrderingComposer,
+    $$StudySchedulesTableAnnotationComposer,
+    $$StudySchedulesTableCreateCompanionBuilder,
+    $$StudySchedulesTableUpdateCompanionBuilder,
+    (
+      StudyScheduleRow,
+      BaseReferences<_$AppDatabase, $StudySchedulesTable, StudyScheduleRow>
+    ),
+    StudyScheduleRow,
+    PrefetchHooks Function()>;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -5196,4 +6146,6 @@ class $AppDatabaseManager {
       $$ReadinessSnapshotsTableTableManager(_db, _db.readinessSnapshots);
   $$UserProfilesTableTableManager get userProfiles =>
       $$UserProfilesTableTableManager(_db, _db.userProfiles);
+  $$StudySchedulesTableTableManager get studySchedules =>
+      $$StudySchedulesTableTableManager(_db, _db.studySchedules);
 }

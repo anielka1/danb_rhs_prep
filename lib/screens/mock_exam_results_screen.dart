@@ -75,6 +75,10 @@ class MockExamResultsScreen extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text('Your session', style: text.h3),
+                        if (value.attempt.seenBeforeStartCount != null)
+                          Text(
+                              '${value.attempt.seenBeforeStartCount} / ${value.attempt.questionIds.length} questions (${(value.attempt.seenBeforeStartCount! * 100 / value.attempt.questionIds.length).round()}%) had been seen before this exam.',
+                              style: text.body),
                         const SizedBox(height: AppSpacing.sm),
                         Text(
                           '${value.attempt.answeredCount} questions answered. '

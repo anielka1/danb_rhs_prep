@@ -17,6 +17,9 @@ part 'app_database.g.dart';
 /// [AnswerAttempt]: ../../domain/models/answer_attempt.dart
 @DataClassName('AnswerAttemptRow')
 class AnswerAttempts extends Table {
+  BoolColumn get confident => boolean().nullable()();
+  IntColumn get activeDurationSeconds => integer().nullable()();
+  TextColumn get localAnsweredDate => text().nullable()();
   TextColumn get id => text()();
   TextColumn get examId => text()();
   TextColumn get questionId => text()();
@@ -86,6 +89,8 @@ class QuestionStates extends Table {
 /// [PracticeSession]: ../../domain/models/practice_session.dart
 @DataClassName('PracticeSessionRow')
 class PracticeSessions extends Table {
+  TextColumn get planDate => text().nullable()();
+  TextColumn get reviewQuestionIdsJson => text().nullable()();
   TextColumn get id => text()();
   TextColumn get examId => text()();
   TextColumn get mode => text()();
@@ -111,6 +116,7 @@ class PracticeSessions extends Table {
 /// [MockAttempt]: ../../domain/models/mock_attempt.dart
 @DataClassName('MockAttemptRow')
 class MockAttempts extends Table {
+  IntColumn get seenBeforeStartCount => integer().nullable()();
   TextColumn get id => text()();
   TextColumn get examId => text()();
   TextColumn get questionIdsJson => text()();
@@ -158,6 +164,7 @@ class ReadinessSnapshots extends Table {
 /// [UserProfile]: ../../domain/models/user_profile.dart
 @DataClassName('UserProfileRow')
 class UserProfiles extends Table {
+  TextColumn get studyPlanPreferencesJson => text().nullable()();
   TextColumn get examId => text()();
   TextColumn get experienceLevel => text()();
   TextColumn get examDatePrecision => text()();
@@ -171,6 +178,17 @@ class UserProfiles extends Table {
 
   @override
   Set<Column> get primaryKey => {examId};
+}
+
+@DataClassName('StudyScheduleRow')
+class StudySchedules extends Table {
+  TextColumn get examId => text()();
+  TextColumn get date => text()();
+  TextColumn get kind => text()();
+  IntColumn get minutes => integer().nullable()();
+  TextColumn get reservedQuestionIdsJson => text()();
+  @override
+  Set<Column> get primaryKey => {examId, date};
 }
 
 /// This app's one local database (PREP-661): every table above, versioned
@@ -214,6 +232,7 @@ class UserProfiles extends Table {
   MockAttempts,
   ReadinessSnapshots,
   UserProfiles,
+  StudySchedules,
 ])
 class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());
@@ -257,41 +276,35 @@ class AppDatabase extends _$AppDatabase {
   /// per this class's own "never erase progress on error/migration" rule
   /// below.
   @override
-  int get schemaVersion => 3;
+  int get schemaVersion => 4;
 
   @override
   MigrationStrategy get migration {
     return MigrationStrategy(
       onCreate: (Migrator m) => m.createAll(),
       onUpgrade: (Migrator m, int from, int to) async {
-        if (from == 1 && to == 2) {
-          // Nullable, no backfill possible or needed — see both new
-          // columns' own doc comments.
-          await m.addColumn(answerAttempts, answerAttempts.contentVersion);
-          await m.addColumn(practiceSessions, practiceSessions.contentVersion);
-          return;
-        }
-        if (from == 1 && to == 3) {
-          // A device that skipped straight from 1 to 3 (e.g. was offline
-          // across a release) needs both upgrades applied, not just the
-          // second.
-          await m.addColumn(answerAttempts, answerAttempts.contentVersion);
-          await m.addColumn(practiceSessions, practiceSessions.contentVersion);
-          await m.addColumn(answerAttempts, answerAttempts.questionVersion);
-          await m.addColumn(answerAttempts, answerAttempts.correctAnswerId);
-          await m.addColumn(answerAttempts, answerAttempts.explanation);
-          return;
-        }
-        if (from == 2 && to == 3) {
-          // Nullable, no backfill possible — see all three new columns'
-          // own doc comments: a pre-existing row has no recorded
-          // question snapshot to backfill this from, and
-          // `PracticeSessionController.resume` is written to treat that
-          // absence as "no reconstructable feedback" rather than
-          // fabricating one from today's content.
-          await m.addColumn(answerAttempts, answerAttempts.questionVersion);
-          await m.addColumn(answerAttempts, answerAttempts.correctAnswerId);
-          await m.addColumn(answerAttempts, answerAttempts.explanation);
+        if (from >= 1 && from < 4 && to == 4) {
+          if (from < 2) {
+            await m.addColumn(answerAttempts, answerAttempts.contentVersion);
+            await m.addColumn(
+                practiceSessions, practiceSessions.contentVersion);
+          }
+          if (from < 3) {
+            await m.addColumn(answerAttempts, answerAttempts.questionVersion);
+            await m.addColumn(answerAttempts, answerAttempts.correctAnswerId);
+            await m.addColumn(answerAttempts, answerAttempts.explanation);
+          }
+          await m.addColumn(answerAttempts, answerAttempts.confident);
+          await m.addColumn(
+              answerAttempts, answerAttempts.activeDurationSeconds);
+          await m.addColumn(answerAttempts, answerAttempts.localAnsweredDate);
+          await m.addColumn(practiceSessions, practiceSessions.planDate);
+          await m.addColumn(
+              practiceSessions, practiceSessions.reviewQuestionIdsJson);
+          await m.addColumn(
+              userProfiles, userProfiles.studyPlanPreferencesJson);
+          await m.addColumn(mockAttempts, mockAttempts.seenBeforeStartCount);
+          await m.createTable(studySchedules);
           return;
         }
         // Every schema jump this database has ever needed to handle is

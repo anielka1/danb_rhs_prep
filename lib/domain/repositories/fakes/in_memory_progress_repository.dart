@@ -1,3 +1,5 @@
+import '../../models/study_schedule.dart';
+import '../study_schedule_repository.dart';
 import '../progress_reset_repository.dart';
 import '../../models/answer_attempt.dart';
 import '../../models/mock_attempt.dart';
@@ -14,7 +16,10 @@ import '../progress_repository.dart';
 /// matters for a caller (e.g. `DebugDemoEnvironment`) that needs a
 /// fully-seeded repository back from a synchronous factory.
 class InMemoryProgressRepository
-    implements ProgressRepository, ProgressResetRepository {
+    implements
+        ProgressRepository,
+        ProgressResetRepository,
+        StudyScheduleRepository {
   InMemoryProgressRepository({
     List<AnswerAttempt> seedAnswerAttempts = const [],
     List<QuestionState> seedQuestionStates = const [],
@@ -34,6 +39,22 @@ class InMemoryProgressRepository
         },
         _readinessSnapshots = List.of(seedReadinessSnapshots);
 
+  final Map<String, List<StudyScheduleEntry>> _schedule = {};
+  @override
+  Future<List<StudyScheduleEntry>> studySchedule(String examId) async =>
+      List.unmodifiable(_schedule[examId] ?? []);
+  @override
+  Future<void> saveStudySchedule(
+      String examId, List<StudyScheduleEntry> entries) async {
+    if (entries.any((e) => e.examId != examId)) {
+      throw ArgumentError('Wrong exam');
+    }
+    _schedule[examId] = List.of(entries);
+  }
+
+  @override
+  Future<List<PracticeSession>> practiceSessionsForExam(String examId) async =>
+      _practiceSessions.values.where((s) => s.examId == examId).toList();
   final List<AnswerAttempt> _attempts;
   final Map<String, QuestionState> _questionStates;
   final Map<String, PracticeSession> _practiceSessions;
@@ -47,6 +68,7 @@ class InMemoryProgressRepository
   Future<void> resetProgressForExam(String examId) async {
     if (examId.trim().isEmpty) throw ArgumentError.value(examId, 'examId');
     // No await between mutations: readers cannot observe a partial reset.
+    _schedule.remove(examId);
     _attempts.removeWhere((a) => a.examId == examId);
     _questionStates.removeWhere((_, state) => state.examId == examId);
     _practiceSessions.removeWhere((_, session) => session.examId == examId);

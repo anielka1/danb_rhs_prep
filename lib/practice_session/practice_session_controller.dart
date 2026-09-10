@@ -1,3 +1,4 @@
+import '../study_plan/study_plan.dart';
 import '../data/local/id_generator.dart';
 import '../domain/models/answer_attempt.dart';
 import '../domain/models/answer_feedback.dart';
@@ -335,22 +336,26 @@ class PracticeSessionController {
   /// returns the immutable [AnswerFeedback] built from that same
   /// evaluation. A failed write retains this exact attempt for retry and
   /// never prevents the interactive result from being returned.
-  Future<AnswerFeedback> submitAnswer(String answerId) {
+  Future<AnswerFeedback> submitAnswer(String answerId,
+      {bool? confident, int? activeDurationSeconds}) {
     final Future<AnswerFeedback>? pending = _pendingSubmit;
     if (pending != null) return pending;
-    final Future<AnswerFeedback> result = _submitAnswer(answerId);
+    final Future<AnswerFeedback> result =
+        _submitAnswer(answerId, confident, activeDurationSeconds);
     _pendingSubmit = result;
     return result.whenComplete(() => _pendingSubmit = null);
   }
 
-  Future<AnswerFeedback> _submitAnswer(String answerId) async {
+  Future<AnswerFeedback> _submitAnswer(
+      String answerId, bool? confident, int? activeDurationSeconds) async {
     final Question question = currentQuestion;
     final bool correct = answerId == question.correctAnswerId;
     // Read once and reused for both the returned feedback and the
     // persisted attempt below — not two separate `_now()` calls, which
     // could (with a real clock) tick forward between them and give the
     // "same evaluation" two different timestamps.
-    final DateTime answeredAt = _now().toUtc();
+    final DateTime localNow = _now();
+    final DateTime answeredAt = localNow.toUtc();
 
     // Built once, from this single `question` read above — see
     // AnswerFeedback's own doc comment for why the UI must read the
@@ -385,7 +390,12 @@ class PracticeSessionController {
           topicId: question.topicId,
           difficulty: question.difficulty,
           sessionId: session.id,
-          sessionType: AttemptSessionType.practice,
+          sessionType: session.mode == PracticeMode.diagnostic
+              ? AttemptSessionType.diagnostic
+              : AttemptSessionType.practice,
+          confident: confident,
+          activeDurationSeconds: activeDurationSeconds,
+          localAnsweredDate: dateKey(localNow),
           selectedAnswerId: answerId,
           isCorrect: correct,
           answeredAt: answeredAt,
@@ -407,7 +417,7 @@ class PracticeSessionController {
   Future<void> complete() async {
     _session = _session.copyWith(
       status: SessionStatus.completed,
-      completedAt: _now().toUtc(),
+      completedAt: _session.completedAt ?? _now().toUtc(),
     );
     await saveSession();
   }
