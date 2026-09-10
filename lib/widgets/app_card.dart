@@ -62,13 +62,15 @@ class AppCard extends StatelessWidget {
 
     final Widget card = Material(
       color: backgroundColor ?? colors.surfaceContainer,
+      elevation: AppElevation.card,
+      shadowColor: colors.primary.withValues(alpha: 0.10),
       borderRadius: borderRadius,
       child: DecoratedBox(
         decoration: BoxDecoration(
           borderRadius: borderRadius,
           border: Border.all(
               color: isSelected ? colors.primary : colors.outlineVariant,
-              width: AppBorderWidth.thick),
+              width: isSelected ? AppBorderWidth.thick : 0.7),
         ),
         child: onTap == null
             ? content

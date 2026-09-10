@@ -23,9 +23,9 @@ class AppSpacing {
 class AppRadii {
   AppRadii._();
 
-  static const double card = 20;
+  static const double card = 26;
   static const double pill = 32;
-  static const double button = 18;
+  static const double button = 20;
   static const double avatar = 100;
   static const double smallIcon = 16;
 }
@@ -198,7 +198,7 @@ class AppSemanticColors extends ThemeExtension<AppSemanticColors> {
     );
   }
 
-  // Semantic status colors remain distinct from the forest action palette.
+  // Semantic status colors remain distinct from the blue action palette.
   static const AppSemanticColors light = AppSemanticColors(
     success: Color(0xFF257D46),
     onSuccess: Color(0xFFFFFFFF),
@@ -209,7 +209,7 @@ class AppSemanticColors extends ThemeExtension<AppSemanticColors> {
     warningContainer: Color(0xFFFBF0DD),
     onWarningContainer: Color(0xFF7A4E0A),
     accent: Color(0xFFD85A3D),
-    mutedForeground: Color(0xFF586C62),
+    mutedForeground: Color(0xFF606B85),
   );
 
   static const AppSemanticColors dark = AppSemanticColors(
@@ -222,7 +222,7 @@ class AppSemanticColors extends ThemeExtension<AppSemanticColors> {
     warningContainer: Color(0xFF3D2C10),
     onWarningContainer: Color(0xFFF0CE94),
     accent: Color(0xFFFF9270),
-    mutedForeground: Color(0xFFADBBB4),
+    mutedForeground: Color(0xFFB5BED5),
   );
 }
 
@@ -235,46 +235,46 @@ class AppSemanticColors extends ThemeExtension<AppSemanticColors> {
 class AppTheme {
   AppTheme._();
 
-  // Forest palette: neutral surfaces, strong teal actions and readable ink.
+  // Blue/lavender palette: airy surfaces, saturated actions and navy ink.
   static const ColorScheme _lightScheme = ColorScheme.light(
     brightness: Brightness.light,
-    primary: Color(0xFF17695F),
+    primary: Color(0xFF4659DB),
     onPrimary: Color(0xFFFFFFFF),
-    primaryContainer: Color(0xFFE5F1EC),
-    onPrimaryContainer: Color(0xFF17695F),
-    secondary: Color(0xFF17695F),
+    primaryContainer: Color(0xFFEEF0FF),
+    onPrimaryContainer: Color(0xFF4659DB),
+    secondary: Color(0xFF4659DB),
     onSecondary: Color(0xFFFFFFFF),
     error: Color(0xFFC03E3E),
     onError: Color(0xFFFFFFFF),
     errorContainer: Color(0xFFFBE7E7),
     onErrorContainer: Color(0xFFB83D3D),
-    surface: Color(0xFFF5F7F5),
-    onSurface: Color(0xFF172D29),
+    surface: Color(0xFFF7F9FF),
+    onSurface: Color(0xFF19223D),
     surfaceContainer: Color(0xFFFFFFFF),
-    onSurfaceVariant: Color(0xFF586C62),
-    outline: Color(0xFFDCE5DF),
-    outlineVariant: Color(0xFFDCE5DF),
+    onSurfaceVariant: Color(0xFF606B85),
+    outline: Color(0xFFE8ECF7),
+    outlineVariant: Color(0xFFE8ECF7),
   );
 
-  // Dark surfaces retain the same forest identity with brighter actions.
+  // Dark surfaces retain the same blue identity with brighter actions.
   static const ColorScheme _darkScheme = ColorScheme.dark(
     brightness: Brightness.dark,
-    primary: Color(0xFF91D5C1),
-    onPrimary: Color(0xFF102D26),
-    primaryContainer: Color(0xFF254C40),
-    onPrimaryContainer: Color(0xFFB7EBD8),
-    secondary: Color(0xFF91D5C1),
-    onSecondary: Color(0xFF102D26),
+    primary: Color(0xFFB3BEFF),
+    onPrimary: Color(0xFF17204E),
+    primaryContainer: Color(0xFF2B3565),
+    onPrimaryContainer: Color(0xFFDDE3FF),
+    secondary: Color(0xFFB3BEFF),
+    onSecondary: Color(0xFF17204E),
     error: Color(0xFFE98080),
     onError: Color(0xFF3B1414),
     errorContainer: Color(0xFF4A2432),
     onErrorContainer: Color(0xFFF3B4B4),
-    surface: Color(0xFF17221F),
-    onSurface: Color(0xFFEDF6F1),
-    surfaceContainer: Color(0xFF22312C),
-    onSurfaceVariant: Color(0xFFADBBB4),
-    outline: Color(0xFF465A50),
-    outlineVariant: Color(0xFF3B4B43),
+    surface: Color(0xFF13192C),
+    onSurface: Color(0xFFF1F4FF),
+    surfaceContainer: Color(0xFF202941),
+    onSurfaceVariant: Color(0xFFB5BED5),
+    outline: Color(0xFF56617D),
+    outlineVariant: Color(0xFF34405E),
   );
 
   static ThemeData get lightTheme =>
@@ -358,7 +358,8 @@ class AppTheme {
         style: ElevatedButton.styleFrom(
           backgroundColor: colorScheme.primary,
           foregroundColor: colorScheme.onPrimary,
-          elevation: AppElevation.none,
+          elevation: AppElevation.card,
+          shadowColor: colorScheme.primary.withValues(alpha: 0.22),
           minimumSize: const Size(
             double.infinity,
             AppTapTarget.minInteractive,
@@ -439,12 +440,12 @@ class AppTextStyles {
 
   static const TextStyle _h1 = TextStyle(
     fontSize: 30,
-    fontWeight: FontWeight.w800,
+    fontWeight: FontWeight.w700,
     height: 1.2,
   );
   static const TextStyle _h2 = TextStyle(
     fontSize: 22,
-    fontWeight: FontWeight.w800,
+    fontWeight: FontWeight.w700,
     height: 1.25,
   );
   static const TextStyle _h3 =
@@ -462,9 +463,9 @@ class AppTextStyles {
     letterSpacing: 0.6,
   );
   static const TextStyle _button =
-      TextStyle(fontSize: 16, fontWeight: FontWeight.w800);
+      TextStyle(fontSize: 16, fontWeight: FontWeight.w700);
   static const TextStyle _statNumber =
-      TextStyle(fontSize: 30, fontWeight: FontWeight.w800);
+      TextStyle(fontSize: 30, fontWeight: FontWeight.w700);
 
   /// Resolves every named style against the active theme's semantic text
   /// colors. Headlines and stat numbers use [ColorScheme.onSurface]

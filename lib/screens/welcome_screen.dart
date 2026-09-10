@@ -9,7 +9,7 @@ import '../services/analytics_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/app_scaffold.dart';
 import '../widgets/primary_button.dart';
-import '../widgets/app_card.dart';
+import '../widgets/welcome_illustration.dart';
 import 'exam_date_screen.dart';
 
 /// The first screen of onboarding: introduces the exam and starts it via
@@ -152,42 +152,14 @@ class _WelcomeContent extends StatelessWidget {
       body: Center(
         child: SingleChildScrollView(
           child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 360),
+            constraints: const BoxConstraints(maxWidth: 400),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
-                  children: [
-                    Expanded(
-                        child: AppCard(
-                            child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Icon(Icons.auto_stories_rounded,
-                            color: colors.secondary, size: 32),
-                        const SizedBox(height: AppSpacing.xl),
-                        Text('Learn.', style: textStyles.h2),
-                      ],
-                    ))),
-                    const SizedBox(width: AppSpacing.md),
-                    Expanded(
-                        child: AppCard(
-                            backgroundColor: colors.primary,
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Icon(Icons.done_all_rounded,
-                                    color: colors.onPrimary, size: 32),
-                                const SizedBox(height: AppSpacing.xl),
-                                Text('Feel ready.',
-                                    style: textStyles.h2
-                                        .copyWith(color: colors.onPrimary)),
-                              ],
-                            ))),
-                  ],
-                ),
-                const SizedBox(height: AppSpacing.xxxl),
+                const SizedBox(height: AppSpacing.lg),
+                const WelcomeIllustration(),
+                const SizedBox(height: AppSpacing.xxl),
                 Text(
                   examName,
                   style: textStyles.label.copyWith(
@@ -200,7 +172,8 @@ class _WelcomeContent extends StatelessWidget {
                 // 2. Headline.
                 Text(
                   'A little practice.\nMore confidence.',
-                  style: textStyles.h1,
+                  style:
+                      textStyles.h1.copyWith(fontSize: 34, letterSpacing: -1.1),
                   textAlign: TextAlign.start,
                 ),
                 const SizedBox(height: AppSpacing.sm),
@@ -218,9 +191,11 @@ class _WelcomeContent extends StatelessWidget {
                 // The one primary CTA.
                 PrimaryButton(
                   label: 'Start Preparing',
+                  trailingIcon: Icons.arrow_forward_rounded,
                   isLoading: isBusy,
                   onPressed: onStartPreparing,
                 ),
+                const SizedBox(height: AppSpacing.lg),
               ],
             ),
           ),

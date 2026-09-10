@@ -41,16 +41,15 @@ than left to whatever a given machine defaults to (see
 
 ## Baseline platform
 
-The checked-in 32 images were generated on Ubuntu with Flutter 3.41.2
-by [update-goldens run 34375367854](https://github.com/anielka1/danb_rhs_prep/actions/runs/34375367854),
-from commit `3818ddd047da209cdf55ecd7f5adaa1d9ef2a1be`.
-Artifact `10113655121` was visually reviewed before copying the PNGs.
-
-Settings and Progress normal-text baselines were updated from Linux run
-`34515886774`, commit `780c2b5174a5050dfdff3dd9d6728c8b33dabedb`,
-artifact `10167663178` (ZIP SHA-256
-`051b19e73b848ec4f8c0fe74c4debe4575ee3a3d7bd88149ea1b5ed123fc0965`).
-All four changed images were visually reviewed; the other 28 images were byte-identical.
+The current 32 images were generated on Ubuntu with Flutter 3.41.2 by
+[update-goldens run 34518857290](https://github.com/anielka1/danb_rhs_prep/actions/runs/34518857290),
+from commit `ee64f95c8f8a861c46536ec65a370ebc605d23c3`.
+Artifact `10168811632` ZIP SHA-256:
+`262d9bd093d48f50d2b7d6e4a9ab149b8ac1440aa4fc215e9775682719727570`.
+All light/dark and normal/AX5 images were visually reviewed for the blue
+palette, typography and welcome illustration redesign. At AX5, content
+continues below the viewport through the existing scrollable layouts;
+interaction tests remain the check for reaching controls below the fold.
 
 Linux CI is authoritative for exact pixel comparisons. macOS rendering
 produced differences across all 32 images despite the same Flutter version,
@@ -95,3 +94,11 @@ flutter test --update-goldens test/golden/
 Never hand-edit a golden PNG, and never regenerate goldens to make an
 unrelated failing test pass — a golden diff means the rendered output
 changed; confirm *why* before accepting the new baseline.
+
+Welcome illustration baselines were subsequently reviewed and updated from
+Linux run `34520554520`, commit `60d0ead72206b20f45c9eca051c8cc49c6e1048a`,
+artifact `10169486947` (ZIP SHA-256
+`96903e812e6cdc344a76fe2cb7e5c8367e6f4be5666f79031102122908ca07c5`).
+The illustration now uses explicit translucent layers instead of path-shadow
+blur. The workflow verifies generated images in a fresh test process before
+uploading them; the pixel comparator remains exact.
