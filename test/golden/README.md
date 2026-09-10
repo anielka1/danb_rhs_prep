@@ -94,3 +94,11 @@ flutter test --update-goldens test/golden/
 Never hand-edit a golden PNG, and never regenerate goldens to make an
 unrelated failing test pass — a golden diff means the rendered output
 changed; confirm *why* before accepting the new baseline.
+
+Welcome illustration baselines were subsequently reviewed and updated from
+Linux run `34520554520`, commit `60d0ead72206b20f45c9eca051c8cc49c6e1048a`,
+artifact `10169486947` (ZIP SHA-256
+`96903e812e6cdc344a76fe2cb7e5c8367e6f4be5666f79031102122908ca07c5`).
+The illustration now uses explicit translucent layers instead of path-shadow
+blur. The workflow verifies generated images in a fresh test process before
+uploading them; the pixel comparator remains exact.
