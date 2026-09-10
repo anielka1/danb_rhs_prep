@@ -21,3 +21,5 @@ Flutter lists macOS and Chrome only. No physical phone or wireless device is con
 ## Visual baselines
 
 The Linux update-goldens workflow now also produces review artifacts for UI pull requests. It never commits them, and the quality job independently continues to compare committed baselines. Intentional Settings and Progress changes require reviewing and committing Linux-generated replacements before merging. macOS output is for local visual inspection only.
+
+Linux run 34515886774 produced 32 images. Four normal-text Settings/Progress images changed and were visually reviewed and committed; the remaining 28 were byte-identical. Local final suite: 961 passed, 1 skipped, 32 macOS/Linux golden mismatches. Format and analysis passed. Targeted settings/help/reset/progress: 25 passed; theme and E2E smoke: 6 passed.
