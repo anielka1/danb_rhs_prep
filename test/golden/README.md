@@ -108,3 +108,10 @@ were reviewed for the soft study-screen redesign from Linux run `34522797485`,
 commit `25486975569577306a122f0e2457a7f6a9cf566a`, artifact `10170365672`.
 ZIP SHA-256: `3cd7c151e23e7366dd40198bdef9f423114e212aca353453dbb9051f12682889`.
 The other 26 images were byte-identical and remain unchanged.
+
+PR #62 Home baselines (four light/dark × normal/AX5 images) were generated
+and visually reviewed on local Ubuntu 24.04 aarch64 (Lima), Flutter 3.41.2,
+from commit `238e992ad9611887f79f8d4b1fb672e5b04fcba1`. Before regeneration,
+all other 28 Linux CI baselines matched exactly. After regeneration, all
+32 golden checks passed in a fresh full-suite process with the exact comparator.
+This local workflow avoids paid GitHub Actions; no macOS baselines were used.
