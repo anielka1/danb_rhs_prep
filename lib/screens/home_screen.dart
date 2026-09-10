@@ -11,6 +11,7 @@ import '../widgets/primary_button.dart';
 import 'exam_overview_screen.dart';
 import 'profile_settings_screen.dart';
 import 'progress_screen.dart';
+import 'saved_questions_screen.dart';
 import 'main_shell.dart';
 import '../widgets/app_bottom_navigation.dart';
 
@@ -80,29 +81,32 @@ class _HomeScreenState extends State<HomeScreen> {
     final colors = context.colors;
     final styles = context.textStyles;
     return AppScaffold(
-      actions: [
-        Tooltip(
-          message: 'Settings',
-          child: CircleIconButton(
-            icon: Icons.settings_rounded,
-            semanticLabel: 'Settings',
-            onPressed: () => Navigator.of(context, rootNavigator: true)
-                .pushNamed(ProfileSettingsScreen.route,
-                    arguments:
-                        BootstrapSessionScope.maybeControllerOf(context)),
-          ),
-        ),
-      ],
       body: SingleChildScrollView(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            const SizedBox(height: AppSpacing.lg),
             Text('RHS PREP', style: styles.label),
             const SizedBox(height: AppSpacing.md),
-            const StudyPageHeading(
+            StudyPageHeading(
               title: 'Small steps.\nSteady progress.',
               subtitle: 'Your next study session is ready.',
-              icon: Icons.wb_sunny_outlined,
+              icon: Icons.settings_rounded,
+              trailing: Tooltip(
+                message: 'Settings',
+                child: SizedBox(
+                  width: 64,
+                  height: 72,
+                  child: CircleIconButton(
+                    icon: Icons.settings_rounded,
+                    semanticLabel: 'Settings',
+                    onPressed: () => Navigator.of(context, rootNavigator: true)
+                        .pushNamed(ProfileSettingsScreen.route,
+                            arguments: BootstrapSessionScope.maybeControllerOf(
+                                context)),
+                  ),
+                ),
+              ),
             ),
             const SizedBox(height: AppSpacing.xxl),
             FutureBuilder<PracticeSession?>(
@@ -164,6 +168,33 @@ class _HomeScreenState extends State<HomeScreen> {
                     Text('View your progress', style: styles.h3),
                     const SizedBox(height: AppSpacing.xs),
                     Text('Accuracy, topics and exam history',
+                        style: styles.bodySmall),
+                  ],
+                )),
+                const Icon(Icons.chevron_right_rounded),
+              ]),
+            ),
+            const SizedBox(height: AppSpacing.md),
+            AppCard(
+              onTap: () {
+                final state = BootstrapSessionScope.maybeControllerOf(context);
+                Navigator.of(context).push(MaterialPageRoute<void>(
+                  builder: (_) => SavedQuestionsScreen(
+                    contentPackage: state?.snapshot.contentPackage,
+                    progressRepository: widget.progressRepository,
+                  ),
+                ));
+              },
+              child: Row(children: [
+                Icon(Icons.bookmark_rounded, color: colors.primary),
+                const SizedBox(width: AppSpacing.md),
+                Expanded(
+                    child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Saved questions', style: styles.h3),
+                    const SizedBox(height: AppSpacing.xs),
+                    Text('Answers & explanations, ready to review',
                         style: styles.bodySmall),
                   ],
                 )),

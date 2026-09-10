@@ -3,6 +3,8 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:danb_rhs_prep/main_demo.dart' as demo;
 import 'package:danb_rhs_prep/screens/main_shell.dart';
+import 'package:danb_rhs_prep/screens/saved_questions_screen.dart';
+import 'package:danb_rhs_prep/widgets/study_page_heading.dart';
 import 'package:danb_rhs_prep/screens/practice_summary_screen.dart';
 import 'package:danb_rhs_prep/screens/profile_settings_screen.dart';
 import 'package:danb_rhs_prep/widgets/answer_option_tile.dart';
@@ -41,6 +43,37 @@ Future<void> _completeOnboarding(WidgetTester tester) async {
 }
 
 void main() {
+  testWidgets(
+      'Home settings sits in the heading and saved library opens directly',
+      (tester) async {
+    await _completeOnboarding(tester);
+    expect(
+        find.descendant(
+            of: find.byType(StudyPageHeading),
+            matching: find.byTooltip('Settings')),
+        findsOneWidget);
+    expect(find.byIcon(Icons.wb_sunny_outlined), findsNothing);
+    await _tapText(tester, 'Continue');
+    await _tapText(tester, 'Start Practice Exam');
+    await tester.tap(find.bySemanticsLabel('Bookmark question'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.bySemanticsLabel('Close'));
+    await tester.pumpAndSettle();
+    await _tapText(tester, 'Home');
+    await _tapText(tester, 'Saved questions');
+    expect(find.byType(SavedQuestionsScreen), findsOneWidget);
+    expect(find.text('Your saved collection.'), findsOneWidget);
+    expect(find.text('Correct answer'), findsOneWidget);
+    expect(find.text('Explanation'), findsOneWidget);
+    await tester.tap(find.bySemanticsLabel('Back').last);
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.byTooltip('Settings'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('Settings'));
+    await tester.pumpAndSettle();
+    expect(find.byType(ProfileSettingsScreen), findsOneWidget);
+  });
+
   testWidgets('settings edits study answers and returns without onboarding',
       (tester) async {
     await _completeOnboarding(tester);
