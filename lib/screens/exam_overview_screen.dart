@@ -19,6 +19,8 @@ import '../widgets/error_state.dart';
 import '../widgets/primary_button.dart';
 import 'practice_question_screen.dart';
 
+enum PracticeLaunch { random, quick10, timed, mistakes, topic }
+
 class ExamOverviewScreen extends StatefulWidget {
   static const String route = '/exam-overview';
 
@@ -30,6 +32,7 @@ class ExamOverviewScreen extends StatefulWidget {
     this.now,
     this.random,
     this.autoStart = false,
+    this.launch,
   });
 
   /// Real, already-loaded questions for the active exam — threaded in as
@@ -83,6 +86,7 @@ class ExamOverviewScreen extends StatefulWidget {
   /// Controlled in tests; production draws once when creating a session.
   final Random? random;
   final bool autoStart;
+  final PracticeLaunch? launch;
 
   @override
   State<ExamOverviewScreen> createState() => _ExamOverviewScreenState();
@@ -92,6 +96,10 @@ class _ExamOverviewScreenState extends State<ExamOverviewScreen> {
   @override
   void initState() {
     super.initState();
+    _requestedCount = widget.launch == PracticeLaunch.random ? 1 : 10;
+    if (widget.launch == PracticeLaunch.mistakes) {
+      _focus = PracticeFocus.incorrectQuestions;
+    }
     if (widget.autoStart) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) _startOrResumePractice();
@@ -104,6 +112,7 @@ class _ExamOverviewScreenState extends State<ExamOverviewScreen> {
   int _requestedCount = 10;
   PracticeFocus _focus = PracticeFocus.any;
   String? _domainId;
+  String? _topicId;
 
   void _updateSelection(VoidCallback update) {
     setState(() {
@@ -184,7 +193,8 @@ class _ExamOverviewScreenState extends State<ExamOverviewScreen> {
 
     if (!mounted) return;
     if (existing != null &&
-        (_focus != PracticeFocus.any ||
+        (widget.launch != null ||
+            _focus != PracticeFocus.any ||
             _domainId != null ||
             _requestedCount != 10)) {
       setState(() => _choosingSession = true);
@@ -273,6 +283,10 @@ class _ExamOverviewScreenState extends State<ExamOverviewScreen> {
           requestedCount: _requestedCount,
           focus: _focus,
           domainId: _domainId,
+          topicId: _topicId,
+          random: widget.launch == PracticeLaunch.random
+              ? (widget.random ?? Random())
+              : null,
           maxCount: maxCount,
         );
       } on PracticeGenerationUnavailable catch (error) {
@@ -291,17 +305,45 @@ class _ExamOverviewScreenState extends State<ExamOverviewScreen> {
         });
         return;
       }
+      if (!mounted) return;
+      if (widget.launch == PracticeLaunch.quick10 &&
+          generator.questions.length < 10) {
+        final count = generator.questions.length;
+        setState(() => _choosingSession = true);
+        final proceed = await AppDialog.show<bool>(
+          context: context,
+          title: '$count questions available',
+          message:
+              'Your available questions and current allowance permit $count of 10 questions. Start this shorter session?',
+          actions: [
+            AppDialogAction(label: 'Start $count questions', value: true),
+            const AppDialogAction(
+                label: 'Cancel',
+                value: false,
+                style: AppDialogActionStyle.cancel)
+          ],
+        );
+        if (!mounted) return;
+        setState(() => _choosingSession = false);
+        if (proceed != true) {
+          setState(() => _starting = false);
+          return;
+        }
+      }
       session = PracticeSession(
         id: 'practice-$examId-${nowFn().toUtc().microsecondsSinceEpoch}',
         examId: examId,
-        mode: switch (_focus) {
-          PracticeFocus.any => _domainId == null
-              ? PracticeMode.quickPractice
-              : PracticeMode.browseDomain,
-          PracticeFocus.weakAreas => PracticeMode.weakAreas,
-          PracticeFocus.incorrectQuestions => PracticeMode.incorrectQuestions,
-          PracticeFocus.bookmarkedQuestions => PracticeMode.bookmarked,
-        },
+        mode: widget.launch == PracticeLaunch.timed
+            ? PracticeMode.timedQuiz
+            : switch (_focus) {
+                PracticeFocus.any => _domainId == null
+                    ? PracticeMode.quickPractice
+                    : PracticeMode.browseDomain,
+                PracticeFocus.weakAreas => PracticeMode.weakAreas,
+                PracticeFocus.incorrectQuestions =>
+                  PracticeMode.incorrectQuestions,
+                PracticeFocus.bookmarkedQuestions => PracticeMode.bookmarked,
+              },
         questionIds: generator.questions.map((q) => q.id).toList(),
         answerOrder: AnswerOrder.shuffled(
             generator.questions, widget.random ?? Random()),
@@ -400,8 +442,76 @@ class _ExamOverviewScreenState extends State<ExamOverviewScreen> {
     );
   }
 
+  Widget _buildLaunch(BuildContext context) {
+    final title = switch (widget.launch!) {
+      PracticeLaunch.random => 'Random question',
+      PracticeLaunch.quick10 => 'Quick 10',
+      PracticeLaunch.timed => 'Timed quiz',
+      PracticeLaunch.mistakes => 'Review mistakes',
+      PracticeLaunch.topic => 'Practice by topic',
+    };
+    final package = widget.contentPackage;
+    return AppScaffold(
+      title: title,
+      leading: CircleIconButton(
+          icon: Icons.chevron_left_rounded,
+          semanticLabel: 'Back',
+          onPressed: () => Navigator.of(context).maybePop()),
+      body: SingleChildScrollView(
+          child:
+              Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        Text(
+            widget.launch == PracticeLaunch.timed
+                ? 'Up to 10 questions with an answering stopwatch. It pauses in the background and while you read explanations, and stops counting after two minutes without interaction. No automatic submission. Saved answer times return when you resume; time on an unfinished answer resets.'
+                : widget.launch == PracticeLaunch.topic
+                    ? 'Choose a topic for a focused session of up to 10 questions.'
+                    : widget.launch == PracticeLaunch.mistakes
+                        ? 'Practise questions you have previously answered incorrectly. Your earlier results stay unchanged.'
+                        : 'Your session uses available questions and your current practice allowance.',
+            style: context.textStyles.body),
+        const SizedBox(height: 24),
+        if (widget.launch == PracticeLaunch.topic && package != null) ...[
+          for (final domain in package.exam.domains) ...[
+            Text(domain.name, style: context.textStyles.h3),
+            for (final topic in domain.topics)
+              ListTile(
+                  selected: _topicId == topic.id,
+                  leading: Icon(_topicId == topic.id
+                      ? Icons.radio_button_checked
+                      : Icons.radio_button_off),
+                  title: Text(topic.name),
+                  onTap: _starting
+                      ? null
+                      : () => setState(() {
+                            _topicId = topic.id;
+                            _domainId = domain.id;
+                          })),
+            const SizedBox(height: 16),
+          ]
+        ],
+        if (_limitCheckFailed)
+          const Text('Could not check your practice allowance. Please retry.'),
+        if (_unavailableReason != null)
+          Semantics(liveRegion: true, child: Text(_unavailableReason!)),
+        const SizedBox(height: 16),
+        PrimaryButton(
+            label: _unavailableReason != null || _limitCheckFailed
+                ? 'Retry'
+                : 'Start $title',
+            isLoading: _starting && !_choosingSession,
+            onPressed: !_hasContent ||
+                    widget.launch == PracticeLaunch.topic && _topicId == null
+                ? null
+                : _startOrResumePractice),
+        if (!_hasContent)
+          const Text('No approved questions are available yet.'),
+      ])),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    if (widget.launch != null) return _buildLaunch(context);
     final colors = context.colors;
     final textStyles = context.textStyles;
     final ContentPackage? package = widget.contentPackage;

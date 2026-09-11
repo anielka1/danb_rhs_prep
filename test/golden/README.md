@@ -164,3 +164,11 @@ Home's AX5 layout uses a smaller heading role so words remain readable at 4x.
 New small-screen tests also select and save diagnostic answers at 4x in both themes.
 These are widget renders, not physical-device screenshots. Shared-harness icon
 placeholder glyphs and the debug banner remain visible.
+
+### Home practice chooser (September 11, 2026)
+
+The six existing Home baselines now show the mint practice chooser and blue Today
+card: home light/dark × normal/AX5, plus planned_home light/dark normal. All six
+were rendered on pinned local Linux and inspected. No comparison tolerance or
+unchanged screen baseline was modified. Running Flutter Web captures and native
+iOS limitations are documented in docs/verification/2026-09-11-home-chooser.md.

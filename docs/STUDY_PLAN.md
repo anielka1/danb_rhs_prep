@@ -13,13 +13,17 @@ or availability question. Completion is written after the profile saves; a failu
 stays retryable. Reopening preserves the timeframe and any diagnostic session.
 Skipping the check completes onboarding without creating answer history.
 
-Home has one Start learning / Continue learning action. New practice uses the
-existing practice generator, eligibility gates and free-limit checks. Existing
-practice (including older planned sessions) retains its ID, question set, saved
-answer permutation and historical feedback. Active diagnostics reopen their own
-screen. Secondary links open saved answers, topic progress, practice filters and
-the optional check. Read errors are shown as errors, never as zero progress.
-Summary returns to Home; it does not create another daily goal.
+Home is a practice chooser: Random question, Quick 10, Timed quiz, Review
+mistakes, Practice by topic, Mock exam and Saved questions. A compact Continue
+session action resumes existing practice/diagnostic or a saved mock. The starting
+check remains optional and secondary. See the [chooser verification report](verification/2026-09-11-home-chooser.md)
+for the precise mode mapping and time semantics.
+
+The Today card uses recorded local-day practice/diagnostic answer events, not
+lifetime statistics or a daily allocation. Mock aggregate results do not provide
+per-answer dates and are explicitly outside this card's scope. Unknown active
+answer time displays Not available. A calendar icon edits the exam date; it does
+not open or recreate a study calendar. Summary returns to Home without a new goal.
 
 ## Why keep the starting check?
 

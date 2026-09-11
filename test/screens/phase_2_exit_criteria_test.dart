@@ -74,7 +74,7 @@ void main() {
         expect(tester.takeException(), isNull);
 
         expect(currentTab(tester), AppTab.home);
-        expect(find.text('Your study space'), findsOneWidget);
+        expect(find.text('Let’s study'), findsOneWidget);
 
         await tapTab(tester, 'Practice');
         expect(tester.takeException(), isNull);
@@ -145,7 +145,7 @@ void main() {
         await tapTab(tester, 'Home');
         expect(tester.takeException(), isNull);
         expect(currentTab(tester), AppTab.home);
-        expect(find.text('Your study space'), findsOneWidget);
+        expect(find.text('Let’s study'), findsOneWidget);
       });
 
       testWidgets(
@@ -168,7 +168,7 @@ void main() {
         expect(tester.takeException(), isNull);
         expect(find.byType(ProfileSettingsScreen), findsNothing);
         expect(currentTab(tester), AppTab.home);
-        expect(find.text('Your study space'), findsOneWidget);
+        expect(find.text('Let’s study'), findsOneWidget);
       });
 
       testWidgets('inactive tabs are excluded from accessibility semantics',
@@ -177,13 +177,13 @@ void main() {
         await tester.pumpWidget(appAt(tester, viewport));
 
         // Home is active: its content is reachable, Progress's is not.
-        expect(find.bySemanticsLabel('Your study space'), findsOneWidget);
+        expect(find.bySemanticsLabel('Let’s study'), findsOneWidget);
         expect(find.bySemanticsLabel(RegExp('Your Progress')), findsNothing);
 
         await tapTab(tester, 'Progress');
 
         expect(find.bySemanticsLabel(RegExp('Your Progress')), findsOneWidget);
-        expect(find.bySemanticsLabel('Your study space'), findsNothing);
+        expect(find.bySemanticsLabel('Let’s study'), findsNothing);
 
         handle.dispose();
       });
@@ -216,8 +216,7 @@ void main() {
             expect(tester.takeException(), isNull);
 
             expect(
-                Theme.of(tester.element(find.text('Your study space')))
-                    .brightness,
+                Theme.of(tester.element(find.text('Let’s study'))).brightness,
                 themeMode == ThemeMode.dark
                     ? Brightness.dark
                     : Brightness.light);
