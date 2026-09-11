@@ -51,11 +51,25 @@ ceil(U/S), with U counting unseen approved ordinary questions, excluding an acti
 mock reserve. This is distinct from the time-constrained assigned pace. With 500
 questions and D=30, F=5/B=3/S=22 and pace=23; reserving 75 gives pace=20.
 
-Initial estimates are 90 seconds for new questions and 45 seconds for reviews.
-After five measured samples of each kind, use the median of samples between 5 and
-300 seconds. Work already recorded today reduces its budget and remaining new
-assignment. A stopwatch on the question screen excludes background time and time
-spent viewing feedback. Estimates do not interrupt an answer in progress.
+Whole-question estimates include answering **and** a 30-second explanation-reading
+allowance: initially 120 seconds for new questions and 75 seconds for reviews.
+With fewer than five measured answers of each kind, these defaults are used.
+After five valid 5–300-second answer samples, the median answer time is used with
+a floor of two-thirds of the original answer default (60 / 30 seconds), plus the
+reading allowance. This prevents quick taps from collapsing the estimate. The
+allowance is a transparent estimate, not a measurement of reading or mastery.
+Today's remaining budget subtracts recorded answer seconds (or the existing
+answer fallback for null measurements) plus the reading allowance per answer.
+Persisted `activeDurationSeconds` still means **answering only**. No historical
+rows, schema, or results are rewritten. Historical calendar answer time uses only
+recorded durations; it does not invent timing for old null measurements.
+
+Answer timing stops in the background and while feedback is shown. After two
+minutes without a pointer interaction it stops accruing until another interaction;
+resuming never backfills idle time. This heuristic can undercount a long period
+of quiet reading of a question. It never interrupts answering. The summary's
+"Elapsed since start" is wall time and explicitly includes pauses, not active
+study time. All remaining-time labels are approximate.
 
 The normal forecast reserves 30% of time for reviews. Actual due reviews are
 assigned first; excess remains visible as backlog. Domain allocation uses weighted
@@ -196,3 +210,27 @@ The schema remains **4**, with no migration or deleted data.
   Verify from a normal Terminal at the repository root with
   `flutter build ios --release --no-codesign`. No successful iOS build is claimed.
 - No hosted GitHub Actions. Physical-device accessibility is not verified.
+
+## Daily journey presentation
+
+Home and the result screen share `DailyStudyOverview`, derived from repositories.
+A saved planned question set supplies completed/remaining counts, even after a
+restart or if a reduced budget would project fewer questions. An older active
+plan is identified as such. Completed commitments stay complete during optional
+free practice. The result screen offers the remaining plan or Home, and describes
+session accuracy as a small sample rather than a mastery or passing estimate.
+
+Calendar rows distinguish forecasts, partial work, completion, rest and exam days
+with words as well as styling. Selecting a future day reveals its editing actions;
+the exam never offers these actions. Historical rows are based on persisted sessions
+and attempts (including old attempts with a UTC date fallback). Saved unfinished
+IDs are retained; unrecorded past forecasts are not fabricated. Accordingly, an
+unstarted missed day without any saved schedule/session cannot be reconstructed
+as historical work. Remaining material is forecast within the same time budget;
+limited coverage offers availability editing and never changes the exam date.
+
+The unstarted daily target reconstructs its pre-answer time capacity; today's
+quick answers cannot create another full allocation. Started plans continue to
+use their persisted commitment. Answer permutations, the free UTC reset, content
+approval and difficulty adaptation are unchanged. The current database schema
+stays at **5**; this change needs no migration.

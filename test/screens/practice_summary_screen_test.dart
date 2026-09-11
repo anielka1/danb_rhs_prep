@@ -149,8 +149,8 @@ void main() {
           reason: 'no answered question means no real breakdown data to '
               'show — an empty list here would be a placeholder, not a '
               'fact');
-      expect(find.textContaining('Strongest area'), findsNothing);
-      expect(find.textContaining('Weakest area'), findsNothing);
+      expect(find.textContaining('Highest session accuracy'), findsNothing);
+      expect(find.textContaining('Lowest session accuracy'), findsNothing);
     });
   });
 
@@ -198,9 +198,10 @@ void main() {
         child: const PracticeSummaryScreen(),
       )));
 
-      expect(find.textContaining('Strongest area: topic_strong (100%)'),
+      expect(
+          find.textContaining('Highest session accuracy: topic_strong (100%)'),
           findsOneWidget);
-      expect(find.textContaining('Weakest area: topic_weak (50%)'),
+      expect(find.textContaining('Lowest session accuracy: topic_weak (50%)'),
           findsOneWidget);
     });
 
@@ -219,8 +220,8 @@ void main() {
         child: const PracticeSummaryScreen(),
       )));
 
-      expect(find.textContaining('Strongest area'), findsNothing);
-      expect(find.textContaining('Weakest area'), findsNothing);
+      expect(find.textContaining('Highest session accuracy'), findsNothing);
+      expect(find.textContaining('Lowest session accuracy'), findsNothing);
     });
   });
 

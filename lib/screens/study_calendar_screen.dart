@@ -1,3 +1,4 @@
+import 'study_availability_screen.dart';
 import 'package:flutter/material.dart';
 import '../bootstrap/bootstrap_session_controller.dart';
 import '../domain/repositories/progress_repository.dart';
@@ -24,6 +25,7 @@ class StudyCalendarScreen extends StatefulWidget {
 
 class _StudyCalendarScreenState extends State<StudyCalendarScreen> {
   bool _saving = false;
+  DateTime? _selectedDate;
   String? _message;
   Future<void> _change(StudyPlanDay day, StudyDayType type,
       {bool move = false}) async {
@@ -97,8 +99,29 @@ class _StudyCalendarScreenState extends State<StudyCalendarScreen> {
             const BackButton(),
             Text('Your study calendar', style: context.textStyles.h1),
             Text(
-                'Future sessions are estimates. Completed answers stay in your history.',
+                'Select a day to review its tasks. Future sessions are estimates. Completed answers stay in your history.',
                 style: context.textStyles.body),
+            if (widget.plan.limitedCoverage &&
+                widget.session.snapshot.examDateSelection?.date != null) ...[
+              const Text(
+                  'Your current study time cannot cover all remaining material before the exam. Your exam date has not changed.'),
+              TextButton(
+                  onPressed: () async {
+                    await Navigator.of(context).push(MaterialPageRoute(
+                        builder: (_) =>
+                            StudyAvailabilityScreen(session: widget.session)));
+                    // The caller reloads the projection when this calendar closes,
+                    // just as it does after a day change above.
+                    if (context.mounted) Navigator.of(context).pop();
+                  },
+                  child: const Text('Adjust availability')),
+            ],
+            if (widget.plan.days.any((d) =>
+                d.date.isBefore(calendarDate(widget.now())) &&
+                (d.status == StudyDayStatus.missed ||
+                    d.status == StudyDayStatus.inProgress)))
+              const Text(
+                  'Missed work stays in the remaining plan, spread across available days within your time budget. You can still continue a started session.'),
             if (_message != null)
               Text(_message!, style: context.textStyles.body),
             const SizedBox(height: AppSpacing.lg),
@@ -106,55 +129,76 @@ class _StudyCalendarScreenState extends State<StudyCalendarScreen> {
               Padding(
                   padding: const EdgeInsets.only(bottom: AppSpacing.md),
                   child: AppCard(
+                      selected: day.date ==
+                          (_selectedDate ?? calendarDate(widget.now())),
+                      onTap: () => setState(() => _selectedDate = day.date),
                       child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
-                        Text('${dateKey(day.date)} · ${day.type.name}',
-                            style: context.textStyles.h3),
-                        Text(day.status.name, style: context.textStyles.body),
-                        if (day.recordedAnswers > 0)
-                          Text(
-                              '${day.recordedAnswers} answers recorded · ${(day.spentSeconds / 60).ceil()} min spent',
-                              style: context.textStyles.body),
-                        if (day.type == StudyDayType.exam)
-                          const Text(
-                              'Exam day · change the exam date in Settings')
-                        else if (day.type == StudyDayType.rest)
-                          const Text('Day off · no study scheduled')
-                        else if (day.status == StudyDayStatus.missed)
-                          const Text('Session not completed')
-                        else if (day.status != StudyDayStatus.completed) ...[
-                          Text(
-                              '${day.newIds.length} new · ${day.reviewIds.length} reviews remaining',
-                              style: context.textStyles.body),
-                          Text(
-                              'About ${(day.estimatedSeconds / 60).ceil()} min / ${day.budgetSeconds ~/ 60} min available',
-                              style: context.textStyles.bodySmall),
-                        ],
-                        if (day.type != StudyDayType.exam &&
-                            day.date.isAfter(calendarDate(widget.now())) &&
-                            day.status == StudyDayStatus.projected)
-                          Wrap(spacing: AppSpacing.sm, children: [
-                            for (final type in [
-                              StudyDayType.study,
-                              StudyDayType.rest,
-                              StudyDayType.buffer,
-                              StudyDayType.review,
-                              StudyDayType.mock
-                            ])
-                              TextButton(
-                                  onPressed:
-                                      _saving ? null : () => _change(day, type),
-                                  child: Text(type == StudyDayType.rest
-                                      ? 'Day off / cancel mock'
-                                      : type.name)),
-                            TextButton(
-                                onPressed: _saving
-                                    ? null
-                                    : () => _change(day, StudyDayType.study,
-                                        move: true),
-                                child: const Text('Move session')),
-                          ]),
-                      ]))),
+                            Text('${dateKey(day.date)} · ${day.type.name}',
+                                style: context.textStyles.h3),
+                            Text(
+                                switch (day.status) {
+                                  StudyDayStatus.projected =>
+                                    day.date.isAfter(calendarDate(widget.now()))
+                                        ? 'Forecast · may change'
+                                        : 'Scheduled',
+                                  StudyDayStatus.inProgress =>
+                                    day.recordedAnswers > 0
+                                        ? 'Partially completed'
+                                        : 'In progress',
+                                  StudyDayStatus.completed => 'Completed',
+                                  StudyDayStatus.missed => 'Not completed'
+                                },
+                                style: context.textStyles.body),
+                            if (day.recordedAnswers > 0)
+                              Text(
+                                  day.spentSeconds > 0
+                                      ? '${day.recordedAnswers} answer${day.recordedAnswers == 1 ? '' : 's'} recorded · ${(day.spentSeconds / 60).ceil()} min answer time'
+                                      : '${day.recordedAnswers} answer${day.recordedAnswers == 1 ? '' : 's'} recorded · timing unavailable',
+                                  style: context.textStyles.body),
+                            if (day.type == StudyDayType.exam)
+                              const Text(
+                                  'Exam day · change the exam date in Settings')
+                            else if (day.type == StudyDayType.rest)
+                              const Text('Day off · no study scheduled')
+                            else if (day.status !=
+                                StudyDayStatus.completed) ...[
+                              Text(
+                                  '${day.newIds.length} new · ${day.reviewIds.length} review${day.reviewIds.length == 1 ? '' : 's'} remaining',
+                                  style: context.textStyles.body),
+                              Text(
+                                  day.date.isBefore(calendarDate(widget.now()))
+                                      ? 'Saved unfinished tasks · your history is preserved'
+                                      : 'About ${(day.estimatedSeconds / 60).ceil()} min / ${day.budgetSeconds ~/ 60} min available',
+                                  style: context.textStyles.bodySmall),
+                            ],
+                            if (day.date == _selectedDate &&
+                                day.type != StudyDayType.exam &&
+                                day.date.isAfter(calendarDate(widget.now())) &&
+                                day.status == StudyDayStatus.projected)
+                              Wrap(spacing: AppSpacing.sm, children: [
+                                for (final type in [
+                                  StudyDayType.study,
+                                  StudyDayType.rest,
+                                  StudyDayType.buffer,
+                                  StudyDayType.review,
+                                  StudyDayType.mock
+                                ])
+                                  TextButton(
+                                      onPressed: _saving
+                                          ? null
+                                          : () => _change(day, type),
+                                      child: Text(type == StudyDayType.rest
+                                          ? 'Day off / cancel mock'
+                                          : type.name)),
+                                TextButton(
+                                    onPressed: _saving
+                                        ? null
+                                        : () => _change(day, StudyDayType.study,
+                                            move: true),
+                                    child: const Text('Move session')),
+                              ]),
+                          ]))),
           ])));
 }

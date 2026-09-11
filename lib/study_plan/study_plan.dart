@@ -111,9 +111,13 @@ class StudyPlanPolicy {
   const StudyPlanPolicy(
       {this.initialNewSeconds = 90,
       this.initialReviewSeconds = 45,
+      this.explanationSeconds = 30,
       this.reviewShare = .30,
       this.retainedQuestions = 3,
       this.retainedDays = 3});
+
+  /// Reading is an explicit allowance, never relabelled answer-time history.
+  final int explanationSeconds;
   final int initialNewSeconds,
       initialReviewSeconds,
       retainedQuestions,
@@ -229,21 +233,30 @@ class StudyPlanPolicy {
                 examDate: deadline);
     final firstIds = <String>{};
     final newMeasurements = <int>[], reviewMeasurements = <int>[];
+    final priorNewMeasurements = <int>[];
     for (final a in history) {
       final first = firstIds.add(a.questionId);
       final duration = a.activeDurationSeconds;
       if (duration != null && duration >= 5 && duration <= 300) {
         (first ? newMeasurements : reviewMeasurements).add(duration);
+        if (first &&
+            (a.localAnsweredDate ?? dateKey(a.answeredAt.toUtc()))
+                    .compareTo(dateKey(today)) <
+                0) {
+          priorNewMeasurements.add(duration);
+        }
       }
     }
     int estimate(List<int> values, int fallback) {
       if (values.length < 5) return fallback;
       values.sort();
-      return values[values.length ~/ 2];
+      return math.max(fallback * 2 ~/ 3, values[values.length ~/ 2]);
     }
 
-    final newSeconds = estimate(newMeasurements, initialNewSeconds);
-    final reviewSeconds = estimate(reviewMeasurements, initialReviewSeconds);
+    final newSeconds =
+        estimate(newMeasurements, initialNewSeconds) + explanationSeconds;
+    final reviewSeconds =
+        estimate(reviewMeasurements, initialReviewSeconds) + explanationSeconds;
     final dates = <DateTime>[];
     final horizon = deadline ?? today.add(const Duration(days: 7));
     if (preferences != null) {
@@ -312,8 +325,10 @@ class StudyPlanPolicy {
       for (final a in history) {
         final first = seenBefore.add(a.questionId);
         if (a.localAnsweredDate == dateKey(day)) {
-          spent +=
-              a.activeDurationSeconds ?? (first ? newSeconds : reviewSeconds);
+          spent += a.activeDurationSeconds ??
+              (first
+                  ? newSeconds - explanationSeconds
+                  : reviewSeconds - explanationSeconds);
           answered++;
           if (first) newAnswered++;
         }
@@ -340,7 +355,8 @@ class StudyPlanPolicy {
                       ? (mockBudgets[dateKey(day)] ?? 0)
                       : preferences!.minutes) *
                   60 -
-              spent);
+              spent -
+              answered * explanationSeconds);
       var time = budget;
       var slots = dailyQuestionLimit ?? 1000000;
       if (isToday && remainingUtcQuota != null) {
@@ -392,12 +408,18 @@ class StudyPlanPolicy {
           // Future pace uses the remaining pool. Today's unstarted baseline
           // reconstructs the pool before today's first answers; once started,
           // persisted session IDs are the commitment, including after restart.
+          final baselineCapacity =
+              (preferences!.minutes * 60 * (1 - reviewShare)) ~/
+                  (estimate(priorNewMeasurements, initialNewSeconds) +
+                      explanationSeconds);
           final dayTarget = isToday && commitments.isNotEmpty
               ? remainingCommitment.length
               : math.max(
                   0,
                   (isToday && s > 0
-                          ? ((remaining.length + newAnswered) / s).ceil()
+                          ? math.min(
+                              ((remaining.length + newAnswered) / s).ceil(),
+                              baselineCapacity)
                           : pace) -
                       newAnswered);
           var count = math.min(dayTarget,
@@ -425,7 +447,7 @@ class StudyPlanPolicy {
             int difficulty(Question q) {
               final h = topicAttempts[q.topicId];
               final target = h == null
-                  ? (preferences!.stage == StudyStage.mostlyReviewing ? 3 : 2)
+                  ? (preferences.stage == StudyStage.mostlyReviewing ? 3 : 2)
                   : h.where((a) => a.isCorrect).length / h.length >= .8
                       ? 4
                       : 2;
@@ -450,7 +472,7 @@ class StudyPlanPolicy {
             newIds.add(q.id);
             time -= newSeconds;
             final dueDate = nextStudyDate(
-                day.add(const Duration(days: 1)), preferences!.weekdays);
+                day.add(const Duration(days: 1)), preferences.weekdays);
             forecast[q.id] = ReviewItem(
                 questionId: q.id,
                 dueDate: dueDate,
@@ -503,34 +525,56 @@ class StudyPlanPolicy {
       days.add(StudyPlanDay(
           date: deadline, type: StudyDayType.exam, budgetSeconds: 0));
     }
-    final historicDates =
-        sessions.map((s) => s.planDate).whereType<String>().toSet();
+    final historicDates = {
+      ...sessions
+          .where((s) => s.examId == exam.id)
+          .map((s) => s.planDate)
+          .whereType<String>(),
+      ...history
+          .map((a) => a.localAnsweredDate ?? dateKey(a.answeredAt.toUtc()))
+    };
     for (final key in historicDates) {
       final date = calendarDate(DateTime.parse(key));
-      final entries = sessions.where((s) => s.planDate == key).toList();
+      final entries = sessions
+          .where((s) => s.examId == exam.id && s.planDate == key)
+          .toList();
       if (!date.isBefore(today)) continue;
-      final recorded =
-          history.where((a) => a.localAnsweredDate == key).toList();
+      final recorded = history
+          .where((a) =>
+              (a.localAnsweredDate ?? dateKey(a.answeredAt.toUtc())) == key)
+          .toList();
+      final pendingNew = <String>{}, pendingReviews = <String>{};
+      for (final session in entries) {
+        if (session.status == SessionStatus.completed) continue;
+        final doneIds = history
+            .where((a) => a.sessionId == session.id)
+            .map((a) => a.questionId)
+            .toSet();
+        for (final id
+            in session.questionIds.where((id) => !doneIds.contains(id))) {
+          (session.reviewQuestionIds.contains(id) ? pendingReviews : pendingNew)
+              .add(id);
+        }
+      }
       days.add(StudyPlanDay(
           date: date,
-          type: StudyDayType.study,
+          type: overrides[key] ?? StudyDayType.study,
+          newIds: pendingNew,
+          reviewIds: pendingReviews,
           status: entries.any((s) => s.status == SessionStatus.inProgress)
               ? StudyDayStatus.inProgress
-              : entries.every((s) => s.status == SessionStatus.completed)
+              : (entries.isEmpty && recorded.isNotEmpty) ||
+                      (entries.isNotEmpty &&
+                          entries.every(
+                              (s) => s.status == SessionStatus.completed))
                   ? StudyDayStatus.completed
                   : StudyDayStatus.missed,
           budgetSeconds: 0,
           recordedAnswers: recorded.length,
           spentSeconds: recorded.fold<int>(
-              0,
-              (sum, a) =>
-                  sum +
-                  (a.activeDurationSeconds ??
-                      (a.sessionType == AttemptSessionType.practice
-                          ? newSeconds
-                          : reviewSeconds))),
-          estimatedSeconds: recorded.fold<int>(
-              0, (sum, a) => sum + (a.activeDurationSeconds ?? 0))));
+              0, (sum, a) => sum + (a.activeDurationSeconds ?? 0)),
+          estimatedSeconds: pendingNew.length * newSeconds +
+              pendingReviews.length * reviewSeconds));
     }
     days.sort((a, b) => a.date.compareTo(b.date));
     return StudyPlanProjection(

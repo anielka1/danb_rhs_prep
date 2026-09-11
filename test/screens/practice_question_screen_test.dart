@@ -17,6 +17,62 @@ void main() {
   Widget wrap(Widget child) =>
       MaterialApp(theme: AppTheme.lightTheme, home: child);
 
+  testWidgets(
+      'controlled clock excludes background and explanation reading from saved answer seconds',
+      (tester) async {
+    var now = DateTime.utc(2026, 9, 11);
+    final repo = InMemoryProgressRepository();
+    final questions = DebugDemoEnvironment.demoQuestions.take(2).toList();
+    final controller = PracticeSessionController(
+        session: PracticeSession(
+            id: 'timed',
+            examId: DebugDemoEnvironment.demoExamId,
+            mode: PracticeMode.quickPractice,
+            questionIds: questions.map((q) => q.id).toList(),
+            status: SessionStatus.inProgress,
+            startedAt: now),
+        questions: questions,
+        progressRepository: repo,
+        now: () => now);
+    await tester.pumpWidget(wrap(PracticeSessionScope(
+        controller: controller,
+        child: PracticeQuestionScreen(now: () => now))));
+    await tester.pumpAndSettle();
+    now = now.add(const Duration(seconds: 10));
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.paused);
+    now = now.add(const Duration(hours: 1));
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+    now = now.add(const Duration(seconds: 20));
+    Future<void> submit(int index) async {
+      final q = questions[index];
+      await tester.ensureVisible(find
+          .text(q.answers.firstWhere((a) => a.id == q.correctAnswerId).text));
+      await tester.tap(find
+          .text(q.answers.firstWhere((a) => a.id == q.correctAnswerId).text));
+      await tester.pump();
+      await tester.ensureVisible(find.text('Submit Answer'));
+      await tester.tap(find.text('Submit Answer'));
+      await tester.pumpAndSettle();
+    }
+
+    await submit(0);
+    expect(
+        (await repo.answerAttemptsForExam(DebugDemoEnvironment.demoExamId))
+            .single
+            .activeDurationSeconds,
+        30);
+    now = now.add(const Duration(minutes: 10));
+    await tester.ensureVisible(find.text('Next Question'));
+    await tester.tap(find.text('Next Question'));
+    await tester.pumpAndSettle();
+    now = now.add(const Duration(seconds: 20));
+    await submit(1);
+    final attempts =
+        await repo.answerAttemptsForExam(DebugDemoEnvironment.demoExamId);
+    expect(attempts.map((a) => a.activeDurationSeconds), [30, 20]);
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
+
   group('no active session', () {
     testWidgets('shows an honest empty state, not a fake question',
         (tester) async {

@@ -192,6 +192,7 @@ class PracticeSessionController {
   final ProgressRepository? progressRepository;
   final List<Question> questions;
   final DateTime Function() _now;
+  DateTime get localNow => _now();
   final IdGenerator _idGenerator;
 
   PracticeSession _session;

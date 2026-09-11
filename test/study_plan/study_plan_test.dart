@@ -42,7 +42,7 @@ void main() {
   });
   test('time dominates required pace; no duplicate new assignment', () {
     final p = plan();
-    expect(p.days.first.newIds.length, 21);
+    expect(p.days.firstWhere((d) => d.date == today).newIds.length, 15);
     expect(p.limitedCoverage, isTrue);
     final ids = p.days.expand((d) => d.newIds).toList();
     expect(ids.toSet().length, ids.length);
@@ -98,8 +98,8 @@ void main() {
     expect(plan(quota: 0).days.first.questionIds, isEmpty);
     final a = answer(package.questions.first, today, seconds: 2600);
     final p = plan(history: [a]);
-    expect(p.days.first.budgetSeconds, 100);
-    expect(p.days.first.newIds.length, 0);
+    expect(p.days.firstWhere((d) => d.date == today).budgetSeconds, 70);
+    expect(p.days.firstWhere((d) => d.date == today).newIds.length, 0);
   });
   test('overdue errors first and bounded backlog visible', () {
     final history = package.questions
@@ -108,9 +108,9 @@ void main() {
             answer(q, today.subtract(const Duration(days: 3)), correct: false))
         .toList();
     final p = plan(history: history);
-    expect(p.days.first.newIds, isEmpty);
-    expect(p.days.first.reviewIds.length, 60);
-    expect(p.days.first.reviewBacklog, 40);
+    expect(p.days.firstWhere((d) => d.date == today).newIds, isEmpty);
+    expect(p.days.firstWhere((d) => d.date == today).reviewIds.length, 36);
+    expect(p.days.firstWhere((d) => d.date == today).reviewBacklog, 64);
   });
   test('success intervals 1/3/7/14; same-day and retry no extra stage', () {
     final q = package.questions.first;
@@ -184,7 +184,7 @@ void main() {
           examDate: date.add(const Duration(days: 30)),
           dailyQuestionLimit: 1,
           reviewQueueOverride: []);
-      final id = p.days.first.newIds.single;
+      final id = p.days.firstWhere((d) => d.date == date).newIds.single;
       final q = package.questions.firstWhere((q) => q.id == id);
       expect(history.any((a) => a.questionId == id), isFalse);
       counts.update(q.domainId, (n) => n + 1, ifAbsent: () => 1);

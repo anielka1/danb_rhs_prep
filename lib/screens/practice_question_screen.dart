@@ -1,3 +1,5 @@
+import '../bootstrap/bootstrap_session_scope.dart';
+import '../practice_session/active_answer_timer.dart';
 import 'dart:async';
 import 'package:flutter/material.dart';
 import '../widgets/practice_save_status.dart';
@@ -15,7 +17,8 @@ import 'answer_explanation_screen.dart';
 
 class PracticeQuestionScreen extends StatefulWidget {
   static const String route = '/practice-question';
-  const PracticeQuestionScreen({super.key});
+  const PracticeQuestionScreen({super.key, this.now});
+  final DateTime Function()? now;
 
   @override
   State<PracticeQuestionScreen> createState() => _PracticeQuestionScreenState();
@@ -33,7 +36,8 @@ class _PracticeQuestionScreenState extends State<PracticeQuestionScreen>
   bool _confident = false;
   bool _answerVisible = true;
   String? _timedQuestionId;
-  final Stopwatch _activeTime = Stopwatch();
+  late final ActiveAnswerTimer _activeTime =
+      ActiveAnswerTimer(now: widget.now ?? DateTime.now);
 
   /// Rebuilds once a second purely so the elapsed-time display
   /// (`controller.elapsed`) actually counts up on screen — this
@@ -112,13 +116,16 @@ class _PracticeQuestionScreenState extends State<PracticeQuestionScreen>
       _submitting = false;
       _pendingSelection = null;
     });
+    final bootstrap = BootstrapSessionScope.maybeControllerOf(context);
     await Navigator.of(context).push(
       MaterialPageRoute(
         settings: const RouteSettings(name: AnswerExplanationScreen.route),
-        builder: (_) => PracticeSessionScope(
-          controller: controller,
-          child: const AnswerExplanationScreen(),
-        ),
+        builder: (_) => BootstrapSessionScope.carry(
+            bootstrap,
+            PracticeSessionScope(
+              controller: controller,
+              child: const AnswerExplanationScreen(),
+            )),
       ),
     );
     // Runs once AnswerExplanationScreen is popped, for any reason —
@@ -138,15 +145,23 @@ class _PracticeQuestionScreenState extends State<PracticeQuestionScreen>
   }
 
   Future<void> _viewExplanation(PracticeSessionController controller) async {
+    _answerVisible = false;
+    _activeTime.stop();
+    final bootstrap = BootstrapSessionScope.maybeControllerOf(context);
     await Navigator.of(context).push(
       MaterialPageRoute(
         settings: const RouteSettings(name: AnswerExplanationScreen.route),
-        builder: (_) => PracticeSessionScope(
-          controller: controller,
-          child: const AnswerExplanationScreen(),
-        ),
+        builder: (_) => BootstrapSessionScope.carry(
+            bootstrap,
+            PracticeSessionScope(
+              controller: controller,
+              child: const AnswerExplanationScreen(),
+            )),
       ),
     );
+    _answerVisible = true;
+    _activeTime.reset();
+    _activeTime.start();
     // See the identical rebuild in _submit above — reached instead when
     // reviewing an already-answered question (e.g. after Previous) hits
     // "Next Question" from there.
@@ -190,182 +205,190 @@ class _PracticeQuestionScreenState extends State<PracticeQuestionScreen>
     _ensureBookmarkLoaded(controller, question.id);
     final bool isBookmarked = controller.isBookmarked(question.id);
 
-    return AppScaffold(
-      body: SingleChildScrollView(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            PracticeSaveStatus(controller: controller),
-            const SizedBox(height: 12),
-            Row(
+    return Listener(
+        onPointerDown: (_) => _activeTime.interaction(),
+        onPointerSignal: (_) => _activeTime.interaction(),
+        child: AppScaffold(
+          body: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                CircleIconButton(
-                  icon: Icons.close_rounded,
-                  onPressed: () async {
-                    if (await confirmLeavingUnsavedPractice(
-                            context, controller) &&
-                        context.mounted) {
-                      Navigator.of(context).maybePop();
-                    }
-                  },
-                  semanticLabel: 'Close',
-                ),
-                const SizedBox(width: 14),
-                Expanded(
-                  child: ProgressBar(
-                    value: (controller.currentIndex + 1) /
-                        controller.totalQuestions,
-                    semanticLabel: 'Question progress',
-                  ),
-                ),
-                const SizedBox(width: 14),
-                Icon(Icons.access_time_rounded,
-                    size: AppIconSize.medium - 2, color: colors.onSurface),
-                const SizedBox(width: AppSpacing.xs),
-                Flexible(
-                  child: Text(_formatElapsed(controller.elapsed),
-                      style: TextStyle(
-                          fontWeight: FontWeight.w700,
-                          color: colors.onSurface)),
-                ),
-              ],
-            ),
-            const SizedBox(height: AppSpacing.xl + 2),
-            Row(
-              children: [
-                Expanded(
-                  child: Text(
-                      'QUESTION ${controller.currentIndex + 1} OF '
-                      '${controller.totalQuestions}',
-                      style: textStyles.label),
-                ),
-                // Real bookmark toggle (PREP-460) — available while
-                // looking at the question itself, not only afterward on
-                // AnswerExplanationScreen; both screens read/write the
-                // exact same PracticeSessionController state, so
-                // bookmarking here or there always agrees.
-                CircleIconButton(
-                  icon: isBookmarked
-                      ? Icons.bookmark_rounded
-                      : Icons.bookmark_border_rounded,
-                  iconColor: isBookmarked
-                      ? colors.primary
-                      : context.semanticColors.mutedForeground,
-                  onPressed: () => _toggleBookmark(controller, question.id),
-                  semanticLabel:
-                      isBookmarked ? 'Remove bookmark' : 'Bookmark question',
-                ),
-              ],
-            ),
-            const SizedBox(height: AppSpacing.md + 2),
-            Text(question.questionText, style: textStyles.h2),
-            const SizedBox(height: 18),
-            Column(
-              children: [
-                for (var i = 0; i < question.answers.length; i++)
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: AppSpacing.md),
-                    child: AnswerOptionTile(
-                      letter: String.fromCharCode(65 + i),
-                      text: question.answers[i].text,
-                      state: _optionState(
-                        answerId: question.answers[i].id,
-                        feedback: feedback,
-                      ),
-                      onTap: alreadyAnswered
-                          ? null
-                          : () => setState(
-                              () => _pendingSelection = question.answers[i].id),
+                PracticeSaveStatus(controller: controller),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    CircleIconButton(
+                      icon: Icons.close_rounded,
+                      onPressed: () async {
+                        if (await confirmLeavingUnsavedPractice(
+                                context, controller) &&
+                            context.mounted) {
+                          Navigator.of(context).maybePop();
+                        }
+                      },
+                      semanticLabel: 'Close',
                     ),
-                  ),
-              ],
-            ),
-            if (!alreadyAnswered)
-              CheckboxListTile(
-                  contentPadding: EdgeInsets.zero,
-                  title: const Text('I knew this answer'),
-                  value: _confident,
-                  onChanged: _submitting
-                      ? null
-                      : (v) => setState(() {
-                            _confident = v ?? false;
-                            if (_confident) _guessed = false;
-                          })),
-            if (!alreadyAnswered)
-              CheckboxListTile(
-                  contentPadding: EdgeInsets.zero,
-                  title: const Text("I guessed"),
-                  value: _guessed,
-                  onChanged: _submitting
-                      ? null
-                      : (v) => setState(() {
-                            _guessed = v ?? false;
-                            if (_guessed) _confident = false;
-                          })),
-            PrimaryButton(
-              label: alreadyAnswered ? 'View Explanation' : 'Submit Answer',
-              isLoading: _submitting,
-              onPressed: alreadyAnswered
-                  ? () => _viewExplanation(controller)
-                  : (_pendingSelection != null
-                      ? () => _submit(controller)
-                      : null),
-            ),
-            const SizedBox(height: AppSpacing.md + 2),
-            Row(
-              children: [
-                Flexible(
-                  child: TextButton.icon(
-                    onPressed: controller.canGoToPrevious
-                        ? () => _goToPrevious(controller)
-                        : null,
-                    icon: Icon(Icons.arrow_back_rounded,
-                        size: AppIconSize.small,
-                        color: controller.canGoToPrevious
-                            ? colors.onSurface
-                            : context.semanticColors.mutedForeground),
-                    label: Text('Previous',
-                        style: TextStyle(
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: ProgressBar(
+                        value: (controller.currentIndex + 1) /
+                            controller.totalQuestions,
+                        semanticLabel: 'Question progress',
+                      ),
+                    ),
+                    const SizedBox(width: 14),
+                    Icon(Icons.access_time_rounded,
+                        size: AppIconSize.medium - 2, color: colors.onSurface),
+                    const SizedBox(width: AppSpacing.xs),
+                    Flexible(
+                      child: Text(_formatElapsed(controller.elapsed),
+                          style: TextStyle(
+                              fontWeight: FontWeight.w700,
+                              color: colors.onSurface)),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: AppSpacing.xl + 2),
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                          'QUESTION ${controller.currentIndex + 1} OF '
+                          '${controller.totalQuestions}',
+                          style: textStyles.label),
+                    ),
+                    // Real bookmark toggle (PREP-460) — available while
+                    // looking at the question itself, not only afterward on
+                    // AnswerExplanationScreen; both screens read/write the
+                    // exact same PracticeSessionController state, so
+                    // bookmarking here or there always agrees.
+                    CircleIconButton(
+                      icon: isBookmarked
+                          ? Icons.bookmark_rounded
+                          : Icons.bookmark_border_rounded,
+                      iconColor: isBookmarked
+                          ? colors.primary
+                          : context.semanticColors.mutedForeground,
+                      onPressed: () => _toggleBookmark(controller, question.id),
+                      semanticLabel: isBookmarked
+                          ? 'Remove bookmark'
+                          : 'Bookmark question',
+                    ),
+                  ],
+                ),
+                const SizedBox(height: AppSpacing.md + 2),
+                Text(question.questionText, style: textStyles.h2),
+                const SizedBox(height: 18),
+                Column(
+                  children: [
+                    for (var i = 0; i < question.answers.length; i++)
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: AppSpacing.md),
+                        child: AnswerOptionTile(
+                          letter: String.fromCharCode(65 + i),
+                          text: question.answers[i].text,
+                          state: _optionState(
+                            answerId: question.answers[i].id,
+                            feedback: feedback,
+                          ),
+                          onTap: alreadyAnswered
+                              ? null
+                              : () {
+                                  _activeTime.interaction();
+                                  setState(() => _pendingSelection =
+                                      question.answers[i].id);
+                                },
+                        ),
+                      ),
+                  ],
+                ),
+                if (!alreadyAnswered)
+                  CheckboxListTile(
+                      contentPadding: EdgeInsets.zero,
+                      title: const Text('I knew this answer'),
+                      value: _confident,
+                      onChanged: _submitting
+                          ? null
+                          : (v) => setState(() {
+                                _confident = v ?? false;
+                                if (_confident) _guessed = false;
+                              })),
+                if (!alreadyAnswered)
+                  CheckboxListTile(
+                      contentPadding: EdgeInsets.zero,
+                      title: const Text("I guessed"),
+                      value: _guessed,
+                      onChanged: _submitting
+                          ? null
+                          : (v) => setState(() {
+                                _guessed = v ?? false;
+                                if (_guessed) _confident = false;
+                              })),
+                PrimaryButton(
+                  label: alreadyAnswered ? 'View Explanation' : 'Submit Answer',
+                  isLoading: _submitting,
+                  onPressed: alreadyAnswered
+                      ? () => _viewExplanation(controller)
+                      : (_pendingSelection != null
+                          ? () => _submit(controller)
+                          : null),
+                ),
+                const SizedBox(height: AppSpacing.md + 2),
+                Row(
+                  children: [
+                    Flexible(
+                      child: TextButton.icon(
+                        onPressed: controller.canGoToPrevious
+                            ? () => _goToPrevious(controller)
+                            : null,
+                        icon: Icon(Icons.arrow_back_rounded,
+                            size: AppIconSize.small,
                             color: controller.canGoToPrevious
                                 ? colors.onSurface
-                                : context.semanticColors.mutedForeground,
-                            fontWeight: FontWeight.w600)),
-                  ),
-                ),
-                const Spacer(),
-                Flexible(
-                  child: TextButton(
-                    onPressed: controller.canGoToNext
-                        ? () => _goToNext(controller)
-                        : null,
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Flexible(
-                          child: Text('Next',
-                              style: TextStyle(
-                                  color: controller.canGoToNext
-                                      ? colors.onSurface
-                                      : context.semanticColors.mutedForeground,
-                                  fontWeight: FontWeight.w600)),
-                        ),
-                        const SizedBox(width: AppSpacing.xs),
-                        Icon(Icons.arrow_forward_rounded,
-                            size: AppIconSize.small,
-                            color: controller.canGoToNext
-                                ? colors.onSurface
                                 : context.semanticColors.mutedForeground),
-                      ],
+                        label: Text('Previous',
+                            style: TextStyle(
+                                color: controller.canGoToPrevious
+                                    ? colors.onSurface
+                                    : context.semanticColors.mutedForeground,
+                                fontWeight: FontWeight.w600)),
+                      ),
                     ),
-                  ),
+                    const Spacer(),
+                    Flexible(
+                      child: TextButton(
+                        onPressed: controller.canGoToNext
+                            ? () => _goToNext(controller)
+                            : null,
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Flexible(
+                              child: Text('Next',
+                                  style: TextStyle(
+                                      color: controller.canGoToNext
+                                          ? colors.onSurface
+                                          : context
+                                              .semanticColors.mutedForeground,
+                                      fontWeight: FontWeight.w600)),
+                            ),
+                            const SizedBox(width: AppSpacing.xs),
+                            Icon(Icons.arrow_forward_rounded,
+                                size: AppIconSize.small,
+                                color: controller.canGoToNext
+                                    ? colors.onSurface
+                                    : context.semanticColors.mutedForeground),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
+                const SizedBox(height: 10),
               ],
             ),
-            const SizedBox(height: 10),
-          ],
-        ),
-      ),
-    );
+          ),
+        ));
   }
 
   AnswerOptionState _optionState({

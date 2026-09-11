@@ -15,7 +15,7 @@ void main() {
   final package = fixture(), today = DateTime.utc(2026, 9, 10);
   final prefs =
       StudyPlanPreferences(weekdays: [1, 2, 3, 4, 5, 6, 7], minutes: 45);
-  const policy = StudyPlanPolicy(initialNewSeconds: 60);
+  const policy = StudyPlanPolicy(initialNewSeconds: 45);
   test(
       'daily commitment survives partial answers, SQLite restart and completion',
       () async {

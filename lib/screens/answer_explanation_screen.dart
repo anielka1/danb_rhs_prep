@@ -1,3 +1,4 @@
+import '../bootstrap/bootstrap_session_scope.dart';
 import 'package:flutter/material.dart';
 import '../widgets/practice_save_status.dart';
 import '../domain/models/answer_feedback.dart';
@@ -57,13 +58,16 @@ class _AnswerExplanationScreenState extends State<AnswerExplanationScreen> {
     if (controller.isLastQuestion) {
       await controller.complete();
       if (!context.mounted) return;
+      final bootstrap = BootstrapSessionScope.maybeControllerOf(context);
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(
           settings: const RouteSettings(name: PracticeSummaryScreen.route),
-          builder: (_) => PracticeSessionScope(
-            controller: controller,
-            child: const PracticeSummaryScreen(),
-          ),
+          builder: (_) => BootstrapSessionScope.carry(
+              bootstrap,
+              PracticeSessionScope(
+                controller: controller,
+                child: const PracticeSummaryScreen(),
+              )),
         ),
       );
       return;
