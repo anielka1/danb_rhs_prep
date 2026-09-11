@@ -32,13 +32,11 @@ void main() {
     for (final label in [
       'Start Preparing',
       "I haven't scheduled it yet",
-      'Continue',
-      'Just starting',
       'Continue'
     ]) {
       await tap(tester, label);
     }
-    await selectAvailability(tester);
+    await skipStartingCheck(tester);
     final oldShell = tester.state(find.byType(MainShell));
     final oldContext = tester.element(find.byType(MainShell));
     final session = BootstrapSessionScope.maybeControllerOf(oldContext)!;

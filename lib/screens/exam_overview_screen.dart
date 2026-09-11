@@ -29,6 +29,7 @@ class ExamOverviewScreen extends StatefulWidget {
     this.entitlement,
     this.now,
     this.random,
+    this.autoStart = false,
   });
 
   /// Real, already-loaded questions for the active exam — threaded in as
@@ -81,12 +82,23 @@ class ExamOverviewScreen extends StatefulWidget {
 
   /// Controlled in tests; production draws once when creating a session.
   final Random? random;
+  final bool autoStart;
 
   @override
   State<ExamOverviewScreen> createState() => _ExamOverviewScreenState();
 }
 
 class _ExamOverviewScreenState extends State<ExamOverviewScreen> {
+  @override
+  void initState() {
+    super.initState();
+    if (widget.autoStart) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _startOrResumePractice();
+      });
+    }
+  }
+
   bool _starting = false;
   bool _choosingSession = false;
   int _requestedCount = 10;
@@ -159,7 +171,14 @@ class _ExamOverviewScreenState extends State<ExamOverviewScreen> {
       try {
         existing = await repository.inProgressPracticeSession(examId);
       } catch (_) {
-        existing = null;
+        if (mounted) {
+          setState(() {
+            _starting = false;
+            _unavailableReason =
+                'Could not read your saved session. Please try again.';
+          });
+        }
+        return;
       }
     }
 

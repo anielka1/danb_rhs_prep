@@ -6,11 +6,8 @@ import 'experience_level.dart';
 /// Manual theme override; `system` follows the OS setting.
 enum ThemePreference { system, light, dark }
 
-/// The study pace a profile gets when nothing has explicitly set one yet
-/// — no "set your daily goal" onboarding step or settings control exists
-/// yet (tracked as separate, parallel work; see
-/// [UserProfile.fromOnboarding]'s own doc comment), so this is a
-/// deliberate, documented default, not a fabricated or random value.
+/// Compatibility value for the retained legacy column; not a study target.
+/// Neither Home nor practice uses it to allocate questions.
 const int kDefaultDailyGoalQuestions = 10;
 
 /// Local onboarding, study, and preference state for a single exam.
@@ -40,32 +37,12 @@ class UserProfile {
     }
   }
 
-  /// Builds the profile to persist the moment onboarding's exam-date and
-  /// experience-level answers are both known (`ExperienceLevelScreen`'s
-  /// completion step, the only caller today).
-  ///
-  /// [dailyGoalQuestions] and [notificationsEnabled] have no onboarding
-  /// step or settings control yet — tracked as separate, parallel work,
-  /// not blocked on here (a clickable "set your daily goal"/notifications
-  /// UI can land independently of this persistence layer). [existing],
-  /// when this exam already has a saved profile (re-running onboarding,
-  /// or restoring after local storage was reset without the database
-  /// also being cleared), keeps those two fields — and [createdAt] — from
-  /// [existing] rather than resetting them to defaults or a fresh
-  /// timestamp: onboarding must never silently overwrite answers it
-  /// doesn't itself collect.
-  ///
-  /// [examDateSelection] reuses [ExamDateSelection]'s own identical
-  /// null-iff-not-scheduled invariant directly. Its [ExamDateSelection.date]
-  /// is a pure *local* calendar date (see that class's doc comment) and is
-  /// deliberately reconstructed here as a UTC-flagged [DateTime] for the
-  /// *same* calendar date — `DateTime.utc(date.year, date.month, date.day)`
-  /// — never `.toUtc()` on the local value, which would perform a real
-  /// timezone conversion and could silently shift the stored date to the
-  /// day before or after the one the user actually chose.
+  /// Persists the real exam timeframe. New users have no self-assessment;
+  /// existing legacy experience and scheduling preferences remain untouched.
+  /// Local calendar components are stored as UTC components without shifting dates.
   factory UserProfile.fromOnboarding({
     required String examId,
-    required ExperienceLevel experienceLevel,
+    ExperienceLevel? experienceLevel,
     required ExamDateSelection examDateSelection,
     required ThemePreference themePreference,
     required DateTime now,
@@ -74,7 +51,7 @@ class UserProfile {
     final DateTime? localDate = examDateSelection.date;
     return UserProfile(
       examId: examId,
-      experienceLevel: experienceLevel,
+      experienceLevel: experienceLevel ?? existing?.experienceLevel,
       examDatePrecision: examDateSelection.precision,
       examDate: localDate == null
           ? null
@@ -91,7 +68,7 @@ class UserProfile {
   }
 
   final String examId;
-  final ExperienceLevel experienceLevel;
+  final ExperienceLevel? experienceLevel;
   final ExamDatePrecision examDatePrecision;
   final DateTime? examDate;
   final StudyPlanPreferences? studyPlanPreferences;

@@ -99,9 +99,8 @@ void main() {
     await tap(tester, 'Exam timeframe');
     await tap(tester, 'Later');
     await tap(tester, 'Save changes');
-    await tap(tester, 'Study experience');
-    await tap(tester, 'Studying already');
-    await tap(tester, 'Save changes');
+    expect(find.text('Study experience'), findsNothing);
+    expect(find.text('Study availability'), findsNothing);
     expect(find.byType(ProfileSettingsScreen), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
@@ -133,18 +132,18 @@ void main() {
       'profile write failure can be retried without restarting onboarding',
       (tester) async {
     await open(tester);
-    await tap(tester, 'Study experience');
-    await tap(tester, 'Studying already');
+    await tap(tester, 'Exam timeframe');
+    await tap(tester, 'Later');
     profiles.fail = true;
     await tap(tester, 'Save changes');
     expect(find.text('Retry'), findsOneWidget);
     expect(session.snapshot.onboardingComplete, isTrue);
-    expect(await store.readExperienceLevel(), ExperienceLevel.studyingAlready);
+    expect(await store.readExperienceLevel(), ExperienceLevel.justStarting);
     profiles.fail = false;
     await tap(tester, 'Retry');
     expect(find.byType(ProfileSettingsScreen), findsOneWidget);
-    expect((await profiles.loadProfile(original.examId))!.experienceLevel,
-        ExperienceLevel.studyingAlready);
+    expect((await profiles.loadProfile(original.examId))!.examDatePrecision,
+        ExamDatePrecision.later);
     expect(await store.readOnboardingComplete(), isNull,
         reason: 'Editing never changes onboarding completion storage.');
   });

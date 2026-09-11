@@ -18,6 +18,26 @@ void main() {
 
   tearDown(() => db.close());
 
+  test(
+      'new profiles persist absence of self-assessment without inventing a level',
+      () async {
+    final profile = UserProfile(
+        examId: 'new-user',
+        experienceLevel: null,
+        examDatePrecision: ExamDatePrecision.notScheduled,
+        dailyGoalQuestions: 10,
+        notificationsEnabled: false,
+        themePreference: ThemePreference.system,
+        onboardingComplete: true,
+        createdAt: DateTime.utc(2026),
+        updatedAt: DateTime.utc(2026));
+    await repository.saveProfile(profile);
+    final restored = await repository.loadProfile('new-user');
+    expect(restored, profile);
+    expect(restored!.experienceLevel, isNull);
+    expect(db.schemaVersion, 5);
+  });
+
   test('loadProfile is null before onboarding has been saved', () async {
     expect(await repository.loadProfile('danb-rhs'), isNull);
   });

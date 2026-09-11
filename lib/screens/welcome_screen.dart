@@ -38,8 +38,8 @@ class WelcomeScreen extends StatefulWidget {
   final AnalyticsService analytics;
 
   /// Forwarded straight to [ExamDateScreen], and from there to
-  /// [ExperienceLevelScreen] — this screen itself never reads or writes
-  /// through it. See [ExperienceLevelScreen]'s own doc comment for what
+  /// [ExamDateScreen] — this screen itself never reads or writes
+  /// through it. See [ExamDateScreen]'s own doc comment for what
   /// it enables.
   final UserSettingsRepository? userSettingsRepository;
 

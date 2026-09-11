@@ -101,6 +101,19 @@ void main() {
     return c;
   }
 
+  testWidgets('empty bank is unavailable material, not a storage retry',
+      (tester) async {
+    final repo = _FlakyRepository();
+    await tester.pumpWidget(
+        wrap(DiagnosticScreen(session: bootstrap(fixture(count: 0), repo))));
+    await tester.pumpAndSettle();
+    expect(find.text('Start diagnostic'), findsNothing);
+    expect(find.text('Retry diagnostic'), findsNothing);
+    expect(find.textContaining('No approved questions'), findsOneWidget);
+    expect(find.text('Skip for now'), findsOneWidget);
+    expect(await repo.practiceSessionsForExam(package.exam.id), isEmpty);
+  });
+
   testWidgets('completed diagnostic reopens its recorded result',
       (tester) async {
     final repo = _FlakyRepository();

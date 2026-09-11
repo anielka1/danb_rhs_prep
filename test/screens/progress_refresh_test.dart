@@ -51,7 +51,7 @@ void main() {
     await repository.savePracticeSession(practice);
     await tester.tap(find.text('Home'));
     await tester.pumpAndSettle();
-    expect(find.text('Continue'), findsOneWidget);
+    expect(find.text('Continue learning'), findsOneWidget);
     await tester.tap(find.text('Practice'));
     await tester.pumpAndSettle();
     await repository.savePracticeSession(practice.copyWith(
@@ -60,8 +60,8 @@ void main() {
     ));
     await tester.tap(find.text('Home'));
     await tester.pumpAndSettle();
-    expect(find.text('Continue'), findsNothing);
-    expect(find.text('Browse practice modes'), findsOneWidget);
-    expect(find.text('Continue'), findsNothing);
+    expect(find.text('Continue learning'), findsNothing);
+    expect(find.text('Practice your way'), findsOneWidget);
+    expect(find.text('Continue learning'), findsNothing);
   });
 }

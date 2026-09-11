@@ -1,4 +1,5 @@
 import 'dart:math';
+import 'package:danb_rhs_prep/study_plan/planned_session_service.dart';
 import 'package:danb_rhs_prep/screens/home_screen.dart';
 import 'package:danb_rhs_prep/screens/diagnostic_screen.dart';
 import 'package:danb_rhs_prep/domain/models/exam_date_selection.dart';
@@ -17,28 +18,25 @@ import 'package:danb_rhs_prep/domain/repositories/fakes/in_memory_progress_repos
 import 'package:danb_rhs_prep/practice_session/practice_session_controller.dart';
 import 'package:danb_rhs_prep/practice_session/practice_session_scope.dart';
 import 'package:danb_rhs_prep/screens/practice_summary_screen.dart';
-import 'package:danb_rhs_prep/screens/study_calendar_screen.dart';
-import 'package:danb_rhs_prep/study_plan/daily_study_overview.dart';
 import 'package:danb_rhs_prep/study_plan/study_plan.dart';
 import 'package:danb_rhs_prep/theme/app_theme.dart';
-import 'package:danb_rhs_prep/widgets/study_plan_panel.dart';
 import '../study_plan/fixtures.dart';
 import '../support/golden_probe.dart';
 
 void main() {
   for (final dark in [false, true]) {
     for (final screen in [
-      'daily_plan_partial',
-      'daily_calendar_partial',
       'daily_result_done',
       'planned_home',
+      'diagnostic_selected',
+      'diagnostic_result',
       'diagnostic_question'
     ]) {
       testWidgets('$screen dark=$dark', (tester) async {
         final today = DateTime(2026, 9, 11),
             package = fixture(
                 count:
-                    screen == 'diagnostic_question' || screen == 'planned_home'
+                    screen.startsWith('diagnostic_') || screen == 'planned_home'
                         ? 80
                         : 3);
         final repo = InMemoryProgressRepository();
@@ -83,7 +81,7 @@ void main() {
             questions: package.questions,
             progressRepository: repo,
             now: () => date);
-        if (screen != 'diagnostic_question' && screen != 'planned_home') {
+        if (screen == 'daily_result_done') {
           await controller.saveSession();
           await controller.submitAnswer('a', activeDurationSeconds: 60);
           if (screen == 'daily_result_done') {
@@ -94,24 +92,28 @@ void main() {
             await controller.complete();
           }
         }
-        final overview =
-            await DailyStudyOverview.load(bootstrap, repo, () => today);
+        if (screen == 'diagnostic_result') {
+          final diagnostic = await const PlannedSessionService().start(
+              package: package,
+              repository: repo,
+              entitlement: bootstrap.snapshot.entitlement,
+              now: () => today,
+              diagnostic: true,
+              random: Random(11));
+          for (var i = 0; i < diagnostic.questions.length; i++) {
+            diagnostic.moveTo(i);
+            await diagnostic.submitAnswer(i % 3 == 0 ? 'b' : 'a');
+          }
+          await diagnostic.complete();
+        }
         final Widget child = switch (screen) {
-          'daily_plan_partial' => Scaffold(
-              body: SingleChildScrollView(
-                  child: StudyPlanPanel(
-                      session: bootstrap, repository: repo, now: () => today))),
           'planned_home' => BootstrapSessionScope(
               controller: bootstrap,
               child: HomeScreen(progressRepository: repo, now: () => today)),
-          'diagnostic_question' =>
+          'diagnostic_question' ||
+          'diagnostic_selected' ||
+          'diagnostic_result' =>
             DiagnosticScreen(session: bootstrap, random: Random(11)),
-          'daily_calendar_partial' => StudyCalendarScreen(
-              initialDate: date,
-              plan: overview.plan,
-              session: bootstrap,
-              repository: repo,
-              now: () => today),
           _ => BootstrapSessionScope(
               controller: bootstrap,
               child: PracticeSessionScope(
@@ -121,15 +123,20 @@ void main() {
         await pumpGolden(tester, child,
             theme: dark ? AppTheme.darkTheme : AppTheme.lightTheme,
             textScale: GoldenTextScale.normal);
-        if (screen == 'diagnostic_question') {
+        if (screen == 'diagnostic_question' ||
+            screen == 'diagnostic_selected') {
           await tester.tap(find.text('Start diagnostic'));
           await tester.pumpAndSettle();
           expect(find.text('Question 1 of 15'), findsOneWidget);
+          if (screen == 'diagnostic_selected') {
+            await tester.tap(find.text('Alternative one'));
+            await tester.pumpAndSettle();
+          }
         }
         if (screen == 'daily_result_done') {
           expect(find.textContaining('Lowest session accuracy'), findsNothing);
           expect(find.textContaining('Highest session accuracy'), findsNothing);
-          await tester.ensureVisible(find.byType(StudyPlanPanel));
+          await tester.ensureVisible(find.text('Back to Home'));
           await tester.pumpAndSettle();
         }
         expect(tester.takeException(), isNull);

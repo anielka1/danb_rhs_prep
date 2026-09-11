@@ -8,10 +8,9 @@ import '../features/content/domain/content_package.dart';
 import '../features/questions/domain/question.dart';
 import '../practice_session/practice_generator.dart';
 import '../practice_session/practice_session_controller.dart';
-import 'study_plan.dart';
 
 /// Uses the existing validation, eligibility and persistence gates. A started set
-/// is immutable; projection updates never replace its question order or kinds.
+/// is immutable. New daily plans are retired; only diagnostics can be created.
 class PlannedSessionService {
   const PlannedSessionService();
   Future<PracticeSessionController> start(
@@ -19,7 +18,6 @@ class PlannedSessionService {
       required ProgressRepository repository,
       required Entitlement entitlement,
       required DateTime Function() now,
-      StudyPlanDay? day,
       bool diagnostic = false,
       Set<String> reservedIds = const {},
       Random? random}) async {
@@ -28,7 +26,7 @@ class PlannedSessionService {
     final eligible = PracticeGenerator.select(
             package: package,
             questionStates: const [],
-            requestedCount: package.questions.length)
+            requestedCount: max(1, package.questions.length))
         .questions;
     final byId = {for (final q in eligible) q.id: q};
     if (active != null) {
@@ -50,53 +48,23 @@ class PlannedSessionService {
     if (diagnostic) {
       if (history.any((a) => a.sessionType == AttemptSessionType.diagnostic)) {
         throw const PracticeGenerationUnavailable(
-            'Your diagnostic is already recorded. Continue with your study plan.');
+            'Your diagnostic is already recorded. Continue studying.');
       }
       questions = diagnosticQuestions(package, reservedIds);
     } else {
-      if (day == null || day.date != calendarDate(now())) {
-        throw const PracticeGenerationUnavailable(
-            'Refresh today’s plan before starting.');
-      }
-      final ids = day.questionIds;
-      if (history.any((a) =>
-          a.localAnsweredDate == dateKey(now()) &&
-          ids.contains(a.questionId))) {
-        throw const PracticeGenerationUnavailable(
-            'Your work has been saved. Refresh your remaining plan.');
-      }
-      if (ids.isEmpty) {
-        throw const PracticeGenerationUnavailable(
-            'No questions are assigned today.');
-      }
-      final cap = maxFreePracticeQuestionsToday(
-          entitlement: entitlement,
-          now: now(),
-          answeredToday:
-              practiceAttemptsAnsweredToday(attempts: history, now: now()),
-          dailyLimit: package.exam.freeTier.dailyPracticeQuestions);
-      if (cap != null && ids.length > cap) {
-        throw const PracticeGenerationUnavailable(
-            'Your allowance changed. Refresh today’s plan. The free limit renews at 00:00 UTC.');
-      }
-      if (ids.toSet().length != ids.length ||
-          ids.any((id) => !byId.containsKey(id) || reservedIds.contains(id))) {
-        throw const PracticeGenerationUnavailable(
-            'The available content changed. Refresh your plan.');
-      }
-      questions = ids.map((id) => byId[id]!).toList();
+      throw const PracticeGenerationUnavailable(
+          'Daily plans have been retired. Start a practice session from Home.');
     }
     final session = PracticeSession(
         id: 'planned-${now().toUtc().microsecondsSinceEpoch}',
         examId: package.exam.id,
-        mode: diagnostic ? PracticeMode.diagnostic : PracticeMode.planned,
+        mode: PracticeMode.diagnostic,
         questionIds: questions.map((q) => q.id).toList(),
         answerOrder: AnswerOrder.shuffled(questions, random ?? Random()),
         status: SessionStatus.inProgress,
         startedAt: now().toUtc(),
         contentVersion: package.contentVersion,
-        planDate: dateKey(now()),
-        reviewQuestionIds: diagnostic ? const [] : day!.reviewIds);
+        reviewQuestionIds: const []);
     // Must be durable before opening the first question; failure is retryable.
     await repository.savePracticeSession(session);
     return PracticeSessionController(
@@ -112,7 +80,7 @@ class PlannedSessionService {
     final pool = PracticeGenerator.select(
             package: package,
             questionStates: const [],
-            requestedCount: package.questions.length)
+            requestedCount: max(1, package.questions.length))
         .questions
         .where((q) => q.isApproved && !reservedIds.contains(q.id))
         .toList();
@@ -133,7 +101,7 @@ class PlannedSessionService {
         ..sort((a, b) => a.id.compareTo(b.id));
       if (candidates.length < quotas[d.id]!) {
         throw PracticeGenerationUnavailable(
-            'The diagnostic needs $count approved questions across all areas. You can skip it and set up your plan.');
+            'The diagnostic needs $count approved questions across all areas. You can skip it and continue studying.');
       }
       selected.addAll(candidates.take(quotas[d.id]!));
     }

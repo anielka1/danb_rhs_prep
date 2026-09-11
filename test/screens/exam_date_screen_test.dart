@@ -17,7 +17,7 @@ import 'package:danb_rhs_prep/domain/repositories/fakes/in_memory_bootstrap_loca
 import 'package:danb_rhs_prep/features/content/domain/content_package.dart';
 import 'package:danb_rhs_prep/features/exams/domain/exam_config.dart';
 import 'package:danb_rhs_prep/screens/exam_date_screen.dart';
-import 'package:danb_rhs_prep/screens/experience_level_screen.dart';
+import 'package:danb_rhs_prep/screens/main_shell.dart';
 import 'package:danb_rhs_prep/theme/app_theme.dart';
 import 'package:danb_rhs_prep/widgets/primary_button.dart';
 
@@ -416,7 +416,7 @@ void main() {
 
   group('save behavior', () {
     testWidgets(
-        'Continue saves the selection and pushes ExperienceLevelScreen — '
+        'Continue saves the selection and pushes MainShell — '
         'never MainShell, and never writes onboardingComplete', (tester) async {
       final localStore = InMemoryBootstrapLocalStore();
       await tester.pumpWidget(wrap(localStore: localStore));
@@ -429,16 +429,15 @@ void main() {
 
       expect(await localStore.readExamDateSelection(),
           ExamDateSelection(precision: ExamDatePrecision.notScheduled));
-      expect(await localStore.readOnboardingComplete(), isNot(isTrue),
-          reason: 'ExamDateScreen must never write onboardingComplete — '
-              'that is ExperienceLevelScreen\'s responsibility now');
-      expect(find.byType(ExperienceLevelScreen), findsOneWidget);
+      expect(await localStore.readOnboardingComplete(), isTrue);
+      expect(await localStore.readExperienceLevel(), isNull);
+      expect(find.byType(MainShell), findsOneWidget);
       expect(find.byType(ExamDateScreen), findsNothing);
     });
 
     testWidgets(
         'a successful save updates the current session — '
-        'ExperienceLevelScreen receives the saved ExamDateSelection, not '
+        'MainShell receives the saved ExamDateSelection, not '
         'a stale snapshot', (tester) async {
       final localStore = InMemoryBootstrapLocalStore();
       await tester.pumpWidget(wrap(localStore: localStore));
@@ -450,8 +449,7 @@ void main() {
       await tester.tap(find.text('Continue'));
       await tester.pumpAndSettle();
 
-      final BuildContext nextContext =
-          tester.element(find.byType(ExperienceLevelScreen));
+      final BuildContext nextContext = tester.element(find.byType(MainShell));
       final ExamDateSelection? sessionSelection =
           BootstrapSessionScope.snapshotOf(nextContext).examDateSelection;
       expect(
@@ -474,10 +472,10 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.byType(ExamDateScreen), findsOneWidget);
-      expect(find.byType(ExperienceLevelScreen), findsNothing);
+      expect(find.byType(MainShell), findsNothing);
       expect(find.text('Retry'), findsOneWidget);
-      expect(
-          find.textContaining("couldn't save your exam date"), findsOneWidget);
+      expect(find.textContaining("couldn't finish saving your setup"),
+          findsOneWidget);
       expect(await localStore.readOnboardingComplete(), isNot(isTrue));
     });
 
@@ -525,7 +523,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(controlled.writeAttempts, 1);
-      expect(find.byType(ExperienceLevelScreen), findsOneWidget);
+      expect(find.byType(MainShell), findsOneWidget);
     });
 
     testWidgets('Back without tapping Continue writes nothing', (tester) async {

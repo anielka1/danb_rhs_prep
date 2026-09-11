@@ -1,9 +1,7 @@
-import 'study_availability_screen.dart';
 import 'package:flutter/material.dart';
 import '../bootstrap/bootstrap_session_controller.dart';
 import '../bootstrap/bootstrap_session_scope.dart';
 import '../domain/models/exam_date_precision.dart';
-import '../domain/models/experience_level.dart';
 import '../domain/repositories/bootstrap_local_store.dart';
 import '../domain/repositories/user_settings_repository.dart';
 import '../services/theme_mode_controller.dart';
@@ -13,7 +11,6 @@ import '../widgets/app_dialog.dart';
 import '../widgets/app_scaffold.dart';
 import '../widgets/primary_button.dart';
 import 'exam_date_screen.dart';
-import 'experience_level_screen.dart';
 import 'study_help_screen.dart';
 
 /// Accountless settings. Only controls backed by working behavior are shown.
@@ -49,7 +46,7 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen> {
       title: 'Reset study progress?',
       message: 'This deletes answers, saved questions, unfinished sessions, '
           'mock exam history and progress for this exam on this device. '
-          'Your study plan and appearance stay unchanged. This cannot be undone.',
+          'Your exam preferences and appearance stay unchanged. This cannot be undone.',
       actions: const [
         AppDialogAction(
             label: 'Keep my progress',
@@ -76,20 +73,15 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen> {
     }
   }
 
-  Future<void> _edit(bool date) async {
+  Future<void> _edit() async {
     final session = widget.session!;
     await Navigator.of(context).push(MaterialPageRoute<void>(
       builder: (_) => BootstrapSessionScope(
         controller: session,
-        child: date
-            ? ExamDateScreen(
-                localStore: widget.localStore!,
-                editing: true,
-                userSettingsRepository: widget.userSettingsRepository)
-            : ExperienceLevelScreen(
-                localStore: widget.localStore!,
-                editing: true,
-                userSettingsRepository: widget.userSettingsRepository),
+        child: ExamDateScreen(
+            localStore: widget.localStore!,
+            editing: true,
+            userSettingsRepository: widget.userSettingsRepository),
       ),
     ));
     if (mounted) setState(() {});
@@ -129,7 +121,7 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen> {
               const SizedBox(height: AppSpacing.lg),
               Text('Make it yours.', style: styles.h1),
               const SizedBox(height: AppSpacing.sm),
-              Text('Your study plan. Your pace.', style: styles.body),
+              Text('Study in your own way.', style: styles.body),
               const SizedBox(height: AppSpacing.xxl),
               AppCard(
                 backgroundColor: context.colors.primaryContainer,
@@ -149,37 +141,13 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen> {
               ),
               if (widget.session != null && widget.localStore != null) ...[
                 const SizedBox(height: AppSpacing.xxxl),
-                Text('YOUR STUDY PLAN', style: styles.label),
-                const SizedBox(height: AppSpacing.md),
-                _SettingsAction(
-                    icon: Icons.calendar_month_rounded,
-                    title: 'Study availability',
-                    subtitle: 'Days, minutes and learning stage',
-                    onTap: () async {
-                      await Navigator.of(context).push(MaterialPageRoute(
-                          builder: (_) => StudyAvailabilityScreen(
-                              session: widget.session!,
-                              repository: widget.userSettingsRepository)));
-                      if (mounted) setState(() {});
-                    }),
+                Text('EXAM', style: styles.label),
                 const SizedBox(height: AppSpacing.md),
                 _SettingsAction(
                     icon: Icons.event_rounded,
                     title: 'Exam timeframe',
                     subtitle: _dateLabel(context),
-                    onTap: () => _edit(true)),
-                const SizedBox(height: AppSpacing.md),
-                _SettingsAction(
-                    icon: Icons.school_rounded,
-                    title: 'Study experience',
-                    subtitle: switch (
-                        widget.session!.snapshot.experienceLevel) {
-                      ExperienceLevel.justStarting => 'Just starting',
-                      ExperienceLevel.studyingAlready => 'Studying already',
-                      ExperienceLevel.retakingExam => 'Taking the exam again',
-                      null => 'Choose your experience',
-                    },
-                    onTap: () => _edit(false)),
+                    onTap: _edit),
               ],
               const SizedBox(height: AppSpacing.xxxl),
               Text('LOOK & FEEL', style: styles.label),

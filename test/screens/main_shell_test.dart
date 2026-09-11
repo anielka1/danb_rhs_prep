@@ -70,7 +70,7 @@ void main() {
     testWidgets('each tab maps to its screen', (tester) async {
       await tester.pumpWidget(wrap(const MainShell()));
       expect(currentTab(tester), AppTab.home);
-      expect(find.text('Your study day'), findsOneWidget);
+      expect(find.text('Your study space'), findsOneWidget);
 
       await tester.tap(find.text('Practice'));
       await tester.pumpAndSettle();

@@ -83,7 +83,7 @@ class _SplashScreenState extends State<SplashScreen> {
 
     // Created exactly once per app session, here — the only place a
     // BootstrapReady is first produced. Every route from here on
-    // (Welcome, Exam Date, Experience Level, Main) forwards this same
+    // (Welcome, Exam Date, optional check, Main) forwards this same
     // instance; none of them ever constructs another one.
     final BootstrapSessionController controller = BootstrapSessionController(
         ready,

@@ -219,9 +219,7 @@ void main() {
     await tapText(tester, 'Start Preparing');
     await tapText(tester, "I haven't scheduled it yet");
     await tapText(tester, 'Continue');
-    await tapText(tester, 'Just starting');
-    await tapText(tester, 'Continue');
-    await selectAvailability(tester);
+    await skipStartingCheck(tester);
     expect(find.byType(MainShell), findsOneWidget);
     await tapText(tester, 'Mock Exam');
     await tapText(tester, 'Start Mock Exam');

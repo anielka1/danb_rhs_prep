@@ -152,3 +152,15 @@ the month view. Twelve existing Home/summary/daily-journey baselines were update
 for intended UI changes, and all changed/new images were inspected. These renders
 are not native simulator screenshots; see
 `docs/verification/2026-09-11-home-calendar-diagnostic.md` for the execution limit.
+
+## Self-directed Home refresh (September 2026)
+
+The retired calendar and daily-plan panel's four baselines were removed with
+their widgets. Existing Home, diagnostic-question, settings and session-result
+captures were refreshed on local Linux Flutter 3.41.2. New selected-answer and
+diagnostic-result captures cover both themes. The matrix still has 42 captures;
+no comparator thresholds, reference fonts, viewport or text scale were changed.
+Home's AX5 layout uses a smaller heading role so words remain readable at 4x.
+New small-screen tests also select and save diagnostic answers at 4x in both themes.
+These are widget renders, not physical-device screenshots. Shared-harness icon
+placeholder glyphs and the debug banner remain visible.

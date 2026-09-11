@@ -1,272 +1,74 @@
-# Adaptive study plan
+# Self-directed study (September 2026)
 
-The plan is a local projection, not an exam-readiness score or a guarantee of
-passing. Production content must pass the existing validator and be approved.
-Draft/demo content is never promoted by the planner. The production pool currently
-has no approved questions; availability can be saved, but a real planned session
-requires approved content. Synthetic integration questions live under `test/`.
+The calendar and daily allocation feature has been retired. Home does not compute
+or display daily commitments, forecasts, required pace, availability or remaining
+planned study time. The allocation engine and calendar editing service have been
+removed, along with their UI. Practice length is chosen per session, not inferred
+from the exam date. Free-plan allowances and their midnight UTC reset are unchanged.
 
-## Durable inputs and migration
+## Current path
 
-Schema 4 adds nullable availability JSON to `UserProfiles`, nullable confidence,
-active seconds and local calendar date to `AnswerAttempts`, planned date and review
-IDs to `PracticeSessions`, pre-start exposure count to `MockAttempts`, and the
-`StudySchedules` exception table. Upgrades from 1, 2 and 3 are additive. Old rows
-retain null measurements; no confidence or time is invented. Generated Drift code
-is produced with `dart run build_runner build`.
+Welcome → exam timeframe → optional starting check → Home. There is no experience
+or availability question. Completion is written after the profile saves; a failure
+stays retryable. Reopening preserves the timeframe and any diagnostic session.
+Skipping the check completes onboarding without creating answer history.
 
-Availability is stored once in the profile and exposed through BootstrapReady's
-profile/availability getter. Bootstrap loads that profile from the settings
-repository; edits publish a new snapshot only after saving. There is deliberately
-no second, potentially contradictory availability record in SharedPreferences.
-Editing the date/experience preserves availability, original question goal and
-creation time. Legacy profiles keep their existing question goal until they choose
-weekdays and 15, 30 or 45 minutes. Retaking an exam is not an advanced skill level;
-Mostly reviewing is a separate stable study-stage value.
+Home has one Start learning / Continue learning action. New practice uses the
+existing practice generator, eligibility gates and free-limit checks. Existing
+practice (including older planned sessions) retains its ID, question set, saved
+answer permutation and historical feedback. Active diagnostics reopen their own
+screen. Secondary links open saved answers, topic progress, practice filters and
+the optional check. Read errors are shown as errors, never as zero progress.
+Summary returns to Home; it does not create another daily goal.
 
-Calendar exceptions are replaced transactionally. Progress reset removes answers,
-sessions, review evidence, mocks and calendar exceptions while preserving profile
-and appearance, following the existing reset lease. Retired leases cannot write
-old progress back after reset. Review state is derived from append-only answers,
-so an idempotently retried answer cannot advance the schedule twice.
+## Why keep the starting check?
 
-Schema 5 subsequently adds nullable persisted answer order for practice and mock
-sessions. The upgrade preserves the schema-4 planner data and all historical
-columns; old sessions keep their content answer order. See
-[session ordering and mock rotation](MOCK_EXAM_FLOW.md#persisted-answer-order-and-mock-rotation).
-This does not change plan allocation, review intervals or free-tier limits.
+It writes `AttemptSessionType.diagnostic` through the same atomic attempt/state
+transaction as practice. `QuestionState.timesSeen/timesCorrect/timesIncorrect`
+therefore include those answers. Progress displays that evidence, and
+`PracticeGenerator` uses the aggregate topic accuracy for `PracticeFocus.weakAreas`
+and mistakes for `incorrectQuestions`. It does not set a self-reported skill level,
+change adaptive difficulty, or calculate the probability of passing. Small samples
+are described as a starting point. Diagnostic attempts do not consume the daily
+free practice allowance. The domain quota and approved-content gate are unchanged.
+Production still needs a reviewed approved bank; no drafts are promoted here.
 
-## Dates, budgets and allocation
+The optional check distinguishes unavailable material, read/start failures, active
+sessions and stored results. Skip, Continue later, resume and retry saving remain
+available. Answer IDs and persistent answer ordering remain the source of scoring.
 
-The pure engine receives the current instant, explicit local calendar date and
-zone label. Calendar arithmetic uses UTC-flagged year/month/day components solely
-for DST-independent date arithmetic; it never converts an exam date with toUtc.
-New answers capture their local date at submission. Old answers without local-day
-evidence use their recorded UTC date for review scheduling, not for confident
-retention evidence. The existing free-practice counter retains its UTC-day reset.
+## Data compatibility
 
-D counts selected study dates from today through the day before the exam.
-F = min(5, floor(0.20D)), B = floor(0.10D), S = D-F-B. The required pace is
-ceil(U/S), with U counting unseen approved ordinary questions, excluding an active
-mock reserve. This is distinct from the time-constrained assigned pace. With 500
-questions and D=30, F=5/B=3/S=22 and pace=23; reserving 75 gives pace=20.
+Schema stays **5**. No migration, deletion or reset runs as part of this change.
+Existing answers, session types, plan dates, review IDs, schedule rows, profile
+availability and legacy daily-goal column remain readable. The old calendar is not
+exposed and no new scheduled work is generated. Existing mock reservations retain
+their prior expiry/access rules; mock selection and payment rules are unchanged.
+The historical review-evidence policy remains tested; it does not allocate work.
 
-Whole-question estimates include answering **and** a 30-second explanation-reading
-allowance: initially 120 seconds for new questions and 75 seconds for reviews.
-With fewer than five measured answers of each kind, these defaults are used.
-After five valid 5–300-second answer samples, the median answer time is used with
-a floor of two-thirds of the original answer default (60 / 30 seconds), plus the
-reading allowance. This prevents quick taps from collapsing the estimate. The
-allowance is a transparent estimate, not a measurement of reading or mastery.
-Today's remaining budget subtracts recorded answer seconds (or the existing
-answer fallback for null measurements) plus the reading allowance per answer.
-Persisted `activeDurationSeconds` still means **answering only**. No historical
-rows, schema, or results are rewritten. Historical calendar answer time uses only
-recorded durations; it does not invent timing for old null measurements.
+`UserProfile.experienceLevel` is nullable. New absence is encoded as the explicit
+`notCollected` marker in the existing non-null text column, rather than a fabricated
+`justStarting` answer. Recognized historical values are preserved. Unknown values
+read as absence. SharedPreferences experience answers are neither fabricated nor
+erased. Re-saving the exam timeframe preserves any existing legacy answer.
 
-Answer timing stops in the background and while feedback is shown. After two
-minutes without a pointer interaction it stops accruing until another interaction;
-resuming never backfills idle time. This heuristic can undercount a long period
-of quiet reading of a question. It never interrupts answering. The summary's
-"Elapsed since start" is wall time and explicitly includes pauses, not active
-study time. All remaining-time labels are approximate.
-
-The normal forecast reserves 30% of time for reviews. Actual due reviews are
-assigned first; excess remains visible as backlog. Domain allocation uses weighted
-cumulative deficits rather than re-rounding every small batch. Within domain ties,
-unseen topics precede weak topics, then remaining material; difficulty uses the
-validated 1–5 scale (initial target 2, mostly-reviewing target 3, then performance).
-IDs break ties deterministically. Missing domain coverage remains explicit in the
-projection. Buffers are distributed and optional; once work has started they can
-absorb excess before increasing ordinary-day load. Moving onto an occupied date
-reuses its single daily budget instead of adding an invisible second session.
-
-Future review dates simulate successful review intervals only to estimate workload;
-they never write answers or create mastery evidence. Actual history is recalculated
-after answers, availability changes, content/access changes and foreground/day
-changes. Unscheduled plans roll over seven days without a countdown. Tomorrow is
-review-only; today/past exam dates schedule no new pre-exam work.
-
-## Review evidence
-
-Success intervals are 1, 3, 7 and 14 days, then 14. Only explicitly confident
-correct answers on separate dates advance a stage. Errors or “I guessed” restart
-at the next available study date. Review policy version 2 keeps the stage for a neutral correct answer but gives
-only a short next-available-study-day check, never the old stage's 3/7/14-day
-interval. An early neutral answer can shorten an existing due date, not delay it.
-An overdue neutral answer clears today's queue until that short next check.
-Repeated neutral answers on successive days remain short. Same-day answers do not
-advance or postpone the interval; an error followed by a same-day correction
-remains at stage zero. Only a confident success on a different day earns the
-1/3/7/14 interval. This derived policy change requires no stored-state migration.
-Days outside selected availability move forward to the next selected weekday.
-Reviews falling after the exam are marked in the projection; final-review slots
-may bring them forward without claiming retention.
-
-Topic retained status requires at least three distinct questions, three recorded
-local dates and three questions at review stage 3 or higher, without an overdue
-review or error. Under three questions or two dates is insufficient data. Other
-states are learning and needs review. These configurable product heuristics are
-not official DANB thresholds. Unique coverage, first-answer accuracy and repeat
-accuracy are shown separately.
-
-## Practice, diagnostic and mock integration
-
-A planned session stores ordered IDs and which IDs were reviews before opening a
-question. Resume restores that same set and feedback. New starts share the existing
-content validator and eligibility gate, enforce the existing UTC practice cap,
-and fail closed on unreadable storage. Existing practice modes remain available.
-A failed answer-history read during resume propagates instead of producing a
-controller with zero answers. This includes failure of the second read after the
-planned-session preflight read succeeded. Retry restores the same saved IDs and
-historical feedback; a successful empty read is a distinct, valid state.
-
-The optional diagnostic reads its count from freeTier.diagnosticQuestions and uses
-largest-remainder domain quotas. It records diagnostic attempts, separate from the
-practice allowance, and offers Skip when the pool is insufficient. Results describe
-performance per area, never exam readiness. Content/eligibility failures show the
-reason and Skip; a transient start failure keeps a visible Retry diagnostic
-button. Retrying uses the normal start/resume path, so a session already persisted
-before an error is reused rather than duplicated. A successful retry clears the
-error message. These recovery changes do not alter schema 4 or historical data.
-
-A mock requires a separate configured-duration slot (currently 60 minutes), content
-availability and remaining access. An optional first-mock reserve is made only from
-unseen approved questions and only if every currently represented topic remains in
-the ordinary pool. Reserving does not mutate a started mock. The selector honors
-reserved IDs and each new result stores the number seen before start. Cancelling,
-starting the first mock, losing access, or content retirement that removes ordinary
-topic coverage releases the ordinary-pool restriction.
-Mock answer review is separate from the timed slot.
+`activeDurationSeconds` still measures answering only. Background time and the
+existing idle timeout are unchanged. Summary elapsed time still includes pauses;
+historical measurements and scores are not reinterpreted.
 
 ## Verification
 
-Tests in `test/study_plan/` exercise real SQLite persistence/restart, schema-3
-migration, idempotent answers, separate diagnostic typing, reservation selection
-and cancellation, old preference preservation, time/quota limits, date boundaries,
-review intervals and 375×667 layouts under light/dark themes at 1×/4× text.
+Updated launch tests cover completion, skipping, insufficient content, persisted
+answers/order through app reconstruction, and retry of profile/completion writes.
+Home tests cover empty content, real progress, safe read retry, direct practice,
+legacy planned resume, diagnostic routing, and small-screen large-text layouts.
+SQLite tests preserve old profile fields and round-trip a new absent experience.
+The diagnostic-to-weak-practice regression verifies its real downstream benefit.
+Obsolete calendar/allocation and experience-selector tests are removed with their
+features; storage, answer ordering, feedback, free-limit and review-evidence checks
+remain. Golden thresholds and shared test harness are unchanged.
 
-Final command results and any outstanding release gates are recorded in the PR.
-Hosted GitHub Actions are not used for this task, per the zero-cost requirement;
-Linux checks use the local Lima VM. Content is never approved to satisfy a gate.
-
-Mock answers contribute to explored coverage, while first-answer and repeat
-accuracy use practice/diagnostic AnswerAttempts. The debug demo allows three mock
-attempts (two seeded history records and one interactive attempt); production
-allowances are unchanged.
-
-### Local verification, 2026-09-10
-
-- Format: 245 files, 0 changed, exit 0. Analyze: no issues, exit 0.
-- Full Linux suite: 1031 passed, 1 skipped, exit 0 (including goldens).
-- Release bundle: exit 0.
-- Content report: exit 0. Production readiness: exit 2, no approved
-  questions for the required 7/4/4 diagnostic distribution.
-- iOS release/no-codesign was attempted but Xcode returned error 66 in this
-  environment. User Terminal verification and physical-device checks are pending.
-
-## Stability follow-up to PR #63
-
-The next-days required pace remains a forecast based on the remaining pool.
-Today's unstarted pace reconstructs the pool before today's first answers so
-completed work is subtracted once, not twice. After a planned session starts,
-its existing schema-4 ordered question IDs and review IDs define the day's
-commitment. A fresh controller and a reopened SQLite database reconstruct the
-same unfinished IDs. Finishing this commitment does not allocate another batch
-when fast recorded answers lower the time estimate. Remaining time, content
-eligibility and UTC allowance still bound the projection; resume never replaces
-the active session. Availability/date edits recalculate the forecast, not saved
-session IDs. Free practice remains separately available.
-
-Home reads the active session in StudyPlanPanel, which owns the only primary
-practice/continue action. The separate Free practice card opens the existing mode
-picker as a secondary action. Returning from practice, Settings, a tab, or the
-background refreshes the panel. No new navigation framework or tab was added.
-
-Calendar presentation separates remaining assignments from recorded answers and
-spent time. Completed rows show their actual recorded work rather than an empty
-assignment, and changing today to a day off keeps that work visible. A missed
-saved session is marked not completed; a day off explicitly says no study is
-scheduled. Exam rows point to Settings and expose no impossible edit buttons.
-Past unstarted projections are not invented as completed or missed records.
-Existing fallback estimates remain for old answers without active timing.
-
-Regressions reproduced on main: 23 became 22 after 18 answers; neutral review
-inherited a seven-day delay; two primary practice actions; editable exam row;
-completed-day zero-assignment presentation; day-off edits hid recorded work;
-exhausted quota incorrectly completed an active session. An in-progress saved
-session now takes precedence over an empty time/quota-constrained assignment.
-The schema remains **4**, with no migration or deleted data.
-
-### Stabilization verification, 2026-09-11
-
-- Format: 246 files, 0 changed, exit 0. Analyze: no issues, exit 0.
-- Full local Linux suite: `01:24 +1042 ~1: All tests passed!`, exit 0
-  (1042 passed, 1 skipped), including the unchanged exact golden comparator.
-- Content report: exit 0; require-ready: exit 2 because approved remains zero.
-- iOS release/no-codesign: attempted, exit 1, Xcode error 66. Direct workspace
-  inspection exits 66 with `ios/Runner.xcworkspace is not a workspace file`
-  and CoreSimulator connection errors in this execution environment.
-  Verify from a normal Terminal at the repository root with
-  `flutter build ios --release --no-codesign`. No successful iOS build is claimed.
-- No hosted GitHub Actions. Physical-device accessibility is not verified.
-
-## Daily journey presentation
-
-Home and the result screen share `DailyStudyOverview`, derived from repositories.
-A saved planned question set supplies completed/remaining counts, even after a
-restart or if a reduced budget would project fewer questions. An older active
-plan is identified as such. Completed commitments stay complete during optional
-free practice. The result screen offers the remaining plan or Home, and describes
-session accuracy as a small sample rather than a mastery or passing estimate.
-
-Calendar rows distinguish forecasts, partial work, completion, rest and exam days
-with words as well as styling. Selecting a future day reveals its editing actions;
-the exam never offers these actions. Historical rows are based on persisted sessions
-and attempts (including old attempts with a UTC date fallback). Saved unfinished
-IDs are retained; unrecorded past forecasts are not fabricated. Accordingly, an
-unstarted missed day without any saved schedule/session cannot be reconstructed
-as historical work. Remaining material is forecast within the same time budget;
-limited coverage offers availability editing and never changes the exam date.
-
-The unstarted daily target reconstructs its pre-answer time capacity; today's
-quick answers cannot create another full allocation. Started plans continue to
-use their persisted commitment. Answer permutations, the free UTC reset, content
-approval and difficulty adaptation are unchanged. The current database schema
-stays at **5**; this change needs no migration.
-
-## Home, month calendar and starting-check recovery
-
-Home keeps Study calendar and its next-seven-day preview outside the Today card
-and outside the approved-pool/availability branches. The preview and month cells
-use the same `StudyPlanProjection` entries: recorded answers plus remaining IDs.
-No 500-question assumption or separate allocation algorithm exists in the UI.
-Empty/unconfigured days use a dash and an explicit no-plan explanation. Recorded
-history remains visible when the available pool becomes empty. Month navigation
-extends through the exam month; without a date, dates can be browsed but the
-planner's seven-day outlook is not extended into invented question assignments.
-Selecting a date scrolls to its details. Today, rest, partial work, completion and
-exam days have structural/text/semantic markers, not just colors. Large text and
-narrow calendars scroll horizontally to retain readable seven-column layouts.
-
-The starting check now reads saved state before advertising a new Start: an active
-diagnostic offers Resume and existing diagnostic history shows its recorded result.
-Read failures have Retry; missing approved content has a separate explanation and
-Skip. Save failures retain the pending answer and disable Continue later/back
-until the write succeeds. Session IDs, answer permutations and historical feedback
-are unchanged. Restarting during onboarding preserves prior choices; continue
-through those saved choices to reach Resume diagnostic. Skipping leaves any saved
-active session intact. No database migration or content approval is performed.
-
-Practice results count actual incorrect feedback, not the rounded score. Zero
-mistakes shows a message and the existing Home/plan action; otherwise Review
-mistakes (N) opens the unchanged read-only answer/explanation review. Even a score
-rounded to 100% can correctly have one mistake.
-
-The optional `tool/main_study_preview.dart` entrypoint uses 80 existing test-fixture
-questions, synthetic from creation, and independent memory stores. It is debug
-only, is never imported by production, does not read/write user history, and resets
-on process exit. This fixture's approved shape tests the real eligibility gates;
-it is not approval of any clinical/draft question. The ordinary demo remains
-unchanged and cannot demonstrate an approved-bank diagnostic. Production currently
-requires human-reviewed approved content before the starting check can run.
+Use `flutter run -t tool/main_study_preview.dart` for the isolated 80-question
+synthetic fixture and full optional check. This is debug-only and writes no
+production data. Actual executed results and reviewed render references are in the
+PR verification report.
