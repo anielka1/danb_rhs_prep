@@ -460,20 +460,28 @@ void main() {
       expect(resumed.currentIndex, 0);
     });
 
-    test(
-        'a failing repository read leaves a fully usable controller with '
-        'an empty answered map, matching submitAnswer\'s own best-effort '
-        'reasoning — restoring history must never crash the interactive '
-        'flow', () async {
-      final resumed = await PracticeSessionController.resume(
-        session: buildController(InMemoryProgressRepository()).session,
-        questions: DebugDemoEnvironment.demoQuestions,
-        progressRepository: _ThrowingProgressRepository(),
+    test('a failed history read is not an empty history', () async {
+      await expectLater(
+        PracticeSessionController.resume(
+          session: buildController(InMemoryProgressRepository()).session,
+          questions: DebugDemoEnvironment.demoQuestions,
+          progressRepository: _ThrowingProgressRepository(),
+        ),
+        throwsStateError,
       );
+    });
 
+    test('a successful empty history resumes with zero answers', () async {
+      final repo = InMemoryProgressRepository();
+      final original = buildController(repo);
+      final resumed = await PracticeSessionController.resume(
+        session: original.session,
+        questions: original.questions,
+        progressRepository: repo,
+      );
       expect(resumed.answeredCount, 0);
       expect(resumed.currentIndex, 0);
-      final AnswerFeedback feedback =
+      final feedback =
           await resumed.submitAnswer(resumed.currentQuestion.correctAnswerId);
       expect(feedback.isCorrect, isTrue);
     });
@@ -648,8 +656,7 @@ class _DelayedQuestionStateRepository implements ProgressRepository {
       throw UnimplementedError('not used by this test');
 }
 
-/// Every read/write throws — proves [PracticeSessionController.resume]'s
-/// best-effort contract.
+/// Read failures must remain distinguishable from successfully empty history.
 class _ThrowingProgressRepository implements ProgressRepository {
   @override
   Future<List<AnswerAttempt>> answerAttemptsForExam(String examId) async {

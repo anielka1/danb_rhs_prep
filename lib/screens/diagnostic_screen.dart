@@ -20,6 +20,9 @@ class _DiagnosticScreenState extends State<DiagnosticScreen> {
   PracticeSessionController? _controller;
   String? _message, _selection;
   bool _busy = false, _done = false;
+  // Eligibility failures require content/state changes; storage failures
+  // can be retried without discarding an existing diagnostic.
+  bool _startUnavailable = false, _retryStart = false;
   @override
   void initState() {
     super.initState();
@@ -27,14 +30,21 @@ class _DiagnosticScreenState extends State<DiagnosticScreen> {
       const PlannedSessionService()
           .diagnosticQuestions(widget.session.snapshot.contentPackage, {});
     } on PracticeGenerationUnavailable catch (e) {
+      _startUnavailable = true;
       _message = e.message;
     } catch (_) {
-      _message = 'Diagnostic content is not available. You can skip this step.';
+      _retryStart = true;
+      _message = 'Could not start the diagnostic. Please retry.';
     }
   }
 
   Future<void> _start() async {
-    setState(() => _busy = true);
+    if (_busy || _startUnavailable) return;
+    setState(() {
+      _busy = true;
+      _message = null;
+      _retryStart = false;
+    });
     try {
       final repo = widget.session.progressRepository;
       if (repo == null) throw StateError('Storage unavailable');
@@ -63,11 +73,18 @@ class _DiagnosticScreenState extends State<DiagnosticScreen> {
         });
       }
     } on PracticeGenerationUnavailable catch (e) {
-      if (mounted) setState(() => _message = e.message);
+      if (mounted) {
+        setState(() {
+          _startUnavailable = true;
+          _message = e.message;
+        });
+      }
     } catch (_) {
       if (mounted) {
-        setState(
-            () => _message = 'Could not start the diagnostic. Please retry.');
+        setState(() {
+          _retryStart = true;
+          _message = 'Could not start the diagnostic. Please retry.';
+        });
       }
     } finally {
       if (mounted) setState(() => _busy = false);
@@ -121,9 +138,9 @@ class _DiagnosticScreenState extends State<DiagnosticScreen> {
       if (c == null) ...[
         Text(
             '${snap.contentPackage.exam.freeTier.diagnosticQuestions} questions across the exam areas. You can skip this and begin your plan.'),
-        if (_message == null)
+        if (!_startUnavailable)
           PrimaryButton(
-              label: 'Start diagnostic',
+              label: _retryStart ? 'Retry diagnostic' : 'Start diagnostic',
               onPressed: _busy ? null : _start,
               isLoading: _busy),
         TextButton(

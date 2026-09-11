@@ -86,10 +86,11 @@ class PracticeSessionController {
   /// full resolution) at `ExamOverviewScreen._startOrResumePractice`'s
   /// own `questionsById` lookup, not here.
   ///
-  /// Best-effort, matching every other read/write here: a failing
-  /// [progressRepository] returns a controller with an empty (not
-  /// crashed) answered map — the interactive flow must still work,
-  /// exactly as [submitAnswer]'s own failures never block it.
+  /// A failed history read propagates to the caller: it is not evidence
+  /// of an unanswered session. Callers must show a retryable error and
+  /// keep the saved session intact instead of opening a fresh controller.
+  /// A successful empty read still restores a genuinely unanswered session.
+  /// This differs from new writes, which retain their payload for retry.
   ///
   /// Only the *latest* attempt per question is restored — via
   /// [ProgressRepository.answerAttemptsForExam]'s documented return
@@ -117,78 +118,72 @@ class PracticeSessionController {
       idGenerator: idGenerator,
     );
 
-    try {
-      final List<AnswerAttempt> attempts =
-          await progressRepository.answerAttemptsForExam(session.examId);
-      // Last-one-in-the-list wins, not a comparison of answeredAt values
-      // — two attempts can carry the *identical* answeredAt (Drift's
-      // storage truncates to whole seconds, see canonicalizeAnswerAttempt;
-      // two submissions within the same second are ordinary, not
-      // exceptional) with no other field able to break that tie, so
-      // [ProgressRepository.answerAttemptsForExam]'s own return order is
-      // relied on as the true chronological order instead — both
-      // implementations return attempts in the order they were recorded.
-      final Set<String> sessionQuestionIds = session.questionIds.toSet();
-      final Map<String, AnswerAttempt> latestBySession = {};
-      for (final attempt in attempts) {
-        if (attempt.sessionId != session.id) continue;
-        // A record sharing this sessionId but naming a questionId that
-        // isn't actually part of this session (foreign data mixed in by
-        // an id collision, or a corrupted/hand-edited row) must never
-        // inflate answeredCount/correctCount or be shown as this
-        // session's own feedback — sessionId alone is not sufficient
-        // proof of membership.
-        if (!sessionQuestionIds.contains(attempt.questionId)) continue;
-        latestBySession[attempt.questionId] = attempt;
-      }
-      for (final attempt in latestBySession.values) {
-        // Rebuilt entirely from what this *attempt* itself persisted —
-        // never from `questions`/`currentQuestion` — so a resumed
-        // session's feedback is the exact same snapshot the original
-        // submitAnswer call evaluated, even if the question's content
-        // has since changed (e.g. a content update corrected its
-        // explanation or correct answer). See AnswerFeedback's and
-        // AnswerAttempt.questionVersion's own doc comments.
-        //
-        // An attempt recorded before schema 3 (PREP-668) has none of
-        // these three columns — there is no historical snapshot to
-        // recover for it, so it's skipped here rather than falling back
-        // to today's `Question` (which is exactly the bug this method
-        // used to have: silently mixing a historical isCorrect verdict
-        // with a possibly-different current explanation/correctAnswerId).
-        // This is a real, accepted gap for installs upgrading from
-        // schema < 3 only — every attempt recorded from schema 3 onward
-        // always has this data.
-        final int? questionVersion = attempt.questionVersion;
-        final String? correctAnswerId = attempt.correctAnswerId;
-        final String? explanation = attempt.explanation;
-        if (questionVersion == null ||
-            correctAnswerId == null ||
-            explanation == null) {
-          continue;
-        }
-        controller._feedback[attempt.questionId] = AnswerFeedback(
-          questionId: attempt.questionId,
-          questionVersion: questionVersion,
-          selectedAnswerId: attempt.selectedAnswerId,
-          correctAnswerId: correctAnswerId,
-          isCorrect: attempt.isCorrect,
-          explanation: explanation,
-          answeredAt: attempt.answeredAt,
-          contentVersion: attempt.contentVersion,
-        );
-      }
-
-      final int firstUnanswered = questions
-          .indexWhere((question) => !controller.isAnswered(question.id));
-      controller._currentIndex =
-          firstUnanswered == -1 ? questions.length - 1 : firstUnanswered;
-      controller._furthestIndex = controller._currentIndex;
-    } catch (_) {
-      // Best-effort: see this method's own doc comment. The controller
-      // returned above (with an empty answered map, at question one) is
-      // still fully usable.
+    final List<AnswerAttempt> attempts =
+        await progressRepository.answerAttemptsForExam(session.examId);
+    // Last-one-in-the-list wins, not a comparison of answeredAt values
+    // — two attempts can carry the *identical* answeredAt (Drift's
+    // storage truncates to whole seconds, see canonicalizeAnswerAttempt;
+    // two submissions within the same second are ordinary, not
+    // exceptional) with no other field able to break that tie, so
+    // [ProgressRepository.answerAttemptsForExam]'s own return order is
+    // relied on as the true chronological order instead — both
+    // implementations return attempts in the order they were recorded.
+    final Set<String> sessionQuestionIds = session.questionIds.toSet();
+    final Map<String, AnswerAttempt> latestBySession = {};
+    for (final attempt in attempts) {
+      if (attempt.sessionId != session.id) continue;
+      // A record sharing this sessionId but naming a questionId that
+      // isn't actually part of this session (foreign data mixed in by
+      // an id collision, or a corrupted/hand-edited row) must never
+      // inflate answeredCount/correctCount or be shown as this
+      // session's own feedback — sessionId alone is not sufficient
+      // proof of membership.
+      if (!sessionQuestionIds.contains(attempt.questionId)) continue;
+      latestBySession[attempt.questionId] = attempt;
     }
+    for (final attempt in latestBySession.values) {
+      // Rebuilt entirely from what this *attempt* itself persisted —
+      // never from `questions`/`currentQuestion` — so a resumed
+      // session's feedback is the exact same snapshot the original
+      // submitAnswer call evaluated, even if the question's content
+      // has since changed (e.g. a content update corrected its
+      // explanation or correct answer). See AnswerFeedback's and
+      // AnswerAttempt.questionVersion's own doc comments.
+      //
+      // An attempt recorded before schema 3 (PREP-668) has none of
+      // these three columns — there is no historical snapshot to
+      // recover for it, so it's skipped here rather than falling back
+      // to today's `Question` (which is exactly the bug this method
+      // used to have: silently mixing a historical isCorrect verdict
+      // with a possibly-different current explanation/correctAnswerId).
+      // This is a real, accepted gap for installs upgrading from
+      // schema < 3 only — every attempt recorded from schema 3 onward
+      // always has this data.
+      final int? questionVersion = attempt.questionVersion;
+      final String? correctAnswerId = attempt.correctAnswerId;
+      final String? explanation = attempt.explanation;
+      if (questionVersion == null ||
+          correctAnswerId == null ||
+          explanation == null) {
+        continue;
+      }
+      controller._feedback[attempt.questionId] = AnswerFeedback(
+        questionId: attempt.questionId,
+        questionVersion: questionVersion,
+        selectedAnswerId: attempt.selectedAnswerId,
+        correctAnswerId: correctAnswerId,
+        isCorrect: attempt.isCorrect,
+        explanation: explanation,
+        answeredAt: attempt.answeredAt,
+        contentVersion: attempt.contentVersion,
+      );
+    }
+
+    final int firstUnanswered =
+        questions.indexWhere((question) => !controller.isAnswered(question.id));
+    controller._currentIndex =
+        firstUnanswered == -1 ? questions.length - 1 : firstUnanswered;
+    controller._furthestIndex = controller._currentIndex;
 
     return controller;
   }
