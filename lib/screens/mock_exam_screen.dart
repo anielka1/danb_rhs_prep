@@ -1,3 +1,5 @@
+import '../subscriptions/subscription_scope.dart';
+import 'subscription_screen.dart';
 import 'package:flutter/material.dart';
 import '../bootstrap/bootstrap_session_scope.dart';
 import '../domain/models/entitlement.dart';
@@ -33,6 +35,7 @@ class _MockExamScreenState extends State<MockExamScreen> {
   ContentPackage? _content;
   ProgressRepository? _repository;
   Entitlement? _entitlement;
+  bool _opening = false;
   bool _initialized = false;
   bool _loading = true;
   bool _failed = false;
@@ -93,6 +96,38 @@ class _MockExamScreenState extends State<MockExamScreen> {
   }
 
   Future<void> _open() async {
+    if (_opening) return;
+    _opening = true;
+    try {
+      await _openOnce();
+    } finally {
+      _opening = false;
+    }
+  }
+
+  Future<void> _openOnce() async {
+    final subscriptions = SubscriptionScope.maybeOf(context);
+    if (subscriptions != null) {
+      _entitlement = await subscriptions.refresh();
+      if (!mounted) return;
+      if (!_controller!.inProgress && !_entitlement!.isActiveAt(DateTime.now())) {
+        try {
+          final previous = await _repository!.mockAttemptsForExam(_content!.exam.id);
+          if (!mounted) return;
+          if (previous.length >= _content!.exam.freeTier.includedMockExams) {
+            final purchased = await SubscriptionScreen.show(
+                context, _content!.exam.subscriptionProductIds);
+            if (!mounted || !purchased) return;
+            _entitlement = subscriptions.entitlement;
+          }
+        } on Object {
+          if (mounted) setState(() => _failed = true);
+          return;
+        }
+      }
+      await _load();
+      if (!mounted || _failed || _unavailable != null || _controller == null) return;
+    }
     await Navigator.of(context).push(MaterialPageRoute<void>(
       settings: const RouteSettings(name: '/mock-exam/instructions'),
       builder: (_) => _MockExamInstructionsScreen(controller: _controller!),

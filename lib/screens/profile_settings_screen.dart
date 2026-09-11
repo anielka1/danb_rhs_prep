@@ -1,3 +1,5 @@
+import 'subscription_screen.dart';
+import '../subscriptions/subscription_scope.dart';
 import 'study_availability_screen.dart';
 import 'package:flutter/material.dart';
 import '../bootstrap/bootstrap_session_controller.dart';
@@ -182,6 +184,16 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen> {
                     onTap: () => _edit(false)),
               ],
               const SizedBox(height: AppSpacing.xxxl),
+              if (widget.session != null && SubscriptionScope.maybeOf(context) != null) ...[
+                _SettingsAction(
+                  icon: Icons.workspace_premium_outlined,
+                  title: 'Premium & subscriptions',
+                  subtitle: 'View plans, restore or manage purchases',
+                  onTap: () => SubscriptionScreen.show(context,
+                    widget.session!.snapshot.contentPackage.exam.subscriptionProductIds),
+                ),
+                const SizedBox(height: AppSpacing.xl),
+              ],
               Text('LOOK & FEEL', style: styles.label),
               const SizedBox(height: AppSpacing.md),
               AppCard(
@@ -220,7 +232,7 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen> {
                   icon: Icons.shield_outlined,
                   title: 'Your data',
                   text:
-                      'No account is needed. Study progress is stored locally in the standard app. The debug demo uses temporary data that resets when it restarts.'),
+                      'No account is needed. Study progress is stored locally in the standard app. Purchases use Apple and RevenueCat to process transactions and maintain subscription access with an anonymous customer ID. The debug demo uses temporary study data.'),
               const SizedBox(height: AppSpacing.md),
               const _InformationSection(
                   icon: Icons.info_outline_rounded,

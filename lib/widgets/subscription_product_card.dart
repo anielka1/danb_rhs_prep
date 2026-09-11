@@ -67,7 +67,10 @@ class SubscriptionProductCard extends StatelessWidget {
               children: [
                 Row(
                   children: [
-                    ExcludeSemantics(child: Text(title, style: textStyles.h3)),
+                    Expanded(
+                      child: ExcludeSemantics(
+                          child: Text(title, style: textStyles.h3)),
+                    ),
                     if (recommended) ...[
                       const SizedBox(width: AppSpacing.sm),
                       ExcludeSemantics(
