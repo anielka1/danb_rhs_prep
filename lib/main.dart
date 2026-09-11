@@ -1,4 +1,7 @@
 import 'dart:async';
+import 'data/subscriptions/revenuecat_subscription_service.dart';
+import 'subscriptions/subscription_scope.dart';
+import 'subscriptions/subscription_service.dart';
 
 import 'package:flutter/material.dart';
 import 'theme/app_theme.dart';
@@ -45,11 +48,13 @@ class DanbRhsPrepApp extends StatefulWidget {
     AppDatabase? database,
     this.progressRepository,
     this.userSettingsRepository,
+    this.subscriptionService,
   })  : _injectedThemeModeController = themeModeController,
         _injectedLocalStore = localStore,
         _injectedBootstrapService = bootstrapService,
         _injectedDatabase = database;
 
+  final SubscriptionService? subscriptionService;
   final AnalyticsService analytics;
   final UserSettingsRepository? userSettingsRepository;
 
@@ -92,7 +97,24 @@ class DanbRhsPrepApp extends StatefulWidget {
   State<DanbRhsPrepApp> createState() => _DanbRhsPrepAppState();
 }
 
-class _DanbRhsPrepAppState extends State<DanbRhsPrepApp> {
+class _DanbRhsPrepAppState extends State<DanbRhsPrepApp>
+    with WidgetsBindingObserver {
+  late final SubscriptionService _subscriptions = widget.subscriptionService ??
+      RevenueCatSubscriptionService(
+        publicKey: const String.fromEnvironment('REVENUECAT_IOS_API_KEY'),
+        termsUrl: const String.fromEnvironment('SUBSCRIPTION_TERMS_URL'),
+        privacyUrl: const String.fromEnvironment('SUBSCRIPTION_PRIVACY_URL'),
+      );
+  late final SubscriptionController _subscriptionController =
+      SubscriptionController(_subscriptions);
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      unawaited(_subscriptionController.refresh());
+    }
+  }
+
   late final ThemeModeController _themeModeController =
       widget._injectedThemeModeController ?? ThemeModeController();
 
@@ -127,6 +149,8 @@ class _DanbRhsPrepAppState extends State<DanbRhsPrepApp> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    unawaited(_subscriptionController.refresh());
     _themeModeController.addListener(_persistThemeMode);
   }
 
@@ -154,6 +178,9 @@ class _DanbRhsPrepAppState extends State<DanbRhsPrepApp> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _subscriptionController.dispose();
+    if (widget.subscriptionService == null) _subscriptions.dispose();
     _themeModeController.removeListener(_persistThemeMode);
     // Only dispose a controller this State created itself; a
     // caller-injected controller remains the caller's to dispose.
@@ -174,6 +201,11 @@ class _DanbRhsPrepAppState extends State<DanbRhsPrepApp> {
       builder: (context, themeMode, _) {
         return MaterialApp(
           title: 'DANB RHS Prep',
+          builder: (_, child) => widget._injectedBootstrapService != null &&
+                  widget.subscriptionService == null
+              ? child!
+              : SubscriptionScope(
+                  controller: _subscriptionController, child: child!),
           debugShowCheckedModeBanner: false,
           theme: AppTheme.lightTheme,
           darkTheme: AppTheme.darkTheme,

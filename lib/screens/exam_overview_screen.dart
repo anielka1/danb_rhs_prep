@@ -1,3 +1,5 @@
+import '../subscriptions/subscription_scope.dart';
+import 'subscription_screen.dart';
 import 'dart:math';
 import '../domain/models/answer_order.dart';
 import '../study_plan/study_schedule_service.dart';
@@ -154,6 +156,12 @@ class _ExamOverviewScreenState extends State<ExamOverviewScreen> {
     // silently falling back to the real device clock partway through.
     final DateTime Function() nowFn = widget.now ?? DateTime.now;
 
+    final subscriptions = SubscriptionScope.maybeOf(context);
+    final entitlement = subscriptions != null
+        ? await subscriptions.refresh()
+        : widget.entitlement;
+    if (!mounted) return;
+
     PracticeSession? existing;
     if (repository != null) {
       try {
@@ -197,9 +205,9 @@ class _ExamOverviewScreenState extends State<ExamOverviewScreen> {
       // Filtered practice reads persisted question history; the default
       // selection needs only the content package.
       int? maxCount;
-      if (widget.entitlement != null && repository != null) {
+      if (entitlement != null && repository != null) {
         final DateTime nowValue = nowFn();
-        if (widget.entitlement!.isActiveAt(nowValue)) {
+        if (entitlement.isActiveAt(nowValue)) {
           // Premium: no cap, and deliberately no attempt-history read at
           // all — an active entitlement never needs to know "how many
           // today", so it can never be blocked by a history read failure
@@ -212,7 +220,7 @@ class _ExamOverviewScreenState extends State<ExamOverviewScreen> {
               now: nowValue,
             );
             maxCount = maxFreePracticeQuestionsToday(
-              entitlement: widget.entitlement!,
+              entitlement: entitlement,
               now: nowValue,
               answeredToday: answeredToday,
               dailyLimit: package.exam.freeTier.dailyPracticeQuestions,
@@ -237,15 +245,25 @@ class _ExamOverviewScreenState extends State<ExamOverviewScreen> {
         }
       }
 
+      if (maxCount == 0 && subscriptions != null) {
+        if (!mounted) return;
+        final purchased = await SubscriptionScreen.show(
+            context, package.exam.subscriptionProductIds);
+        if (!mounted) return;
+        setState(() => _starting = false);
+        if (purchased) await _startOrResumePractice();
+        return;
+      }
+
       final PracticeGenerator generator;
       try {
         generator = PracticeGenerator.select(
           package: package,
-          excludedQuestionIds: repository != null && widget.entitlement != null
+          excludedQuestionIds: repository != null && entitlement != null
               ? await effectiveMockReserve(
                   repository: repository,
                   package: package,
-                  entitlement: widget.entitlement!,
+                  entitlement: entitlement,
                   now: nowFn())
               : const {},
           questionStates: _focus == PracticeFocus.any || repository == null
