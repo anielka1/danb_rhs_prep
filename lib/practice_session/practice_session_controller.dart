@@ -1,3 +1,4 @@
+import '../domain/models/answer_order.dart';
 import '../study_plan/study_plan.dart';
 import '../data/local/id_generator.dart';
 import '../domain/models/answer_attempt.dart';
@@ -38,7 +39,7 @@ class PracticeSessionController {
     DateTime Function() now = DateTime.now,
     IdGenerator idGenerator = const IdGenerator(),
   })  : _session = session,
-        questions = List.unmodifiable(questions),
+        questions = AnswerOrder.resolve(questions, session.answerOrder),
         _now = now,
         _idGenerator = idGenerator {
     assert(

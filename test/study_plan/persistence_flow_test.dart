@@ -243,7 +243,7 @@ void main() {
     addTearDown(db.close);
     final repo = DriftProgressRepository(db);
     final history = await repo.answerAttemptsForExam(package.exam.id);
-    expect(db.schemaVersion, 4);
+    expect(db.schemaVersion, 5);
     expect(history.single.id, 'old');
     expect(history.single.contentVersion, 'old');
     expect(history.single.confident, isNull);

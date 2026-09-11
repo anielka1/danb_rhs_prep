@@ -110,7 +110,7 @@ void main() {
   });
 
   testWidgets(
-      'a new session whose initial save fails can be saved from its question',
+      'a new session whose initial save fails must retry before opening a question',
       (tester) async {
     final repo = _Repository()..failSession = true;
     await tester.pumpWidget(MaterialApp(
@@ -121,11 +121,17 @@ void main() {
     await tester.ensureVisible(find.text('Start Practice Exam'));
     await tester.tap(find.text('Start Practice Exam'));
     await tester.pumpAndSettle();
-    expect(find.byType(PracticeQuestionScreen), findsOneWidget);
-    expect(find.text('Retry saving'), findsOneWidget);
+    expect(find.byType(PracticeQuestionScreen), findsNothing);
+    expect(find.text('Could not save your session. Please try again.'),
+        findsOneWidget);
+    expect(repo.savedSession, isNull);
     repo.failSession = false;
-    await retry(tester);
+    await tester.ensureVisible(find.text('Start Practice Exam'));
+    await tester.tap(find.text('Start Practice Exam'));
+    await tester.pumpAndSettle();
     expect(repo.savedSession!.status, SessionStatus.inProgress);
+    expect(repo.savedSession!.answerOrder, isNotNull);
+    expect(find.byType(PracticeQuestionScreen), findsOneWidget);
     expect(find.text('Retry saving'), findsNothing);
   });
   testWidgets('failed answer save is visible and retry records it once',

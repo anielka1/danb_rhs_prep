@@ -1,3 +1,4 @@
+import '../support/controlled_random.dart';
 import 'dart:io';
 
 import 'package:drift/native.dart';
@@ -43,8 +44,10 @@ void main() {
     final firstRepo = DriftProgressRepository(first);
     final blueprint = MockExamBlueprint.fromPackage(mockPackage());
 
-    final firstController =
-        MockExamController(blueprint: blueprint, repository: firstRepo);
+    final firstController = MockExamController(
+        blueprint: blueprint,
+        repository: firstRepo,
+        random: ControlledRandom(rotate: true));
     await firstController.load();
     await firstController.start();
     await firstController.answer('a');
@@ -53,6 +56,8 @@ void main() {
     await firstController.answer('b');
 
     final String attemptId = firstController.attempt!.id;
+    final selectedIds = firstController.attempt!.questionIds;
+    final savedOrder = firstController.attempt!.answerOrder;
 
     // Simulates the app/process being killed mid-exam: the connection is
     // genuinely closed, not merely left in scope.
@@ -65,8 +70,10 @@ void main() {
     addTearDown(reopened.close);
     final reopenedRepo = DriftProgressRepository(reopened);
 
-    final resumedController =
-        MockExamController(blueprint: blueprint, repository: reopenedRepo);
+    final resumedController = MockExamController(
+        blueprint: blueprint,
+        repository: reopenedRepo,
+        random: ControlledRandom(forbid: true));
     await resumedController.load();
     await resumedController.start();
 
@@ -75,11 +82,11 @@ void main() {
         reason: 'an attempt interrupted mid-way must not be silently '
             'marked complete or abandoned by surviving a restart');
     expect(resumedController.attempt!.answers, {
-      blueprint.questions[0].id: 'a',
-      blueprint.questions[1].id: 'b',
+      selectedIds[0]: 'a',
+      selectedIds[1]: 'b',
     });
-    expect(resumedController.attempt!.flaggedQuestionIds,
-        {blueprint.questions[0].id});
+    expect(resumedController.attempt!.flaggedQuestionIds, {selectedIds[0]});
     expect(resumedController.currentIndex, 1);
+    expect(resumedController.attempt!.answerOrder, savedOrder);
   });
 }

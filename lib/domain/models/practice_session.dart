@@ -1,3 +1,5 @@
+import 'answer_order.dart';
+
 /// How the question set for a [PracticeSession] was chosen.
 enum PracticeMode {
   quickPractice,
@@ -26,13 +28,15 @@ class PracticeSession {
     required this.examId,
     required this.mode,
     required List<String> questionIds,
+    Map<String, List<String>>? answerOrder,
     required this.status,
     required this.startedAt,
     this.completedAt,
     this.contentVersion,
     this.planDate,
     List<String> reviewQuestionIds = const [],
-  })  : questionIds = List.unmodifiable(questionIds),
+  })  : answerOrder = AnswerOrder.freeze(answerOrder),
+        questionIds = List.unmodifiable(questionIds),
         reviewQuestionIds = List.unmodifiable(reviewQuestionIds) {
     if ((completedAt != null) != (status == SessionStatus.completed)) {
       throw ArgumentError(
@@ -47,6 +51,9 @@ class PracticeSession {
   final String examId;
   final PracticeMode mode;
   final List<String> questionIds;
+
+  /// Null only for legacy sessions, which retain content answer order.
+  final Map<String, List<String>>? answerOrder;
   final SessionStatus status;
 
   /// Always stored in UTC.
@@ -73,6 +80,7 @@ class PracticeSession {
       examId: examId,
       mode: mode,
       questionIds: questionIds,
+      answerOrder: answerOrder,
       status: status ?? this.status,
       startedAt: startedAt ?? this.startedAt,
       completedAt: completedAt ?? this.completedAt,
@@ -90,6 +98,7 @@ class PracticeSession {
         other.examId == examId &&
         other.mode == mode &&
         _listEquals(other.questionIds, questionIds) &&
+        AnswerOrder.equal(other.answerOrder, answerOrder) &&
         other.status == status &&
         other.startedAt == startedAt &&
         other.completedAt == completedAt &&
@@ -104,6 +113,7 @@ class PracticeSession {
         examId,
         mode,
         Object.hashAll(questionIds),
+        AnswerOrder.hash(answerOrder),
         status,
         startedAt,
         completedAt,

@@ -1,3 +1,5 @@
+import 'dart:math';
+import '../domain/models/answer_order.dart';
 import '../study_plan/study_schedule_service.dart';
 import 'package:flutter/material.dart';
 import '../domain/models/entitlement.dart';
@@ -26,6 +28,7 @@ class ExamOverviewScreen extends StatefulWidget {
     this.progressRepository,
     this.entitlement,
     this.now,
+    this.random,
   });
 
   /// Real, already-loaded questions for the active exam — threaded in as
@@ -75,6 +78,9 @@ class ExamOverviewScreen extends StatefulWidget {
   /// day-boundary behavior deterministic; defaults to [DateTime.now] in
   /// production.
   final DateTime Function()? now;
+
+  /// Controlled in tests; production draws once when creating a session.
+  final Random? random;
 
   @override
   State<ExamOverviewScreen> createState() => _ExamOverviewScreenState();
@@ -278,6 +284,8 @@ class _ExamOverviewScreenState extends State<ExamOverviewScreen> {
           PracticeFocus.bookmarkedQuestions => PracticeMode.bookmarked,
         },
         questionIds: generator.questions.map((q) => q.id).toList(),
+        answerOrder: AnswerOrder.shuffled(
+            generator.questions, widget.random ?? Random()),
         status: SessionStatus.inProgress,
         startedAt: nowFn().toUtc(),
         contentVersion: package.contentVersion,
@@ -347,7 +355,18 @@ class _ExamOverviewScreenState extends State<ExamOverviewScreen> {
       return;
     }
 
-    if (existing == null) await controller.saveSession();
+    if (existing == null && repository != null) {
+      try {
+        await repository.savePracticeSession(session);
+      } catch (_) {
+        if (!mounted) return;
+        setState(() {
+          _starting = false;
+          _unavailableReason = 'Could not save your session. Please try again.';
+        });
+        return;
+      }
+    }
     if (!mounted) return;
     setState(() => _starting = false);
 

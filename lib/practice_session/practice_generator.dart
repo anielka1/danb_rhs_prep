@@ -41,13 +41,9 @@ enum PracticeFocus {
 /// **not** Section 16's much larger weighted adaptive-priority engine,
 /// which is separate, later work.
 ///
-/// Mirrors [MockExamBlueprint]'s shape and determinism: no randomness
-/// anywhere (selection is a stable sort by [Question.id], exactly like
-/// that class), so the same package/history/parameters always produce the
-/// same session — this is what makes the class testable with plain fakes
-/// (no repository needed) and what "deterministyczny wybor" in this
-/// ticket's scope means: not merely reproducible in tests, but genuinely
-/// free of hidden randomness in production too.
+/// Practice question selection remains deterministic (stable question-ID sort).
+/// Answer ordering is a separate persisted session concern. Mock selection uses
+/// exposure-ranked randomness only when starting a new mock, not in this engine.
 class PracticeGenerator {
   PracticeGenerator._(this.questions, this.requestedCount, this.focus);
 

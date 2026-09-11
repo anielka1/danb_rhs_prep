@@ -1,3 +1,5 @@
+import 'dart:math';
+import '../domain/models/answer_order.dart';
 import '../domain/models/answer_attempt.dart';
 import '../domain/models/practice_session.dart';
 import '../domain/models/entitlement.dart';
@@ -19,7 +21,8 @@ class PlannedSessionService {
       required DateTime Function() now,
       StudyPlanDay? day,
       bool diagnostic = false,
-      Set<String> reservedIds = const {}}) async {
+      Set<String> reservedIds = const {},
+      Random? random}) async {
     final active = await repository.inProgressPracticeSession(package.exam.id);
     final history = await repository.answerAttemptsForExam(package.exam.id);
     final eligible = PracticeGenerator.select(
@@ -88,6 +91,7 @@ class PlannedSessionService {
         examId: package.exam.id,
         mode: diagnostic ? PracticeMode.diagnostic : PracticeMode.planned,
         questionIds: questions.map((q) => q.id).toList(),
+        answerOrder: AnswerOrder.shuffled(questions, random ?? Random()),
         status: SessionStatus.inProgress,
         startedAt: now().toUtc(),
         contentVersion: package.contentVersion,

@@ -1406,6 +1406,12 @@ class $PracticeSessionsTable extends PracticeSessions
   late final GeneratedColumn<String> questionIdsJson = GeneratedColumn<String>(
       'question_ids_json', aliasedName, false,
       type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _answerOrderJsonMeta =
+      const VerificationMeta('answerOrderJson');
+  @override
+  late final GeneratedColumn<String> answerOrderJson = GeneratedColumn<String>(
+      'answer_order_json', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
   static const VerificationMeta _statusMeta = const VerificationMeta('status');
   @override
   late final GeneratedColumn<String> status = GeneratedColumn<String>(
@@ -1437,6 +1443,7 @@ class $PracticeSessionsTable extends PracticeSessions
         examId,
         mode,
         questionIdsJson,
+        answerOrderJson,
         status,
         startedAt,
         completedAt,
@@ -1487,6 +1494,12 @@ class $PracticeSessionsTable extends PracticeSessions
     } else if (isInserting) {
       context.missing(_questionIdsJsonMeta);
     }
+    if (data.containsKey('answer_order_json')) {
+      context.handle(
+          _answerOrderJsonMeta,
+          answerOrderJson.isAcceptableOrUnknown(
+              data['answer_order_json']!, _answerOrderJsonMeta));
+    }
     if (data.containsKey('status')) {
       context.handle(_statusMeta,
           status.isAcceptableOrUnknown(data['status']!, _statusMeta));
@@ -1533,6 +1546,8 @@ class $PracticeSessionsTable extends PracticeSessions
           .read(DriftSqlType.string, data['${effectivePrefix}mode'])!,
       questionIdsJson: attachedDatabase.typeMapping.read(
           DriftSqlType.string, data['${effectivePrefix}question_ids_json'])!,
+      answerOrderJson: attachedDatabase.typeMapping.read(
+          DriftSqlType.string, data['${effectivePrefix}answer_order_json']),
       status: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}status'])!,
       startedAt: attachedDatabase.typeMapping
@@ -1558,6 +1573,7 @@ class PracticeSessionRow extends DataClass
   final String examId;
   final String mode;
   final String questionIdsJson;
+  final String? answerOrderJson;
   final String status;
   final DateTime startedAt;
   final DateTime? completedAt;
@@ -1574,6 +1590,7 @@ class PracticeSessionRow extends DataClass
       required this.examId,
       required this.mode,
       required this.questionIdsJson,
+      this.answerOrderJson,
       required this.status,
       required this.startedAt,
       this.completedAt,
@@ -1591,6 +1608,9 @@ class PracticeSessionRow extends DataClass
     map['exam_id'] = Variable<String>(examId);
     map['mode'] = Variable<String>(mode);
     map['question_ids_json'] = Variable<String>(questionIdsJson);
+    if (!nullToAbsent || answerOrderJson != null) {
+      map['answer_order_json'] = Variable<String>(answerOrderJson);
+    }
     map['status'] = Variable<String>(status);
     map['started_at'] = Variable<DateTime>(startedAt);
     if (!nullToAbsent || completedAt != null) {
@@ -1614,6 +1634,9 @@ class PracticeSessionRow extends DataClass
       examId: Value(examId),
       mode: Value(mode),
       questionIdsJson: Value(questionIdsJson),
+      answerOrderJson: answerOrderJson == null && nullToAbsent
+          ? const Value.absent()
+          : Value(answerOrderJson),
       status: Value(status),
       startedAt: Value(startedAt),
       completedAt: completedAt == null && nullToAbsent
@@ -1636,6 +1659,7 @@ class PracticeSessionRow extends DataClass
       examId: serializer.fromJson<String>(json['examId']),
       mode: serializer.fromJson<String>(json['mode']),
       questionIdsJson: serializer.fromJson<String>(json['questionIdsJson']),
+      answerOrderJson: serializer.fromJson<String?>(json['answerOrderJson']),
       status: serializer.fromJson<String>(json['status']),
       startedAt: serializer.fromJson<DateTime>(json['startedAt']),
       completedAt: serializer.fromJson<DateTime?>(json['completedAt']),
@@ -1653,6 +1677,7 @@ class PracticeSessionRow extends DataClass
       'examId': serializer.toJson<String>(examId),
       'mode': serializer.toJson<String>(mode),
       'questionIdsJson': serializer.toJson<String>(questionIdsJson),
+      'answerOrderJson': serializer.toJson<String?>(answerOrderJson),
       'status': serializer.toJson<String>(status),
       'startedAt': serializer.toJson<DateTime>(startedAt),
       'completedAt': serializer.toJson<DateTime?>(completedAt),
@@ -1667,6 +1692,7 @@ class PracticeSessionRow extends DataClass
           String? examId,
           String? mode,
           String? questionIdsJson,
+          Value<String?> answerOrderJson = const Value.absent(),
           String? status,
           DateTime? startedAt,
           Value<DateTime?> completedAt = const Value.absent(),
@@ -1680,6 +1706,9 @@ class PracticeSessionRow extends DataClass
         examId: examId ?? this.examId,
         mode: mode ?? this.mode,
         questionIdsJson: questionIdsJson ?? this.questionIdsJson,
+        answerOrderJson: answerOrderJson.present
+            ? answerOrderJson.value
+            : this.answerOrderJson,
         status: status ?? this.status,
         startedAt: startedAt ?? this.startedAt,
         completedAt: completedAt.present ? completedAt.value : this.completedAt,
@@ -1698,6 +1727,9 @@ class PracticeSessionRow extends DataClass
       questionIdsJson: data.questionIdsJson.present
           ? data.questionIdsJson.value
           : this.questionIdsJson,
+      answerOrderJson: data.answerOrderJson.present
+          ? data.answerOrderJson.value
+          : this.answerOrderJson,
       status: data.status.present ? data.status.value : this.status,
       startedAt: data.startedAt.present ? data.startedAt.value : this.startedAt,
       completedAt:
@@ -1717,6 +1749,7 @@ class PracticeSessionRow extends DataClass
           ..write('examId: $examId, ')
           ..write('mode: $mode, ')
           ..write('questionIdsJson: $questionIdsJson, ')
+          ..write('answerOrderJson: $answerOrderJson, ')
           ..write('status: $status, ')
           ..write('startedAt: $startedAt, ')
           ..write('completedAt: $completedAt, ')
@@ -1726,8 +1759,18 @@ class PracticeSessionRow extends DataClass
   }
 
   @override
-  int get hashCode => Object.hash(planDate, reviewQuestionIdsJson, id, examId,
-      mode, questionIdsJson, status, startedAt, completedAt, contentVersion);
+  int get hashCode => Object.hash(
+      planDate,
+      reviewQuestionIdsJson,
+      id,
+      examId,
+      mode,
+      questionIdsJson,
+      answerOrderJson,
+      status,
+      startedAt,
+      completedAt,
+      contentVersion);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -1738,6 +1781,7 @@ class PracticeSessionRow extends DataClass
           other.examId == this.examId &&
           other.mode == this.mode &&
           other.questionIdsJson == this.questionIdsJson &&
+          other.answerOrderJson == this.answerOrderJson &&
           other.status == this.status &&
           other.startedAt == this.startedAt &&
           other.completedAt == this.completedAt &&
@@ -1751,6 +1795,7 @@ class PracticeSessionsCompanion extends UpdateCompanion<PracticeSessionRow> {
   final Value<String> examId;
   final Value<String> mode;
   final Value<String> questionIdsJson;
+  final Value<String?> answerOrderJson;
   final Value<String> status;
   final Value<DateTime> startedAt;
   final Value<DateTime?> completedAt;
@@ -1763,6 +1808,7 @@ class PracticeSessionsCompanion extends UpdateCompanion<PracticeSessionRow> {
     this.examId = const Value.absent(),
     this.mode = const Value.absent(),
     this.questionIdsJson = const Value.absent(),
+    this.answerOrderJson = const Value.absent(),
     this.status = const Value.absent(),
     this.startedAt = const Value.absent(),
     this.completedAt = const Value.absent(),
@@ -1776,6 +1822,7 @@ class PracticeSessionsCompanion extends UpdateCompanion<PracticeSessionRow> {
     required String examId,
     required String mode,
     required String questionIdsJson,
+    this.answerOrderJson = const Value.absent(),
     required String status,
     required DateTime startedAt,
     this.completedAt = const Value.absent(),
@@ -1794,6 +1841,7 @@ class PracticeSessionsCompanion extends UpdateCompanion<PracticeSessionRow> {
     Expression<String>? examId,
     Expression<String>? mode,
     Expression<String>? questionIdsJson,
+    Expression<String>? answerOrderJson,
     Expression<String>? status,
     Expression<DateTime>? startedAt,
     Expression<DateTime>? completedAt,
@@ -1808,6 +1856,7 @@ class PracticeSessionsCompanion extends UpdateCompanion<PracticeSessionRow> {
       if (examId != null) 'exam_id': examId,
       if (mode != null) 'mode': mode,
       if (questionIdsJson != null) 'question_ids_json': questionIdsJson,
+      if (answerOrderJson != null) 'answer_order_json': answerOrderJson,
       if (status != null) 'status': status,
       if (startedAt != null) 'started_at': startedAt,
       if (completedAt != null) 'completed_at': completedAt,
@@ -1823,6 +1872,7 @@ class PracticeSessionsCompanion extends UpdateCompanion<PracticeSessionRow> {
       Value<String>? examId,
       Value<String>? mode,
       Value<String>? questionIdsJson,
+      Value<String?>? answerOrderJson,
       Value<String>? status,
       Value<DateTime>? startedAt,
       Value<DateTime?>? completedAt,
@@ -1836,6 +1886,7 @@ class PracticeSessionsCompanion extends UpdateCompanion<PracticeSessionRow> {
       examId: examId ?? this.examId,
       mode: mode ?? this.mode,
       questionIdsJson: questionIdsJson ?? this.questionIdsJson,
+      answerOrderJson: answerOrderJson ?? this.answerOrderJson,
       status: status ?? this.status,
       startedAt: startedAt ?? this.startedAt,
       completedAt: completedAt ?? this.completedAt,
@@ -1866,6 +1917,9 @@ class PracticeSessionsCompanion extends UpdateCompanion<PracticeSessionRow> {
     if (questionIdsJson.present) {
       map['question_ids_json'] = Variable<String>(questionIdsJson.value);
     }
+    if (answerOrderJson.present) {
+      map['answer_order_json'] = Variable<String>(answerOrderJson.value);
+    }
     if (status.present) {
       map['status'] = Variable<String>(status.value);
     }
@@ -1893,6 +1947,7 @@ class PracticeSessionsCompanion extends UpdateCompanion<PracticeSessionRow> {
           ..write('examId: $examId, ')
           ..write('mode: $mode, ')
           ..write('questionIdsJson: $questionIdsJson, ')
+          ..write('answerOrderJson: $answerOrderJson, ')
           ..write('status: $status, ')
           ..write('startedAt: $startedAt, ')
           ..write('completedAt: $completedAt, ')
@@ -1931,6 +1986,12 @@ class $MockAttemptsTable extends MockAttempts
   late final GeneratedColumn<String> questionIdsJson = GeneratedColumn<String>(
       'question_ids_json', aliasedName, false,
       type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _answerOrderJsonMeta =
+      const VerificationMeta('answerOrderJson');
+  @override
+  late final GeneratedColumn<String> answerOrderJson = GeneratedColumn<String>(
+      'answer_order_json', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
   static const VerificationMeta _answersJsonMeta =
       const VerificationMeta('answersJson');
   @override
@@ -1992,6 +2053,7 @@ class $MockAttemptsTable extends MockAttempts
         id,
         examId,
         questionIdsJson,
+        answerOrderJson,
         answersJson,
         flaggedQuestionIdsJson,
         status,
@@ -2036,6 +2098,12 @@ class $MockAttemptsTable extends MockAttempts
               data['question_ids_json']!, _questionIdsJsonMeta));
     } else if (isInserting) {
       context.missing(_questionIdsJsonMeta);
+    }
+    if (data.containsKey('answer_order_json')) {
+      context.handle(
+          _answerOrderJsonMeta,
+          answerOrderJson.isAcceptableOrUnknown(
+              data['answer_order_json']!, _answerOrderJsonMeta));
     }
     if (data.containsKey('answers_json')) {
       context.handle(
@@ -2114,6 +2182,8 @@ class $MockAttemptsTable extends MockAttempts
           .read(DriftSqlType.string, data['${effectivePrefix}exam_id'])!,
       questionIdsJson: attachedDatabase.typeMapping.read(
           DriftSqlType.string, data['${effectivePrefix}question_ids_json'])!,
+      answerOrderJson: attachedDatabase.typeMapping.read(
+          DriftSqlType.string, data['${effectivePrefix}answer_order_json']),
       answersJson: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}answers_json'])!,
       flaggedQuestionIdsJson: attachedDatabase.typeMapping.read(
@@ -2147,6 +2217,7 @@ class MockAttemptRow extends DataClass implements Insertable<MockAttemptRow> {
   final String id;
   final String examId;
   final String questionIdsJson;
+  final String? answerOrderJson;
   final String answersJson;
   final String flaggedQuestionIdsJson;
   final String status;
@@ -2161,6 +2232,7 @@ class MockAttemptRow extends DataClass implements Insertable<MockAttemptRow> {
       required this.id,
       required this.examId,
       required this.questionIdsJson,
+      this.answerOrderJson,
       required this.answersJson,
       required this.flaggedQuestionIdsJson,
       required this.status,
@@ -2179,6 +2251,9 @@ class MockAttemptRow extends DataClass implements Insertable<MockAttemptRow> {
     map['id'] = Variable<String>(id);
     map['exam_id'] = Variable<String>(examId);
     map['question_ids_json'] = Variable<String>(questionIdsJson);
+    if (!nullToAbsent || answerOrderJson != null) {
+      map['answer_order_json'] = Variable<String>(answerOrderJson);
+    }
     map['answers_json'] = Variable<String>(answersJson);
     map['flagged_question_ids_json'] = Variable<String>(flaggedQuestionIdsJson);
     map['status'] = Variable<String>(status);
@@ -2205,6 +2280,9 @@ class MockAttemptRow extends DataClass implements Insertable<MockAttemptRow> {
       id: Value(id),
       examId: Value(examId),
       questionIdsJson: Value(questionIdsJson),
+      answerOrderJson: answerOrderJson == null && nullToAbsent
+          ? const Value.absent()
+          : Value(answerOrderJson),
       answersJson: Value(answersJson),
       flaggedQuestionIdsJson: Value(flaggedQuestionIdsJson),
       status: Value(status),
@@ -2232,6 +2310,7 @@ class MockAttemptRow extends DataClass implements Insertable<MockAttemptRow> {
       id: serializer.fromJson<String>(json['id']),
       examId: serializer.fromJson<String>(json['examId']),
       questionIdsJson: serializer.fromJson<String>(json['questionIdsJson']),
+      answerOrderJson: serializer.fromJson<String?>(json['answerOrderJson']),
       answersJson: serializer.fromJson<String>(json['answersJson']),
       flaggedQuestionIdsJson:
           serializer.fromJson<String>(json['flaggedQuestionIdsJson']),
@@ -2253,6 +2332,7 @@ class MockAttemptRow extends DataClass implements Insertable<MockAttemptRow> {
       'id': serializer.toJson<String>(id),
       'examId': serializer.toJson<String>(examId),
       'questionIdsJson': serializer.toJson<String>(questionIdsJson),
+      'answerOrderJson': serializer.toJson<String?>(answerOrderJson),
       'answersJson': serializer.toJson<String>(answersJson),
       'flaggedQuestionIdsJson':
           serializer.toJson<String>(flaggedQuestionIdsJson),
@@ -2271,6 +2351,7 @@ class MockAttemptRow extends DataClass implements Insertable<MockAttemptRow> {
           String? id,
           String? examId,
           String? questionIdsJson,
+          Value<String?> answerOrderJson = const Value.absent(),
           String? answersJson,
           String? flaggedQuestionIdsJson,
           String? status,
@@ -2287,6 +2368,9 @@ class MockAttemptRow extends DataClass implements Insertable<MockAttemptRow> {
         id: id ?? this.id,
         examId: examId ?? this.examId,
         questionIdsJson: questionIdsJson ?? this.questionIdsJson,
+        answerOrderJson: answerOrderJson.present
+            ? answerOrderJson.value
+            : this.answerOrderJson,
         answersJson: answersJson ?? this.answersJson,
         flaggedQuestionIdsJson:
             flaggedQuestionIdsJson ?? this.flaggedQuestionIdsJson,
@@ -2310,6 +2394,9 @@ class MockAttemptRow extends DataClass implements Insertable<MockAttemptRow> {
       questionIdsJson: data.questionIdsJson.present
           ? data.questionIdsJson.value
           : this.questionIdsJson,
+      answerOrderJson: data.answerOrderJson.present
+          ? data.answerOrderJson.value
+          : this.answerOrderJson,
       answersJson:
           data.answersJson.present ? data.answersJson.value : this.answersJson,
       flaggedQuestionIdsJson: data.flaggedQuestionIdsJson.present
@@ -2341,6 +2428,7 @@ class MockAttemptRow extends DataClass implements Insertable<MockAttemptRow> {
           ..write('id: $id, ')
           ..write('examId: $examId, ')
           ..write('questionIdsJson: $questionIdsJson, ')
+          ..write('answerOrderJson: $answerOrderJson, ')
           ..write('answersJson: $answersJson, ')
           ..write('flaggedQuestionIdsJson: $flaggedQuestionIdsJson, ')
           ..write('status: $status, ')
@@ -2360,6 +2448,7 @@ class MockAttemptRow extends DataClass implements Insertable<MockAttemptRow> {
       id,
       examId,
       questionIdsJson,
+      answerOrderJson,
       answersJson,
       flaggedQuestionIdsJson,
       status,
@@ -2377,6 +2466,7 @@ class MockAttemptRow extends DataClass implements Insertable<MockAttemptRow> {
           other.id == this.id &&
           other.examId == this.examId &&
           other.questionIdsJson == this.questionIdsJson &&
+          other.answerOrderJson == this.answerOrderJson &&
           other.answersJson == this.answersJson &&
           other.flaggedQuestionIdsJson == this.flaggedQuestionIdsJson &&
           other.status == this.status &&
@@ -2393,6 +2483,7 @@ class MockAttemptsCompanion extends UpdateCompanion<MockAttemptRow> {
   final Value<String> id;
   final Value<String> examId;
   final Value<String> questionIdsJson;
+  final Value<String?> answerOrderJson;
   final Value<String> answersJson;
   final Value<String> flaggedQuestionIdsJson;
   final Value<String> status;
@@ -2408,6 +2499,7 @@ class MockAttemptsCompanion extends UpdateCompanion<MockAttemptRow> {
     this.id = const Value.absent(),
     this.examId = const Value.absent(),
     this.questionIdsJson = const Value.absent(),
+    this.answerOrderJson = const Value.absent(),
     this.answersJson = const Value.absent(),
     this.flaggedQuestionIdsJson = const Value.absent(),
     this.status = const Value.absent(),
@@ -2424,6 +2516,7 @@ class MockAttemptsCompanion extends UpdateCompanion<MockAttemptRow> {
     required String id,
     required String examId,
     required String questionIdsJson,
+    this.answerOrderJson = const Value.absent(),
     required String answersJson,
     required String flaggedQuestionIdsJson,
     required String status,
@@ -2447,6 +2540,7 @@ class MockAttemptsCompanion extends UpdateCompanion<MockAttemptRow> {
     Expression<String>? id,
     Expression<String>? examId,
     Expression<String>? questionIdsJson,
+    Expression<String>? answerOrderJson,
     Expression<String>? answersJson,
     Expression<String>? flaggedQuestionIdsJson,
     Expression<String>? status,
@@ -2464,6 +2558,7 @@ class MockAttemptsCompanion extends UpdateCompanion<MockAttemptRow> {
       if (id != null) 'id': id,
       if (examId != null) 'exam_id': examId,
       if (questionIdsJson != null) 'question_ids_json': questionIdsJson,
+      if (answerOrderJson != null) 'answer_order_json': answerOrderJson,
       if (answersJson != null) 'answers_json': answersJson,
       if (flaggedQuestionIdsJson != null)
         'flagged_question_ids_json': flaggedQuestionIdsJson,
@@ -2484,6 +2579,7 @@ class MockAttemptsCompanion extends UpdateCompanion<MockAttemptRow> {
       Value<String>? id,
       Value<String>? examId,
       Value<String>? questionIdsJson,
+      Value<String?>? answerOrderJson,
       Value<String>? answersJson,
       Value<String>? flaggedQuestionIdsJson,
       Value<String>? status,
@@ -2499,6 +2595,7 @@ class MockAttemptsCompanion extends UpdateCompanion<MockAttemptRow> {
       id: id ?? this.id,
       examId: examId ?? this.examId,
       questionIdsJson: questionIdsJson ?? this.questionIdsJson,
+      answerOrderJson: answerOrderJson ?? this.answerOrderJson,
       answersJson: answersJson ?? this.answersJson,
       flaggedQuestionIdsJson:
           flaggedQuestionIdsJson ?? this.flaggedQuestionIdsJson,
@@ -2528,6 +2625,9 @@ class MockAttemptsCompanion extends UpdateCompanion<MockAttemptRow> {
     }
     if (questionIdsJson.present) {
       map['question_ids_json'] = Variable<String>(questionIdsJson.value);
+    }
+    if (answerOrderJson.present) {
+      map['answer_order_json'] = Variable<String>(answerOrderJson.value);
     }
     if (answersJson.present) {
       map['answers_json'] = Variable<String>(answersJson.value);
@@ -2570,6 +2670,7 @@ class MockAttemptsCompanion extends UpdateCompanion<MockAttemptRow> {
           ..write('id: $id, ')
           ..write('examId: $examId, ')
           ..write('questionIdsJson: $questionIdsJson, ')
+          ..write('answerOrderJson: $answerOrderJson, ')
           ..write('answersJson: $answersJson, ')
           ..write('flaggedQuestionIdsJson: $flaggedQuestionIdsJson, ')
           ..write('status: $status, ')
@@ -4826,6 +4927,7 @@ typedef $$PracticeSessionsTableCreateCompanionBuilder
   required String examId,
   required String mode,
   required String questionIdsJson,
+  Value<String?> answerOrderJson,
   required String status,
   required DateTime startedAt,
   Value<DateTime?> completedAt,
@@ -4840,6 +4942,7 @@ typedef $$PracticeSessionsTableUpdateCompanionBuilder
   Value<String> examId,
   Value<String> mode,
   Value<String> questionIdsJson,
+  Value<String?> answerOrderJson,
   Value<String> status,
   Value<DateTime> startedAt,
   Value<DateTime?> completedAt,
@@ -4874,6 +4977,10 @@ class $$PracticeSessionsTableFilterComposer
 
   ColumnFilters<String> get questionIdsJson => $composableBuilder(
       column: $table.questionIdsJson,
+      builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get answerOrderJson => $composableBuilder(
+      column: $table.answerOrderJson,
       builder: (column) => ColumnFilters(column));
 
   ColumnFilters<String> get status => $composableBuilder(
@@ -4919,6 +5026,10 @@ class $$PracticeSessionsTableOrderingComposer
       column: $table.questionIdsJson,
       builder: (column) => ColumnOrderings(column));
 
+  ColumnOrderings<String> get answerOrderJson => $composableBuilder(
+      column: $table.answerOrderJson,
+      builder: (column) => ColumnOrderings(column));
+
   ColumnOrderings<String> get status => $composableBuilder(
       column: $table.status, builder: (column) => ColumnOrderings(column));
 
@@ -4959,6 +5070,9 @@ class $$PracticeSessionsTableAnnotationComposer
 
   GeneratedColumn<String> get questionIdsJson => $composableBuilder(
       column: $table.questionIdsJson, builder: (column) => column);
+
+  GeneratedColumn<String> get answerOrderJson => $composableBuilder(
+      column: $table.answerOrderJson, builder: (column) => column);
 
   GeneratedColumn<String> get status =>
       $composableBuilder(column: $table.status, builder: (column) => column);
@@ -5006,6 +5120,7 @@ class $$PracticeSessionsTableTableManager extends RootTableManager<
             Value<String> examId = const Value.absent(),
             Value<String> mode = const Value.absent(),
             Value<String> questionIdsJson = const Value.absent(),
+            Value<String?> answerOrderJson = const Value.absent(),
             Value<String> status = const Value.absent(),
             Value<DateTime> startedAt = const Value.absent(),
             Value<DateTime?> completedAt = const Value.absent(),
@@ -5019,6 +5134,7 @@ class $$PracticeSessionsTableTableManager extends RootTableManager<
             examId: examId,
             mode: mode,
             questionIdsJson: questionIdsJson,
+            answerOrderJson: answerOrderJson,
             status: status,
             startedAt: startedAt,
             completedAt: completedAt,
@@ -5032,6 +5148,7 @@ class $$PracticeSessionsTableTableManager extends RootTableManager<
             required String examId,
             required String mode,
             required String questionIdsJson,
+            Value<String?> answerOrderJson = const Value.absent(),
             required String status,
             required DateTime startedAt,
             Value<DateTime?> completedAt = const Value.absent(),
@@ -5045,6 +5162,7 @@ class $$PracticeSessionsTableTableManager extends RootTableManager<
             examId: examId,
             mode: mode,
             questionIdsJson: questionIdsJson,
+            answerOrderJson: answerOrderJson,
             status: status,
             startedAt: startedAt,
             completedAt: completedAt,
@@ -5079,6 +5197,7 @@ typedef $$MockAttemptsTableCreateCompanionBuilder = MockAttemptsCompanion
   required String id,
   required String examId,
   required String questionIdsJson,
+  Value<String?> answerOrderJson,
   required String answersJson,
   required String flaggedQuestionIdsJson,
   required String status,
@@ -5096,6 +5215,7 @@ typedef $$MockAttemptsTableUpdateCompanionBuilder = MockAttemptsCompanion
   Value<String> id,
   Value<String> examId,
   Value<String> questionIdsJson,
+  Value<String?> answerOrderJson,
   Value<String> answersJson,
   Value<String> flaggedQuestionIdsJson,
   Value<String> status,
@@ -5129,6 +5249,10 @@ class $$MockAttemptsTableFilterComposer
 
   ColumnFilters<String> get questionIdsJson => $composableBuilder(
       column: $table.questionIdsJson,
+      builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get answerOrderJson => $composableBuilder(
+      column: $table.answerOrderJson,
       builder: (column) => ColumnFilters(column));
 
   ColumnFilters<String> get answersJson => $composableBuilder(
@@ -5186,6 +5310,10 @@ class $$MockAttemptsTableOrderingComposer
       column: $table.questionIdsJson,
       builder: (column) => ColumnOrderings(column));
 
+  ColumnOrderings<String> get answerOrderJson => $composableBuilder(
+      column: $table.answerOrderJson,
+      builder: (column) => ColumnOrderings(column));
+
   ColumnOrderings<String> get answersJson => $composableBuilder(
       column: $table.answersJson, builder: (column) => ColumnOrderings(column));
 
@@ -5239,6 +5367,9 @@ class $$MockAttemptsTableAnnotationComposer
 
   GeneratedColumn<String> get questionIdsJson => $composableBuilder(
       column: $table.questionIdsJson, builder: (column) => column);
+
+  GeneratedColumn<String> get answerOrderJson => $composableBuilder(
+      column: $table.answerOrderJson, builder: (column) => column);
 
   GeneratedColumn<String> get answersJson => $composableBuilder(
       column: $table.answersJson, builder: (column) => column);
@@ -5298,6 +5429,7 @@ class $$MockAttemptsTableTableManager extends RootTableManager<
             Value<String> id = const Value.absent(),
             Value<String> examId = const Value.absent(),
             Value<String> questionIdsJson = const Value.absent(),
+            Value<String?> answerOrderJson = const Value.absent(),
             Value<String> answersJson = const Value.absent(),
             Value<String> flaggedQuestionIdsJson = const Value.absent(),
             Value<String> status = const Value.absent(),
@@ -5314,6 +5446,7 @@ class $$MockAttemptsTableTableManager extends RootTableManager<
             id: id,
             examId: examId,
             questionIdsJson: questionIdsJson,
+            answerOrderJson: answerOrderJson,
             answersJson: answersJson,
             flaggedQuestionIdsJson: flaggedQuestionIdsJson,
             status: status,
@@ -5330,6 +5463,7 @@ class $$MockAttemptsTableTableManager extends RootTableManager<
             required String id,
             required String examId,
             required String questionIdsJson,
+            Value<String?> answerOrderJson = const Value.absent(),
             required String answersJson,
             required String flaggedQuestionIdsJson,
             required String status,
@@ -5346,6 +5480,7 @@ class $$MockAttemptsTableTableManager extends RootTableManager<
             id: id,
             examId: examId,
             questionIdsJson: questionIdsJson,
+            answerOrderJson: answerOrderJson,
             answersJson: answersJson,
             flaggedQuestionIdsJson: flaggedQuestionIdsJson,
             status: status,
