@@ -201,3 +201,23 @@ The required DANB, CDC, FDA and ADA materials were consulted. RadiologyInfo is a
 For the four unfilled Purpose and Technique slots, obtain authorized access to a recognized radiography reference such as **Iannucci and Howerton, Dental Radiography, 6th edition (2022)** or **Bird and Robinson, Modern Dental Assisting, 14th edition (2024)**, both listed by the read DANB outline. Verify the exact edition and chapter/page when accessed; neither book was read in this task. Needed sections: anatomical landmark appearance/differential identification; paralleling and central-ray geometry; horizontal overlap correction; vertical distortion and receptor-placement errors. Device-specific positioning/reprocessing questions additionally need the applicable manufacturer IFU and revision.
 
 No claim is made that these are the only available sources. The present public material supports a limited first batch, not complete blueprint coverage. Four extra general-justification variants were deliberately not substituted for missing technical breadth.
+
+## Editorial re-read — PR #65 revision, 2026-09-11
+
+The cited ADA, FDA, CDC and RadiologyInfo sections above were opened again
+before revising candidate facts. This re-read is not a new publication date or
+a human clinical approval. No newly inaccessible full paper is represented as
+read. The scope outline was not used to establish a clinical key.
+
+Particular checks: ADA 2026 initial endodontic and individualized periodontal
+selection; ADA 2024 patient shielding versus applicable requirements; ADA
+exposure creep alongside FDA optimization; CDC contaminated surfaces versus
+barrier placement and the limits of chemical-indicator evidence. The earlier
+limits concerning legacy shielding text and unread full guidance remain.
+Supplementary descriptions of imaging outputs and display adjustment support
+the revised distractor distinctions; no new numerical protocol was inferred.
+
+See the per-item source locators and unresolved expert checks in
+[first_batch_review.md](first_batch_review.md). Wrong-option misconceptions are
+editorial interpretations of the cited distinctions, not source quotations or
+empirically demonstrated learner errors.

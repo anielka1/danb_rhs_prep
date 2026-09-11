@@ -33,7 +33,7 @@ Prepared: **26 draft candidates**, with exact inventory and reviewer content in 
 | Infection Prevention and Control | 8 | 8 | 0 |
 | Total | 30 | 26 | 4 |
 
-These are editorial counts, not exam weights or a mock-exam blueprint. The configured 50/25/25 weights remain unchanged. Draft difficulty labels are provisional author judgments on the existing 1–5 scale, not psychometric calibration. No review decisions are entered.
+These are editorial counts, not exam weights or a mock-exam blueprint. The configured 50/25/25 weights remain unchanged. After editorial revision of PR #65, provisional difficulty is 1: **18**, 2: **8**, 3–5: **0**, using the new authoring-guide rubric. These are complexity judgments, not psychometric calibration. Seven of ten represented topics still have fewer than three candidates; this revision adds no questions. No review decisions are entered.
 
 ## 5. Missing material and safe source storage
 
