@@ -122,3 +122,10 @@ Eight normal-text baselines (Home, settings, practice question and mock result,
 light/dark) were regenerated in local Ubuntu 24.04 with Flutter 3.41.2 and visually
 reviewed. They cover availability setup, optional confidence, and stored pre-mock
 exposure. AX5 baselines remain unchanged. No hosted Actions run was requested.
+
+### Study plan stability (2026-09-11)
+
+Two Home normal-text baselines (light/dark) were regenerated with Flutter 3.41.2
+on local Ubuntu 24.04 aarch64 and visually reviewed: a single Continue action in
+the plan panel and a secondary Free practice card. The other 30 images are byte
+identical. The pixel comparator and text scales are unchanged. No hosted Actions.

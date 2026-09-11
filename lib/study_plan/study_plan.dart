@@ -47,7 +47,7 @@ class ReviewItem {
   final int stage;
   final bool afterError;
   final bool afterExam;
-  int get policyVersion => 1;
+  int get policyVersion => 2;
 }
 
 class StudyPlanDay {
@@ -59,7 +59,9 @@ class StudyPlanDay {
       Iterable<String> reviewIds = const [],
       required this.budgetSeconds,
       this.estimatedSeconds = 0,
-      this.reviewBacklog = 0})
+      this.reviewBacklog = 0,
+      this.recordedAnswers = 0,
+      this.spentSeconds = 0})
       : newIds = List.unmodifiable(newIds),
         reviewIds = List.unmodifiable(reviewIds);
   final DateTime date;
@@ -67,6 +69,7 @@ class StudyPlanDay {
   final StudyDayStatus status;
   final List<String> newIds, reviewIds;
   final int budgetSeconds, estimatedSeconds, reviewBacklog;
+  final int recordedAnswers, spentSeconds;
   List<String> get questionIds => [...reviewIds, ...newIds];
 }
 
@@ -154,16 +157,16 @@ class StudyPlanPolicy {
           stage = math.min(4, stage + 1);
           lastSuccessDate = dateKey(day);
         }
-        final interval =
-            error || stage == 0 ? 1 : const [1, 3, 7, 14][stage - 1];
+        // Only a new confident success earns the stage's longer interval.
+        // Neutral answers keep the stage but schedule a short next-study-day
+        // check. Early answers can shorten, never delay, an existing due date.
+        final interval = advance ? const [1, 3, 7, 14][stage - 1] : 1;
         final candidate = nextStudyDate(
             day.add(Duration(days: interval)), preferences.weekdays);
-        // Neutral/same-day repeats must not postpone an already scheduled review.
-        if (due == null ||
-            error ||
-            advance ||
-            lastAttemptDate != dateKey(day)) {
+        if (due == null || error || advance) {
           due = candidate;
+        } else if (lastAttemptDate != dateKey(day)) {
+          due = due.isAfter(day) && due.isBefore(candidate) ? due : candidate;
         }
         lastAttemptDate = dateKey(day);
       }
@@ -315,6 +318,22 @@ class StudyPlanPolicy {
           if (first) newAnswered++;
         }
       }
+      final commitments = sessions
+          .where((session) =>
+              session.examId == exam.id &&
+              session.planDate == dateKey(day) &&
+              session.mode == PracticeMode.planned)
+          .toList();
+      final committedNew = commitments
+          .expand((s) =>
+              s.questionIds.where((id) => !s.reviewQuestionIds.contains(id)))
+          .toSet();
+      final remainingCommitment = committedNew
+          .where((id) =>
+              !seen.contains(id) &&
+              approved.containsKey(id) &&
+              !reservedIds.contains(id))
+          .toList();
       final budget = math.max(
           0,
           (type == StudyDayType.mock
@@ -370,11 +389,27 @@ class StudyPlanPolicy {
         if (type == StudyDayType.study || useBuffer) {
           // Reserve review time even before enough history exists to project it.
           final newTime = math.max(0, budget - (budget * reviewShare).ceil());
-          var count = math.min(math.max(0, pace - newAnswered),
+          // Future pace uses the remaining pool. Today's unstarted baseline
+          // reconstructs the pool before today's first answers; once started,
+          // persisted session IDs are the commitment, including after restart.
+          final dayTarget = isToday && commitments.isNotEmpty
+              ? remainingCommitment.length
+              : math.max(
+                  0,
+                  (isToday && s > 0
+                          ? ((remaining.length + newAnswered) / s).ceil()
+                          : pace) -
+                      newAnswered);
+          var count = math.min(dayTarget,
               math.min(slots, math.min(time, newTime) ~/ newSeconds));
           while (count-- > 0) {
-            final candidates =
-                remaining.where((q) => !allocated.contains(q.id)).toList();
+            final candidates = remaining
+                .where((q) =>
+                    !allocated.contains(q.id) &&
+                    (!isToday ||
+                        commitments.isEmpty ||
+                        remainingCommitment.contains(q.id)))
+                .toList();
             if (candidates.isEmpty) break;
             final total = domainCounts.values.fold<int>(0, (a, b) => a + b) + 1;
             double deficit(Question q) => weightSum == 0
@@ -398,6 +433,11 @@ class StudyPlanPolicy {
             }
 
             candidates.sort((a, b) {
+              if (isToday && commitments.isNotEmpty) {
+                return remainingCommitment
+                    .indexOf(a.id)
+                    .compareTo(remainingCommitment.indexOf(b.id));
+              }
               var c = deficit(b).compareTo(deficit(a));
               if (c != 0) return c;
               c = topicPriority(a).compareTo(topicPriority(b));
@@ -430,19 +470,33 @@ class StudyPlanPolicy {
           newIds: newIds,
           reviewIds: reviewIds,
           reviewBacklog: due.length - reviewIds.length,
-          status: answered == 0
-              ? StudyDayStatus.projected
-              : time == 0 || newIds.isEmpty && reviewIds.isEmpty
-                  ? StudyDayStatus.completed
-                  : StudyDayStatus.inProgress));
+          recordedAnswers: answered,
+          spentSeconds: spent,
+          status: commitments.any((s) => s.status == SessionStatus.inProgress)
+              ? StudyDayStatus.inProgress
+              : answered == 0
+                  ? StudyDayStatus.projected
+                  : time == 0 || newIds.isEmpty && reviewIds.isEmpty
+                      ? StudyDayStatus.completed
+                      : StudyDayStatus.inProgress));
     }
     // Calendar includes days off and immutable session history, separate from D.
     for (var day = today;
         day.isBefore(horizon);
         day = day.add(const Duration(days: 1))) {
       if (!days.any((d) => d.date == day)) {
-        days.add(
-            StudyPlanDay(date: day, type: StudyDayType.rest, budgetSeconds: 0));
+        final recorded =
+            history.where((a) => a.localAnsweredDate == dateKey(day)).toList();
+        days.add(StudyPlanDay(
+            date: day,
+            type: StudyDayType.rest,
+            budgetSeconds: 0,
+            recordedAnswers: recorded.length,
+            spentSeconds: recorded.fold<int>(
+                0, (sum, a) => sum + (a.activeDurationSeconds ?? 0)),
+            status: recorded.isEmpty
+                ? StudyDayStatus.projected
+                : StudyDayStatus.completed));
       }
     }
     if (deadline != null && !deadline.isBefore(today)) {
@@ -466,6 +520,15 @@ class StudyPlanPolicy {
                   ? StudyDayStatus.completed
                   : StudyDayStatus.missed,
           budgetSeconds: 0,
+          recordedAnswers: recorded.length,
+          spentSeconds: recorded.fold<int>(
+              0,
+              (sum, a) =>
+                  sum +
+                  (a.activeDurationSeconds ??
+                      (a.sessionType == AttemptSessionType.practice
+                          ? newSeconds
+                          : reviewSeconds))),
           estimatedSeconds: recorded.fold<int>(
               0, (sum, a) => sum + (a.activeDurationSeconds ?? 0))));
     }

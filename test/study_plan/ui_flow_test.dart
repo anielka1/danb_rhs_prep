@@ -1,3 +1,7 @@
+import 'package:danb_rhs_prep/screens/main_shell.dart';
+import 'package:danb_rhs_prep/widgets/app_bottom_navigation.dart';
+import 'package:danb_rhs_prep/screens/home_screen.dart';
+import 'package:danb_rhs_prep/bootstrap/bootstrap_session_scope.dart';
 import 'package:danb_rhs_prep/screens/practice_question_screen.dart';
 import 'package:danb_rhs_prep/domain/models/practice_session.dart';
 import 'package:flutter/material.dart';
@@ -178,6 +182,165 @@ void main() {
         active.questionIds);
     await tester.pumpWidget(const SizedBox.shrink());
   });
+  testWidgets('configured Home has one primary practice action',
+      (tester) async {
+    final s = session();
+    await tester.pumpWidget(wrap(
+        BootstrapSessionScope(
+            controller: s,
+            child: HomeScreen(
+                progressRepository: s.progressRepository, now: () => day)),
+        false,
+        1));
+    await tester.pumpAndSettle();
+    expect(find.text("Start today's session"), findsOneWidget);
+    expect(find.text('Start Practicing'), findsNothing);
+    expect(find.text('Free practice'), findsOneWidget);
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
+  testWidgets('exam day offers no impossible calendar edits', (tester) async {
+    final s = session();
+    final p = const StudyPlanPolicy().project(
+        now: day,
+        localToday: day,
+        timezone: 'Test',
+        exam: package.exam,
+        preferences: prefs,
+        pool: package.questions,
+        attempts: [],
+        examDate: day.add(const Duration(days: 1)));
+    await tester.pumpWidget(wrap(
+        StudyCalendarScreen(
+            plan: p,
+            session: s,
+            repository: s.progressRepository!,
+            now: () => day),
+        false,
+        1));
+    await tester.pumpAndSettle();
+    expect(find.text('Move session'), findsNothing);
+    expect(find.text('Day off / cancel mock'), findsNothing);
+  });
+  testWidgets(
+      'completed calendar day shows recorded work instead of zero assignment',
+      (tester) async {
+    final s = session();
+    final yesterday = day.subtract(const Duration(days: 1));
+    final ids = package.questions.take(2).map((q) => q.id).toList();
+    final history = package.questions
+        .take(2)
+        .map((q) => answer(q, yesterday, seconds: 60))
+        .toList();
+    final saved = PracticeSession(
+        id: 'done',
+        examId: package.exam.id,
+        mode: PracticeMode.planned,
+        questionIds: ids,
+        status: SessionStatus.completed,
+        startedAt: yesterday,
+        completedAt: yesterday,
+        planDate: dateKey(yesterday));
+    final p = const StudyPlanPolicy().project(
+        now: day,
+        localToday: day,
+        timezone: 'Test',
+        exam: package.exam,
+        preferences: prefs,
+        pool: package.questions,
+        attempts: history,
+        sessions: [saved]);
+    await tester.pumpWidget(wrap(
+        StudyCalendarScreen(
+            plan: p,
+            session: s,
+            repository: s.progressRepository!,
+            now: () => day),
+        false,
+        1));
+    await tester.pumpAndSettle();
+    expect(find.text('2 answers recorded · 2 min spent'), findsOneWidget);
+  });
+  testWidgets(
+      'Home session result Home restart and reset keep one current action',
+      (tester) async {
+    var s = session(count: 1);
+    final repo = s.progressRepository! as InMemoryProgressRepository;
+    Widget home() => wrap(
+        BootstrapSessionScope(
+            controller: s,
+            child: HomeScreen(progressRepository: repo, now: () => day)),
+        false,
+        1);
+    await tester.pumpWidget(home());
+    await tester.pumpAndSettle();
+    for (final label in [
+      "Start today's session",
+      'Correct fixture answer',
+      'Submit Answer',
+      'Finish',
+      'Back to Home'
+    ]) {
+      await tester.ensureVisible(find.text(label));
+      await tester.tap(find.text(label));
+      await tester.pumpAndSettle();
+    }
+    expect(find.text("Today's plan completed"), findsOneWidget);
+    expect(find.text("Start today's session"), findsNothing);
+    expect(find.text('Continue planned session'), findsNothing);
+    expect((await repo.answerAttemptsForExam(package.exam.id)).length, 1);
+    await tester.pumpWidget(const SizedBox.shrink());
+    s = BootstrapSessionController(s.snapshot,
+        progressRepository: repo,
+        userSettingsRepository: s.userSettingsRepository);
+    await tester.pumpWidget(home());
+    await tester.pumpAndSettle();
+    expect(find.text("Today's plan completed"), findsOneWidget);
+    expect(find.text('1 answers recorded today'), findsOneWidget);
+    await repo.resetProgressForExam(package.exam.id);
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.paused);
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+    await tester.pumpAndSettle();
+    expect(find.text("Start today's session"), findsOneWidget);
+    expect(find.text("Today's plan completed"), findsNothing);
+    expect(s.snapshot.profile!.studyPlanPreferences, prefs);
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
+  testWidgets('return from another tab refreshes session completion',
+      (tester) async {
+    final s = session(count: 1), shell = _Shell();
+    final repo = s.progressRepository!;
+    final saved = PracticeSession(
+        id: 'tab-session',
+        examId: package.exam.id,
+        mode: PracticeMode.planned,
+        questionIds: [package.questions.first.id],
+        status: SessionStatus.inProgress,
+        startedAt: day,
+        planDate: dateKey(day));
+    await repo.savePracticeSession(saved);
+    Widget home(AppTab tab) => wrap(
+        BootstrapSessionScope(
+            controller: s,
+            child: MainShellScope(
+                controller: shell,
+                activeTab: tab,
+                child: HomeScreen(progressRepository: repo, now: () => day))),
+        false,
+        1);
+    await tester.pumpWidget(home(AppTab.home));
+    await tester.pumpAndSettle();
+    expect(find.text('Continue planned session'), findsOneWidget);
+    await tester.pumpWidget(home(AppTab.practice));
+    await tester.pumpAndSettle();
+    await repo.recordAnswerAttempt(answer(package.questions.first, day));
+    await repo.savePracticeSession(
+        saved.copyWith(status: SessionStatus.completed, completedAt: day));
+    await tester.pumpWidget(home(AppTab.home));
+    await tester.pumpAndSettle();
+    expect(find.text('Continue planned session'), findsNothing);
+    expect(find.text("Today's plan completed"), findsOneWidget);
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
   testWidgets('short diagnostic gives reason and Skip; no fabricated attempts',
       (tester) async {
     final s = session(count: 1);
@@ -188,4 +351,11 @@ void main() {
     expect(await s.progressRepository!.answerAttemptsForExam(package.exam.id),
         isEmpty);
   });
+}
+
+class _Shell implements MainShellController {
+  @override
+  AppTab get currentTab => AppTab.home;
+  @override
+  void goToTab(AppTab tab, {AppTab? resetTab}) {}
 }

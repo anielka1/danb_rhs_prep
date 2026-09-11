@@ -20,10 +20,8 @@ import 'package:danb_rhs_prep/widgets/answer_option_tile.dart';
 /// Deliberately does not assume a fixed number of practice questions: the
 /// real demo `ProgressRepository` already seeds an in-progress practice
 /// session (`DebugDemoEnvironment.demoInProgressPracticeSession`), so
-/// Home's empty-state action reads "Continue," not "Start Practicing," and
-/// "Start Practice Exam" resumes that session rather than starting a new
-/// one — this test follows whichever label/session length is actually
-/// real, rather than hardcoding either.
+/// Free practice's "Start Practice Exam" resumes that session rather than
+/// starting a new one. This test follows the real session length.
 Future<void> _tapText(WidgetTester tester, String label) async {
   final Finder finder = find.text(label);
   await tester.ensureVisible(finder);
@@ -55,7 +53,7 @@ void main() {
             matching: find.byTooltip('Settings')),
         findsOneWidget);
     expect(find.byIcon(Icons.wb_sunny_outlined), findsNothing);
-    await _tapText(tester, 'Continue');
+    await _tapText(tester, 'Browse practice modes');
     await _tapText(tester, 'Start Practice Exam');
     await tester.tap(find.bySemanticsLabel('Bookmark question'));
     await tester.pumpAndSettle();
@@ -101,15 +99,9 @@ void main() {
       'Progress, entirely through real demo composition', (tester) async {
     await _completeOnboarding(tester);
 
-    // Home: an honest empty-state action reaches the real practice flow —
-    // whichever label is actually shown (see this file's doc comment).
-    final Finder homeAction = find.text('Continue').evaluate().isNotEmpty
-        ? find.text('Continue')
-        : find.text('Start Practicing');
-    expect(homeAction, findsOneWidget);
-    await tester.ensureVisible(homeAction);
-    await tester.tap(homeAction);
-    await tester.pumpAndSettle();
+    // Free practice remains a working secondary route; the main Continue
+    // now resumes questions directly (covered by Home integration tests).
+    await _tapText(tester, 'Browse practice modes');
 
     await _tapText(tester, 'Start Practice Exam');
 
