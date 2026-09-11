@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:danb_rhs_prep/practice_session/practice_session_scope.dart';
@@ -11,14 +10,6 @@ import 'package:danb_rhs_prep/services/theme_mode_controller.dart';
 import 'package:danb_rhs_prep/theme/app_theme.dart';
 
 import '../support/practice_session_test_support.dart';
-
-/// Every one of these controls is reachable in the running app but has no
-/// backing feature yet (no auth, no session/attempt storage, no
-/// notification/audio system). They must not expose a tap action to
-/// assistive services — a control with a tap action but no effect is
-/// exactly the "silently does nothing" case this suite guards against.
-bool _hasTapAction(SemanticsNode node) =>
-    node.getSemanticsData().hasAction(SemanticsAction.tap);
 
 void main() {
   Widget wrap(Widget child) =>
@@ -77,8 +68,8 @@ void main() {
         controller: buildDemoPracticeSessionController(),
         child: const PracticeSummaryScreen(),
       )));
-      expect(_hasTapAction(tester.getSemantics(find.text('Review Mistakes'))),
-          isFalse);
+      expect(find.text('Review Mistakes'), findsNothing);
+      expect(find.text('No mistakes in this session'), findsOneWidget);
 
       handle.dispose();
     });

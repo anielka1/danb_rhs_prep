@@ -74,7 +74,7 @@ void main() {
         expect(tester.takeException(), isNull);
 
         expect(currentTab(tester), AppTab.home);
-        expect(find.text('Small steps.\nSteady progress.'), findsOneWidget);
+        expect(find.text('Your study day'), findsOneWidget);
 
         await tapTab(tester, 'Practice');
         expect(tester.takeException(), isNull);
@@ -145,7 +145,7 @@ void main() {
         await tapTab(tester, 'Home');
         expect(tester.takeException(), isNull);
         expect(currentTab(tester), AppTab.home);
-        expect(find.text('Small steps.\nSteady progress.'), findsOneWidget);
+        expect(find.text('Your study day'), findsOneWidget);
       });
 
       testWidgets(
@@ -168,7 +168,7 @@ void main() {
         expect(tester.takeException(), isNull);
         expect(find.byType(ProfileSettingsScreen), findsNothing);
         expect(currentTab(tester), AppTab.home);
-        expect(find.text('Small steps.\nSteady progress.'), findsOneWidget);
+        expect(find.text('Your study day'), findsOneWidget);
       });
 
       testWidgets('inactive tabs are excluded from accessibility semantics',
@@ -177,15 +177,13 @@ void main() {
         await tester.pumpWidget(appAt(tester, viewport));
 
         // Home is active: its content is reachable, Progress's is not.
-        expect(find.bySemanticsLabel('Small steps.\nSteady progress.'),
-            findsOneWidget);
+        expect(find.bySemanticsLabel('Your study day'), findsOneWidget);
         expect(find.bySemanticsLabel(RegExp('Your Progress')), findsNothing);
 
         await tapTab(tester, 'Progress');
 
         expect(find.bySemanticsLabel(RegExp('Your Progress')), findsOneWidget);
-        expect(find.bySemanticsLabel('Small steps.\nSteady progress.'),
-            findsNothing);
+        expect(find.bySemanticsLabel('Your study day'), findsNothing);
 
         handle.dispose();
       });
@@ -218,8 +216,7 @@ void main() {
             expect(tester.takeException(), isNull);
 
             expect(
-                Theme.of(tester
-                        .element(find.text('Small steps.\nSteady progress.')))
+                Theme.of(tester.element(find.text('Your study day')))
                     .brightness,
                 themeMode == ThemeMode.dark
                     ? Brightness.dark

@@ -4,7 +4,6 @@ import '../bootstrap/bootstrap_session_scope.dart';
 import '../domain/repositories/progress_repository.dart';
 import '../theme/app_theme.dart';
 import '../widgets/app_card.dart';
-import '../widgets/study_page_heading.dart';
 import '../widgets/app_scaffold.dart';
 import '../widgets/primary_button.dart';
 import 'exam_overview_screen.dart';
@@ -78,34 +77,38 @@ class _HomeScreenState extends State<HomeScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const SizedBox(height: AppSpacing.lg),
-            Text('RHS PREP', style: styles.label),
-            const SizedBox(height: AppSpacing.md),
-            StudyPageHeading(
-              title: 'Small steps.\nSteady progress.',
-              subtitle: 'A little practice, at your pace.',
-              icon: Icons.settings_rounded,
-              trailing: Tooltip(
-                message: 'Settings',
-                child: SizedBox(
-                  width: 64,
-                  height: 72,
+            Row(children: [
+              Expanded(
+                  child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                    Text('RHS PREP', style: styles.label),
+                    Text('Your study day', style: styles.h2),
+                    Text(
+                        BootstrapSessionScope.maybeControllerOf(context)
+                                    ?.snapshot
+                                    .examDateSelection
+                                    ?.date ==
+                                null
+                            ? 'Exam date not set'
+                            : 'Exam · ${MaterialLocalizations.of(context).formatCompactDate(BootstrapSessionScope.controllerOf(context).snapshot.examDateSelection!.date!)}',
+                        style: styles.bodySmall)
+                  ])),
+              Tooltip(
+                  message: 'Settings',
                   child: CircleIconButton(
-                    icon: Icons.settings_rounded,
-                    semanticLabel: 'Settings',
-                    onPressed: () async {
-                      await Navigator.of(context, rootNavigator: true)
-                          .pushNamed(ProfileSettingsScreen.route,
-                              arguments:
-                                  BootstrapSessionScope.maybeControllerOf(
-                                      context));
-                      if (mounted) setState(() => _planRevision++);
-                    },
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(height: AppSpacing.xxl),
+                      icon: Icons.settings_rounded,
+                      semanticLabel: 'Settings',
+                      onPressed: () async {
+                        await Navigator.of(context, rootNavigator: true)
+                            .pushNamed(ProfileSettingsScreen.route,
+                                arguments:
+                                    BootstrapSessionScope.maybeControllerOf(
+                                        context));
+                        if (mounted) setState(() => _planRevision++);
+                      })),
+            ]),
+            const SizedBox(height: AppSpacing.md),
             if (BootstrapSessionScope.maybeControllerOf(context) != null &&
                 widget.progressRepository != null) ...[
               StudyPlanPanel(
@@ -113,7 +116,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   session: BootstrapSessionScope.controllerOf(context),
                   repository: widget.progressRepository!,
                   now: widget.now),
-              const SizedBox(height: AppSpacing.xxl),
+              const SizedBox(height: AppSpacing.md),
             ],
             AppCard(
               child: Column(
@@ -137,8 +140,8 @@ class _HomeScreenState extends State<HomeScreen> {
                           label: const Text('Browse practice modes')),
                   ]),
             ),
-            const SizedBox(height: AppSpacing.xxl),
-            Text('Your learning', style: styles.h3),
+            const SizedBox(height: AppSpacing.md),
+            Text('Explore', style: styles.h3),
             const SizedBox(height: AppSpacing.md),
             AppCard(
               onTap: _openProgress,
@@ -185,7 +188,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 const Icon(Icons.chevron_right_rounded),
               ]),
             ),
-            const SizedBox(height: AppSpacing.huge),
+            const SizedBox(height: AppSpacing.lg),
           ],
         ),
       ),

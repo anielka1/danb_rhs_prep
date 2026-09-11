@@ -91,7 +91,7 @@ void main() {
       ));
       await tester.pumpAndSettle();
       expect(tester.takeException(), isNull);
-      expect(find.text('Review Mistakes'), findsOneWidget);
+      expect(find.text('No mistakes in this session'), findsOneWidget);
     });
   }
 }

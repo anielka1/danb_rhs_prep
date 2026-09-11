@@ -5,7 +5,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:danb_rhs_prep/main_demo.dart' as demo;
 import 'package:danb_rhs_prep/screens/main_shell.dart';
 import 'package:danb_rhs_prep/screens/saved_questions_screen.dart';
-import 'package:danb_rhs_prep/widgets/study_page_heading.dart';
 import 'package:danb_rhs_prep/screens/practice_summary_screen.dart';
 import 'package:danb_rhs_prep/screens/profile_settings_screen.dart';
 import 'package:danb_rhs_prep/widgets/answer_option_tile.dart';
@@ -47,11 +46,9 @@ void main() {
       'Home settings sits in the heading and saved library opens directly',
       (tester) async {
     await _completeOnboarding(tester);
-    expect(
-        find.descendant(
-            of: find.byType(StudyPageHeading),
-            matching: find.byTooltip('Settings')),
-        findsOneWidget);
+    expect(find.byTooltip('Settings'), findsOneWidget);
+    expect(tester.getCenter(find.byTooltip('Settings')).dy,
+        lessThan(tester.getBottomLeft(find.text('Your study day')).dy + 40));
     expect(find.byIcon(Icons.wb_sunny_outlined), findsNothing);
     await _tapText(tester, 'Browse practice modes');
     await _tapText(tester, 'Start Practice Exam');

@@ -277,3 +277,14 @@ keys. Use environment variables, the operating-system keychain, or an approved
 secret manager locally, and encrypted repository/environment secrets in CI. If
 a credential is exposed, revoke and rotate it immediately, review access logs,
 and record only the rotation date and owner—not the secret value.
+
+### Isolated study-journey preview
+
+To exercise onboarding, the starting check and the calendar with an eligible
+synthetic test pool, run `flutter run -t tool/main_study_preview.dart` and choose
+an available native device. This debug-only entrypoint uses 80 test fixtures and
+independent in-memory stores; restarting the process clears **only this preview's**
+state. No production questions, approvals or user data are changed. The existing
+`lib/main_demo.dart` demo still contains draft trivia and is not an eligible
+starting-check bank. Persistence across restart is covered separately by the
+repository and app-composition regression tests.

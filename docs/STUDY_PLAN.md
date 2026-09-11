@@ -234,3 +234,39 @@ quick answers cannot create another full allocation. Started plans continue to
 use their persisted commitment. Answer permutations, the free UTC reset, content
 approval and difficulty adaptation are unchanged. The current database schema
 stays at **5**; this change needs no migration.
+
+## Home, month calendar and starting-check recovery
+
+Home keeps Study calendar and its next-seven-day preview outside the Today card
+and outside the approved-pool/availability branches. The preview and month cells
+use the same `StudyPlanProjection` entries: recorded answers plus remaining IDs.
+No 500-question assumption or separate allocation algorithm exists in the UI.
+Empty/unconfigured days use a dash and an explicit no-plan explanation. Recorded
+history remains visible when the available pool becomes empty. Month navigation
+extends through the exam month; without a date, dates can be browsed but the
+planner's seven-day outlook is not extended into invented question assignments.
+Selecting a date scrolls to its details. Today, rest, partial work, completion and
+exam days have structural/text/semantic markers, not just colors. Large text and
+narrow calendars scroll horizontally to retain readable seven-column layouts.
+
+The starting check now reads saved state before advertising a new Start: an active
+diagnostic offers Resume and existing diagnostic history shows its recorded result.
+Read failures have Retry; missing approved content has a separate explanation and
+Skip. Save failures retain the pending answer and disable Continue later/back
+until the write succeeds. Session IDs, answer permutations and historical feedback
+are unchanged. Restarting during onboarding preserves prior choices; continue
+through those saved choices to reach Resume diagnostic. Skipping leaves any saved
+active session intact. No database migration or content approval is performed.
+
+Practice results count actual incorrect feedback, not the rounded score. Zero
+mistakes shows a message and the existing Home/plan action; otherwise Review
+mistakes (N) opens the unchanged read-only answer/explanation review. Even a score
+rounded to 100% can correctly have one mistake.
+
+The optional `tool/main_study_preview.dart` entrypoint uses 80 existing test-fixture
+questions, synthetic from creation, and independent memory stores. It is debug
+only, is never imported by production, does not read/write user history, and resets
+on process exit. This fixture's approved shape tests the real eligibility gates;
+it is not approval of any clinical/draft question. The ordinary demo remains
+unchanged and cannot demonstrate an approved-bank diagnostic. Production currently
+requires human-reviewed approved content before the starting check can run.
