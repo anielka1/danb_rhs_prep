@@ -60,10 +60,13 @@ void main() {
         .controller;
     expect(find.text('Question 1 of 5'), findsOneWidget);
     expect(find.textContaining('correct answer'), findsNothing);
-    await tester.tap(find.byType(AnswerOptionTile).first);
+    await tester.tap(find.byType(AnswerOptionTile).at(
+        controller.currentQuestion.answers.indexWhere(
+            (a) => a.id == controller.currentQuestion.correctAnswerId)));
     await tester.pumpAndSettle();
     await tapText(tester, 'Flag question');
-    expect(controller.attempt!.flaggedQuestionIds, {'demo-question-1'});
+    expect(controller.attempt!.flaggedQuestionIds,
+        {controller.questions.first.id});
     expect(find.bySemanticsLabel('Question 3, unanswered'), findsNothing);
     await tapText(tester, 'Show question navigator');
     final jump = find.bySemanticsLabel('Question 3, unanswered');
@@ -77,7 +80,10 @@ void main() {
     await tapText(tester, 'Previous question');
     expect(find.text('Question 2 of 5'), findsOneWidget);
     for (var i = 1; i < 5; i++) {
-      final choice = find.byType(AnswerOptionTile).at(i == 4 ? 1 : 0);
+      final choice = find.byType(AnswerOptionTile).at(
+          controller.currentQuestion.answers.indexWhere((a) => i == 4
+              ? a.id != controller.currentQuestion.correctAnswerId
+              : a.id == controller.currentQuestion.correctAnswerId));
       await tester.ensureVisible(choice);
       await tester.tap(choice);
       await tester.pumpAndSettle();
@@ -248,7 +254,9 @@ void main() {
         expect(tester.getSize(answer).height, greaterThanOrEqualTo(44));
         await tester.tap(answer);
         await tester.pumpAndSettle();
-        expect(find.bySemanticsLabel('Option A: 4, selected'), findsOneWidget);
+        final text = tester.widget<AnswerOptionTile>(answer).text;
+        expect(
+            find.bySemanticsLabel('Option A: $text, selected'), findsOneWidget);
         await tapText(tester, 'Flag question');
         expect(find.text('Remove flag'), findsOneWidget);
         await tapText(tester, 'Finish mock exam');

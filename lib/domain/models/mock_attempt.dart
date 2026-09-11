@@ -1,3 +1,5 @@
+import 'answer_order.dart';
+
 /// Lifecycle state of a [MockAttempt].
 enum MockAttemptStatus { inProgress, completed, abandoned }
 
@@ -15,6 +17,7 @@ class MockAttempt {
     required this.id,
     required this.examId,
     required List<String> questionIds,
+    Map<String, List<String>>? answerOrder,
     required Map<String, String> answers,
     required Set<String> flaggedQuestionIds,
     required this.status,
@@ -25,7 +28,8 @@ class MockAttempt {
     this.currentQuestionIndex = 0,
     this.contentVersion,
     this.seenBeforeStartCount,
-  })  : questionIds = List.unmodifiable(questionIds),
+  })  : answerOrder = AnswerOrder.freeze(answerOrder),
+        questionIds = List.unmodifiable(questionIds),
         answers = Map.unmodifiable(answers),
         flaggedQuestionIds = Set.unmodifiable(flaggedQuestionIds) {
     if (id.isEmpty ||
@@ -72,6 +76,9 @@ class MockAttempt {
   final String examId;
   final List<String> questionIds;
 
+  /// Null only for legacy sessions, which retain content answer order.
+  final Map<String, List<String>>? answerOrder;
+
   /// Question ID to selected answer ID, for questions answered so far.
   final Map<String, String> answers;
   final Set<String> flaggedQuestionIds;
@@ -103,6 +110,7 @@ class MockAttempt {
       id: id,
       examId: examId,
       questionIds: questionIds,
+      answerOrder: answerOrder,
       answers: answers ?? this.answers,
       flaggedQuestionIds: flaggedQuestionIds ?? this.flaggedQuestionIds,
       status: status ?? this.status,
@@ -123,6 +131,7 @@ class MockAttempt {
         other.id == id &&
         other.examId == examId &&
         _listEquals(other.questionIds, questionIds) &&
+        AnswerOrder.equal(other.answerOrder, answerOrder) &&
         _mapEquals(other.answers, answers) &&
         _setEquals(other.flaggedQuestionIds, flaggedQuestionIds) &&
         other.status == status &&
@@ -140,6 +149,7 @@ class MockAttempt {
         id,
         examId,
         Object.hashAll(questionIds),
+        AnswerOrder.hash(answerOrder),
         Object.hashAllUnordered(
           answers.entries.map((e) => Object.hash(e.key, e.value)),
         ),

@@ -1,3 +1,5 @@
+import 'dart:math';
+import '../domain/models/answer_order.dart';
 import '../domain/models/mock_attempt.dart';
 import '../features/content/domain/content_package.dart';
 import '../features/content/domain/content_validation.dart';
@@ -10,13 +12,16 @@ class MockExamUnavailable implements Exception {
   final String message;
 }
 
-/// Validates content and allocates a deterministic, duplicate-free exam using
-/// largest-remainder domain quotas. No UI, assets, network or fixture imports.
+/// Validates content and allocates a duplicate-free exam using largest-remainder
+/// domain quotas. Preflight is deterministic; new starts inject randomness.
+/// No UI, assets, network or fixture imports.
 class MockExamBlueprint {
   MockExamBlueprint._(this.package, this.isDemo, this.quotas, this.questions);
 
   factory MockExamBlueprint.fromPackage(ContentPackage package,
-      {Set<String> preferredQuestionIds = const {}}) {
+      {Set<String> preferredQuestionIds = const {},
+      Map<String, int> exposureCounts = const {},
+      Random? random}) {
     final validation = const ContentValidator().validate(package);
     if (!validation.isValid ||
         !package.exam.mockExam.practicePassingPercent.isFinite ||
@@ -59,18 +64,28 @@ class MockExamBlueprint {
     }
     final selected = <Question>[];
     for (final domain in domains) {
-      final pool = eligible.where((q) => q.domainId == domain.id).toList()
-        ..sort((a, b) {
-          final pa = preferredQuestionIds.contains(a.id),
-              pb = preferredQuestionIds.contains(b.id);
-          return pa != pb ? (pa ? -1 : 1) : a.id.compareTo(b.id);
-        });
+      final pool = eligible.where((q) => q.domainId == domain.id).toList();
+      // Shuffle before stable rank comparison: no randomness in the comparator.
+      if (random != null) pool.shuffle(random);
+      final tieRank = {for (var i = 0; i < pool.length; i++) pool[i].id: i};
+      pool.sort((a, b) {
+        final pa = preferredQuestionIds.contains(a.id),
+            pb = preferredQuestionIds.contains(b.id);
+        if (pa != pb) return pa ? -1 : 1;
+        final exposure =
+            (exposureCounts[a.id] ?? 0).compareTo(exposureCounts[b.id] ?? 0);
+        if (exposure != 0) return exposure;
+        return random == null
+            ? a.id.compareTo(b.id)
+            : tieRank[a.id]!.compareTo(tieRank[b.id]!);
+      });
       if (pool.length < quotas[domain.id]!) {
         throw const MockExamUnavailable(
             'There are not enough eligible questions for the configured mock exam.');
       }
       selected.addAll(pool.take(quotas[domain.id]!));
     }
+    if (random != null) selected.shuffle(random);
     return MockExamBlueprint._(
         package, isDemo, Map.unmodifiable(quotas), List.unmodifiable(selected));
   }
@@ -117,7 +132,7 @@ class MockExamBlueprint {
         throw const FormatException('Saved mock exam violates domain quotas.');
       }
     }
-    return List.unmodifiable(resolved);
+    return AnswerOrder.resolve(resolved, attempt.answerOrder);
   }
 
   MockExamResult resultFor(MockAttempt attempt) {

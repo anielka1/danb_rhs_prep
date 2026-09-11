@@ -1,3 +1,4 @@
+import 'controlled_random.dart';
 import 'dart:async';
 import 'package:danb_rhs_prep/debug/debug_demo_environment.dart';
 import 'package:danb_rhs_prep/domain/models/mock_attempt.dart';
@@ -102,6 +103,7 @@ Future<MockExamController> startedMock(
   final controller = MockExamController(
       blueprint: MockExamBlueprint.fromPackage(package ?? mockPackage()),
       repository: repository ?? ControlledMockRepository(),
+      random: ControlledRandom(),
       now: now ?? () => DateTime.utc(2026, 1, 1, 12));
   await controller.load();
   await controller.start();

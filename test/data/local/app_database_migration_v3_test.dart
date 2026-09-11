@@ -191,7 +191,7 @@ void main() {
     final AppDatabase db = AppDatabase.forTesting(NativeDatabase(dbFile));
     addTearDown(db.close);
 
-    expect(db.schemaVersion, 4);
+    expect(db.schemaVersion, 5);
     final rows = await db.select(db.answerAttempts).get();
     expect(rows, isEmpty);
   });

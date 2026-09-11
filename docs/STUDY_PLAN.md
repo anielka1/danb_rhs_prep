@@ -30,6 +30,12 @@ and appearance, following the existing reset lease. Retired leases cannot write
 old progress back after reset. Review state is derived from append-only answers,
 so an idempotently retried answer cannot advance the schedule twice.
 
+Schema 5 subsequently adds nullable persisted answer order for practice and mock
+sessions. The upgrade preserves the schema-4 planner data and all historical
+columns; old sessions keep their content answer order. See
+[session ordering and mock rotation](MOCK_EXAM_FLOW.md#persisted-answer-order-and-mock-rotation).
+This does not change plan allocation, review intervals or free-tier limits.
+
 ## Dates, budgets and allocation
 
 The pure engine receives the current instant, explicit local calendar date and

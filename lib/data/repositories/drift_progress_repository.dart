@@ -1,3 +1,4 @@
+import '../../domain/models/answer_order.dart';
 import '../../domain/models/study_schedule.dart';
 import '../../domain/repositories/study_schedule_repository.dart';
 import '../../domain/repositories/progress_reset_repository.dart';
@@ -268,6 +269,9 @@ class DriftProgressRepository
             planDate: Value(session.planDate),
             reviewQuestionIdsJson: Value(jsonEncode(session.reviewQuestionIds)),
             questionIdsJson: jsonEncode(session.questionIds),
+            answerOrderJson: Value(session.answerOrder == null
+                ? null
+                : jsonEncode(session.answerOrder)),
             status: session.status.name,
             startedAt: session.startedAt.toUtc(),
             completedAt: Value(session.completedAt?.toUtc()),
@@ -299,6 +303,9 @@ class DriftProgressRepository
             ? const []
             : List<String>.from(jsonDecode(row.reviewQuestionIdsJson!) as List),
         questionIds: List<String>.from(jsonDecode(row.questionIdsJson) as List),
+        answerOrder: AnswerOrder.decode(row.answerOrderJson == null
+            ? null
+            : jsonDecode(row.answerOrderJson!)),
         status: SessionStatus.values.firstWhere(
           (value) => value.name == row.status,
           orElse: () => SessionStatus.inProgress,
@@ -360,6 +367,9 @@ class DriftProgressRepository
             id: attempt.id,
             examId: attempt.examId,
             questionIdsJson: jsonEncode(attempt.questionIds),
+            answerOrderJson: Value(attempt.answerOrder == null
+                ? null
+                : jsonEncode(attempt.answerOrder)),
             answersJson: jsonEncode(attempt.answers),
             flaggedQuestionIdsJson:
                 jsonEncode(attempt.flaggedQuestionIds.toList()),
@@ -397,6 +407,9 @@ class DriftProgressRepository
       id: row.id,
       examId: row.examId,
       questionIds: List<String>.from(jsonDecode(row.questionIdsJson) as List),
+      answerOrder: AnswerOrder.decode(row.answerOrderJson == null
+          ? null
+          : jsonDecode(row.answerOrderJson!)),
       answers: Map<String, String>.from(
           jsonDecode(row.answersJson) as Map<String, Object?>),
       flaggedQuestionIds:

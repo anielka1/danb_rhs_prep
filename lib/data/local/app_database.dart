@@ -95,6 +95,7 @@ class PracticeSessions extends Table {
   TextColumn get examId => text()();
   TextColumn get mode => text()();
   TextColumn get questionIdsJson => text()();
+  TextColumn get answerOrderJson => text().nullable()();
   TextColumn get status => text()();
   DateTimeColumn get startedAt => dateTime()();
   DateTimeColumn get completedAt => dateTime().nullable()();
@@ -120,6 +121,7 @@ class MockAttempts extends Table {
   TextColumn get id => text()();
   TextColumn get examId => text()();
   TextColumn get questionIdsJson => text()();
+  TextColumn get answerOrderJson => text().nullable()();
   TextColumn get answersJson => text()();
   TextColumn get flaggedQuestionIdsJson => text()();
   TextColumn get status => text()();
@@ -244,7 +246,9 @@ class AppDatabase extends _$AppDatabase {
   // ignore: use_super_parameters
   AppDatabase.forTesting(QueryExecutor executor) : super(executor);
 
-  /// Schema version 3 (PREP-668): added
+  /// Schema 5 adds nullable answer-order JSON to practice and mock rows.
+  /// Frozen schema-4 migration coverage: app_database_migration_v5_test.dart.
+  /// Earlier schema version 3 (PREP-668): added
   /// `AnswerAttempts.questionVersion`/`correctAnswerId`/`explanation`
   /// (schema 2, PREP-664, added `AnswerAttempts.contentVersion` and
   /// `PracticeSessions.contentVersion`). Bumping this further requires
@@ -276,14 +280,14 @@ class AppDatabase extends _$AppDatabase {
   /// per this class's own "never erase progress on error/migration" rule
   /// below.
   @override
-  int get schemaVersion => 4;
+  int get schemaVersion => 5;
 
   @override
   MigrationStrategy get migration {
     return MigrationStrategy(
       onCreate: (Migrator m) => m.createAll(),
       onUpgrade: (Migrator m, int from, int to) async {
-        if (from >= 1 && from < 4 && to == 4) {
+        if (from >= 1 && from < 5 && to == 5) {
           if (from < 2) {
             await m.addColumn(answerAttempts, answerAttempts.contentVersion);
             await m.addColumn(
@@ -294,17 +298,21 @@ class AppDatabase extends _$AppDatabase {
             await m.addColumn(answerAttempts, answerAttempts.correctAnswerId);
             await m.addColumn(answerAttempts, answerAttempts.explanation);
           }
-          await m.addColumn(answerAttempts, answerAttempts.confident);
-          await m.addColumn(
-              answerAttempts, answerAttempts.activeDurationSeconds);
-          await m.addColumn(answerAttempts, answerAttempts.localAnsweredDate);
-          await m.addColumn(practiceSessions, practiceSessions.planDate);
-          await m.addColumn(
-              practiceSessions, practiceSessions.reviewQuestionIdsJson);
-          await m.addColumn(
-              userProfiles, userProfiles.studyPlanPreferencesJson);
-          await m.addColumn(mockAttempts, mockAttempts.seenBeforeStartCount);
-          await m.createTable(studySchedules);
+          if (from < 4) {
+            await m.addColumn(answerAttempts, answerAttempts.confident);
+            await m.addColumn(
+                answerAttempts, answerAttempts.activeDurationSeconds);
+            await m.addColumn(answerAttempts, answerAttempts.localAnsweredDate);
+            await m.addColumn(practiceSessions, practiceSessions.planDate);
+            await m.addColumn(
+                practiceSessions, practiceSessions.reviewQuestionIdsJson);
+            await m.addColumn(
+                userProfiles, userProfiles.studyPlanPreferencesJson);
+            await m.addColumn(mockAttempts, mockAttempts.seenBeforeStartCount);
+            await m.createTable(studySchedules);
+          }
+          await m.addColumn(practiceSessions, practiceSessions.answerOrderJson);
+          await m.addColumn(mockAttempts, mockAttempts.answerOrderJson);
           return;
         }
         // Every schema jump this database has ever needed to handle is
