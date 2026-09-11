@@ -15,12 +15,8 @@ import 'main.dart';
 /// card — see [DebugDemoEnvironment.demoInProgressPracticeSession]);
 /// study-session UI beyond that card is implemented in separate tasks.
 ///
-/// Onboarding starts incomplete on purpose (see [createDebugDemoApp]):
-/// this is the vehicle for demonstrating that Welcome -> Exam Date ->
-/// Experience Level -> Home is genuinely clickable end to end (PREP-647),
-/// not a shortcut around it. No experience level is pre-seeded either,
-/// so Experience Level's choice cards must actually be tapped, the same
-/// as a real accountless user would.
+/// Onboarding starts incomplete so the demo exercises the same timeframe and
+/// optional check flow as the real app, with isolated synthetic repositories.
 void main() {
   runApp(createDebugDemoApp());
 }

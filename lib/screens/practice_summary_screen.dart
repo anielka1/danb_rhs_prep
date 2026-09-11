@@ -1,5 +1,4 @@
 import '../bootstrap/bootstrap_session_scope.dart';
-import '../widgets/study_plan_panel.dart';
 import 'package:flutter/material.dart';
 import '../widgets/practice_save_status.dart';
 import '../features/questions/domain/question.dart';
@@ -275,19 +274,8 @@ class PracticeSummaryScreen extends StatelessWidget {
             else
               const Text('No mistakes in this session'),
             const SizedBox(height: AppSpacing.md),
-            if (BootstrapSessionScope.maybeControllerOf(context)
-                        ?.progressRepository !=
-                    null &&
-                !controller.hasUnsavedChanges)
-              StudyPlanPanel(
-                  session: BootstrapSessionScope.controllerOf(context),
-                  repository: BootstrapSessionScope.controllerOf(context)
-                      .progressRepository!,
-                  now: () => controller.localNow,
-                  onFinished: () => _backToHome(context))
-            else
-              PrimaryButton(
-                  label: 'Back to Home', onPressed: () => _backToHome(context)),
+            PrimaryButton(
+                label: 'Back to Home', onPressed: () => _backToHome(context)),
             const SizedBox(height: AppSpacing.lg),
           ],
         ),

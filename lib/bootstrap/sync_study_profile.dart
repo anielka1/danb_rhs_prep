@@ -12,7 +12,7 @@ Future<void> syncStudyProfile(
   final snapshot = session.snapshot;
   final date = snapshot.examDateSelection;
   final experience = snapshot.experienceLevel;
-  if (date == null || experience == null) return;
+  if (date == null) return;
   final existing = await repository.loadProfile(snapshot.selectedExamId);
   final profile = UserProfile.fromOnboarding(
     examId: snapshot.selectedExamId,

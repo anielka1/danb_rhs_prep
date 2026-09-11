@@ -195,8 +195,8 @@ void main() {
         (tester) async {
       await tester.pumpWidget(appWith(const HomeScreen()));
       await tester.pumpAndSettle();
-      final size = tester
-          .getSize(find.widgetWithText(ElevatedButton, 'Start Practicing'));
+      final size =
+          tester.getSize(find.widgetWithText(ElevatedButton, 'Start learning'));
       expect(size.width, greaterThanOrEqualTo(44));
       expect(size.height, greaterThanOrEqualTo(44));
       expect(find.byType(FloatingActionButton), findsNothing);

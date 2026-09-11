@@ -11,6 +11,7 @@ import '../theme/app_theme.dart';
 import '../widgets/app_scaffold.dart';
 import '../widgets/app_card.dart';
 import '../widgets/primary_button.dart';
+import '../widgets/answer_option_tile.dart';
 
 class DiagnosticScreen extends StatefulWidget {
   const DiagnosticScreen({super.key, required this.session, this.random});
@@ -40,6 +41,9 @@ class _DiagnosticScreenState extends State<DiagnosticScreen> {
       _checking = true;
       _message = null;
       _checkFailed = false;
+      _startUnavailable = false;
+      _resume = false;
+      _done = false;
     });
     try {
       final repo = widget.session.progressRepository;
@@ -67,7 +71,7 @@ class _DiagnosticScreenState extends State<DiagnosticScreen> {
       _message = widget.session.snapshot.contentPackage.questions
               .any((q) => q.isApproved)
           ? e.message
-          : 'No approved questions are available for the starting check. You can skip it and continue to your plan.';
+          : 'No approved questions are available for the starting check. You can skip it and continue studying.';
     } catch (_) {
       _checkFailed = true;
       _message = 'Could not read your diagnostic. Please retry.';
@@ -164,6 +168,7 @@ class _DiagnosticScreenState extends State<DiagnosticScreen> {
   Widget build(BuildContext context) {
     final c = _controller;
     final snap = widget.session.snapshot;
+    final largeText = MediaQuery.textScalerOf(context).scale(1) >= 2;
     return PopScope(
         canPop: !_busy && !(c?.hasUnsavedChanges ?? false),
         child: AppScaffold(
@@ -171,10 +176,23 @@ class _DiagnosticScreenState extends State<DiagnosticScreen> {
                 child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-              Text(_done ? 'Your starting point' : 'Optional starting check',
-                  style: context.textStyles.h1),
-              Text('A learning snapshot, not a prediction of passing the exam.',
-                  style: context.textStyles.body),
+              Text(
+                  _done
+                      ? 'Your starting point'
+                      : c != null
+                          ? 'Starting check'
+                          : 'Optional starting check',
+                  style: largeText
+                      ? context.textStyles.h3
+                      : c != null && !_done
+                          ? context.textStyles.h2
+                          : context.textStyles.h1),
+              if (c == null || _done) ...[
+                const SizedBox(height: AppSpacing.sm),
+                Text(
+                    'Find areas to revisit. This small sample is not a prediction of passing the exam.',
+                    style: context.textStyles.body),
+              ],
               const SizedBox(height: AppSpacing.lg),
               if (_message != null)
                 Text(_message!, style: context.textStyles.body),
@@ -188,19 +206,50 @@ class _DiagnosticScreenState extends State<DiagnosticScreen> {
                       child: const Text('Skip for now'))
                 ])
               else if (_done) ...[
-                for (final domain in snap.contentPackage.exam.domains)
-                  AppCard(
-                      child: Text(
-                          c != null
-                              ? '${domain.name}: ${c.questions.where((q) => q.domainId == domain.id && c.feedbackFor(q.id)?.isCorrect == true).length} / ${c.questions.where((q) => q.domainId == domain.id).length}'
-                              : '${domain.name}: ${_recorded.where((a) => a.domainId == domain.id && a.isCorrect).length} / ${_recorded.where((a) => a.domainId == domain.id).length}',
-                          style: context.textStyles.body)),
+                AppCard(
+                    child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                      Text('${c?.answeredCount ?? _recorded.length} answered',
+                          style: context.textStyles.h2),
+                      const SizedBox(height: AppSpacing.md),
+                      for (final domain in snap.contentPackage.exam.domains)
+                        Padding(
+                            padding:
+                                const EdgeInsets.only(bottom: AppSpacing.lg),
+                            child: _DomainResult(
+                                name: domain.name,
+                                correct: c != null
+                                    ? c.questions
+                                        .where((q) =>
+                                            q.domainId == domain.id &&
+                                            c.feedbackFor(q.id)?.isCorrect ==
+                                                true)
+                                        .length
+                                    : _recorded
+                                        .where((a) =>
+                                            a.domainId == domain.id &&
+                                            a.isCorrect)
+                                        .length,
+                                total: c != null
+                                    ? c.questions
+                                        .where((q) => q.domainId == domain.id)
+                                        .length
+                                    : _recorded
+                                        .where((a) => a.domainId == domain.id)
+                                        .length)),
+                    ])),
+                const SizedBox(height: AppSpacing.md),
+                Text(
+                    'These answers are included in Progress. Use My weak areas in Practice to revisit areas with lower recorded accuracy. A few answers are only a starting point.',
+                    style: context.textStyles.body),
+                const SizedBox(height: AppSpacing.lg),
                 PrimaryButton(
-                    label: 'Continue to my plan',
+                    label: 'Continue to Home',
                     onPressed: () => Navigator.pop(context)),
               ] else if (c == null) ...[
                 Text(
-                    '${snap.contentPackage.exam.freeTier.diagnosticQuestions} questions across the exam areas. You can skip this and begin your plan.'),
+                    '${snap.contentPackage.exam.freeTier.diagnosticQuestions} questions across the exam areas. Your answers contribute to topic progress and help you choose areas to revisit in practice. You can skip this check.'),
                 if (!_startUnavailable)
                   PrimaryButton(
                       label: _retryStart
@@ -223,16 +272,25 @@ class _DiagnosticScreenState extends State<DiagnosticScreen> {
                     style: context.textStyles.label),
                 Text(c.currentQuestion.questionText,
                     style: context.textStyles.h3),
-                for (final a in c.currentQuestion.answers)
-                  ListTile(
-                      selected: _selection == a.id,
-                      leading: Icon(_selection == a.id
-                          ? Icons.radio_button_checked
-                          : Icons.radio_button_unchecked),
-                      title: Text(a.text),
-                      onTap: _busy
-                          ? null
-                          : () => setState(() => _selection = a.id)),
+                const SizedBox(height: AppSpacing.md),
+                LinearProgressIndicator(
+                    value: c.answeredCount / c.questions.length,
+                    semanticsLabel: 'Starting check progress',
+                    semanticsValue:
+                        '${(100 * c.answeredCount / c.questions.length).round()}'),
+                const SizedBox(height: AppSpacing.lg),
+                for (final (index, a) in c.currentQuestion.answers.indexed)
+                  Padding(
+                      padding: const EdgeInsets.only(bottom: AppSpacing.md),
+                      child: AnswerOptionTile(
+                          letter: String.fromCharCode(65 + index),
+                          text: a.text,
+                          state: _selection == a.id
+                              ? AnswerOptionState.selected
+                              : AnswerOptionState.unselected,
+                          onTap: _busy || c.hasUnsavedChanges
+                              ? null
+                              : () => setState(() => _selection = a.id))),
                 if (c.hasUnsavedChanges)
                   TextButton(
                       onPressed: () async {
@@ -261,4 +319,22 @@ class _DiagnosticScreenState extends State<DiagnosticScreen> {
               ],
             ]))));
   }
+}
+
+class _DomainResult extends StatelessWidget {
+  const _DomainResult(
+      {required this.name, required this.correct, required this.total});
+  final String name;
+  final int correct, total;
+  @override
+  Widget build(BuildContext context) =>
+      Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Text(name, style: context.textStyles.h3),
+        Text('$correct / $total correct', style: context.textStyles.body),
+        const SizedBox(height: AppSpacing.sm),
+        if (total > 0)
+          LinearProgressIndicator(
+              value: correct / total,
+              semanticsLabel: '$name, $correct of $total correct'),
+      ]);
 }

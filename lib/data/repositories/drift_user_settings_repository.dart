@@ -36,7 +36,7 @@ class DriftUserSettingsRepository implements UserSettingsRepository {
             studyPlanPreferencesJson:
                 Value(profile.studyPlanPreferences?.encode()),
             examId: profile.examId,
-            experienceLevel: profile.experienceLevel.name,
+            experienceLevel: profile.experienceLevel?.name ?? 'notCollected',
             examDatePrecision: profile.examDatePrecision.name,
             examDate: Value(profile.examDate?.toUtc()),
             dailyGoalQuestions: profile.dailyGoalQuestions,
@@ -54,10 +54,12 @@ class DriftUserSettingsRepository implements UserSettingsRepository {
       studyPlanPreferences:
           StudyPlanPreferences.decode(row.studyPlanPreferencesJson),
       examId: row.examId,
-      experienceLevel: ExperienceLevel.values.firstWhere(
-        (value) => value.name == row.experienceLevel,
-        orElse: () => ExperienceLevel.justStarting,
-      ),
+      experienceLevel: switch (row.experienceLevel) {
+        'justStarting' => ExperienceLevel.justStarting,
+        'studyingAlready' => ExperienceLevel.studyingAlready,
+        'retakingExam' => ExperienceLevel.retakingExam,
+        _ => null,
+      },
       examDatePrecision: ExamDatePrecision.values.firstWhere(
         (value) => value.name == row.examDatePrecision,
         orElse: () => ExamDatePrecision.notScheduled,

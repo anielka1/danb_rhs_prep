@@ -10,7 +10,6 @@ import 'package:danb_rhs_prep/domain/repositories/fakes/in_memory_user_settings_
 import 'package:danb_rhs_prep/screens/main_shell.dart';
 import 'package:danb_rhs_prep/screens/diagnostic_screen.dart';
 import 'fixtures.dart';
-import 'onboarding_helper.dart';
 
 void main() {
   for (final mode in ['complete', 'skip', 'unavailable']) {
@@ -44,9 +43,8 @@ void main() {
         await tap('Start Preparing');
         await tap('Within a month');
         await tap('Continue');
-        await tap('Studying already');
-        await tap('Continue');
-        await selectAvailability(tester, skipDiagnostic: false);
+        expect(find.text('Just starting'), findsNothing);
+        expect(await local.readExperienceLevel(), isNull);
         expect(find.byType(DiagnosticScreen), findsOneWidget);
       }
 
@@ -75,8 +73,6 @@ void main() {
         // Saved onboarding choices are still presented; availability toggles retain state.
         await tap('Start Preparing');
         await tap('Continue');
-        await tap('Continue');
-        await tap('Save availability');
         await tap('Resume diagnostic');
         expect(find.text('Question 2 of 15'), findsOneWidget);
         expect(
@@ -93,14 +89,12 @@ void main() {
             hasLength(15));
         expect(await progress.practiceSessionsForExam(package.exam.id),
             hasLength(1));
-        await tap('Continue to my plan');
+        await tap('Continue to Home');
       }
       expect(find.byType(MainShell), findsOneWidget);
-      await tap('Study calendar');
-      expect(find.text('Your study calendar'), findsOneWidget);
-      if (mode == 'unavailable') {
-        expect(find.textContaining('No question plan yet'), findsOneWidget);
-      }
+      expect(find.text('Study calendar'), findsNothing);
+      expect((await settings.loadProfile(package.exam.id))!.experienceLevel,
+          isNull);
       await tester.pumpWidget(const SizedBox.shrink());
       await tester.pumpWidget(app());
       await tester.pumpAndSettle();

@@ -23,7 +23,7 @@ class StudyHelpScreen extends StatelessWidget {
     'What if an answer does not save?':
         'Use the retry action shown with the save error. Keep the session open until saving succeeds. Closing the app can lose changes that have not been saved.',
     'What happens when I reset?':
-        'Reset study progress removes answers, saved questions and session history for this exam. Your study plan and appearance stay unchanged. You can cancel before confirming.',
+        'Reset study progress removes answers, saved questions and session history for this exam. Your exam preferences and appearance stay unchanged. You can cancel before confirming.',
     'Does the demo keep my progress?':
         'Demo questions and starting history are examples. Your changes last while the demo is running and reset when it restarts. The standard app stores study progress on the device.',
   };

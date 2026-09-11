@@ -45,7 +45,7 @@ final class BootstrapReady extends BootstrapResult {
   final ContentPackage contentPackage;
 
   /// The real, saved profile for [selectedExamId], if one exists —
-  /// `ExperienceLevelScreen`'s onboarding-completion step is the only
+  /// `ExamDateScreen`'s onboarding-completion step is the only
   /// writer today (PREP-663), via [userSettingsRepository]. Null on a
   /// fresh install, before onboarding has completed once, or whenever
   /// [userSettingsRepository] itself is null.
@@ -92,7 +92,7 @@ final class BootstrapReady extends BootstrapResult {
   /// Returns a copy with the given fields replaced — used to keep the
   /// in-memory session snapshot synchronized with local storage as
   /// onboarding progresses (e.g. after `ExamDateScreen` or
-  /// `ExperienceLevelScreen` successfully saves an answer), without
+  /// `ExamDateScreen` successfully saves an answer), without
   /// waiting for a fresh `AppBootstrapService.initialize()`/`retry()`
   /// run. Each onboarding screen builds an updated snapshot this way
   /// immediately after its own write succeeds, and passes it — not the

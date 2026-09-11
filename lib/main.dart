@@ -22,7 +22,6 @@ import 'screens/splash_screen.dart';
 import 'screens/main_shell.dart';
 import 'screens/welcome_screen.dart';
 import 'screens/exam_date_screen.dart';
-import 'screens/experience_level_screen.dart';
 import 'screens/exam_overview_screen.dart';
 import 'screens/practice_question_screen.dart';
 import 'screens/answer_explanation_screen.dart';
@@ -199,11 +198,6 @@ class _DanbRhsPrepAppState extends State<DanbRhsPrepApp> {
                   userSettingsRepository: _userSettingsRepository,
                 ),
             ExamDateScreen.route: (_) => ExamDateScreen(
-                  localStore: _localStore,
-                  analytics: widget.analytics,
-                  userSettingsRepository: _userSettingsRepository,
-                ),
-            ExperienceLevelScreen.route: (_) => ExperienceLevelScreen(
                   localStore: _localStore,
                   analytics: widget.analytics,
                   userSettingsRepository: _userSettingsRepository,

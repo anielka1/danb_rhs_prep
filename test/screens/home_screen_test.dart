@@ -1,235 +1,218 @@
-import 'package:danb_rhs_prep/domain/repositories/fakes/in_memory_progress_repository.dart';
-import 'package:danb_rhs_prep/screens/practice_question_screen.dart';
 import 'dart:async';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-
 import 'package:danb_rhs_prep/bootstrap/app_bootstrap_service.dart';
 import 'package:danb_rhs_prep/bootstrap/bootstrap_session_controller.dart';
 import 'package:danb_rhs_prep/bootstrap/bootstrap_session_scope.dart';
-import 'package:danb_rhs_prep/debug/debug_demo_environment.dart';
-import 'package:danb_rhs_prep/domain/models/answer_attempt.dart';
 import 'package:danb_rhs_prep/domain/models/entitlement.dart';
-import 'package:danb_rhs_prep/domain/models/mock_attempt.dart';
 import 'package:danb_rhs_prep/domain/models/practice_session.dart';
-import 'package:danb_rhs_prep/domain/models/question_state.dart';
-import 'package:danb_rhs_prep/domain/models/readiness_snapshot.dart';
 import 'package:danb_rhs_prep/domain/models/user_profile.dart';
-import 'package:danb_rhs_prep/domain/repositories/progress_repository.dart';
-import 'package:danb_rhs_prep/screens/exam_overview_screen.dart';
+import 'package:danb_rhs_prep/domain/repositories/fakes/in_memory_progress_repository.dart';
+import 'package:danb_rhs_prep/practice_session/practice_session_controller.dart';
+import 'package:danb_rhs_prep/practice_session/practice_session_scope.dart';
 import 'package:danb_rhs_prep/screens/home_screen.dart';
+import 'package:danb_rhs_prep/screens/diagnostic_screen.dart';
+import 'package:danb_rhs_prep/screens/practice_question_screen.dart';
+import 'package:danb_rhs_prep/screens/saved_questions_screen.dart';
 import 'package:danb_rhs_prep/theme/app_theme.dart';
+import 'package:danb_rhs_prep/widgets/primary_button.dart';
+import '../study_plan/fixtures.dart';
 
-/// Always throws — proves HomeScreen falls back to its honest default
-/// empty state on a repository failure rather than crashing or hanging.
-class _ThrowingProgressRepository implements ProgressRepository {
+class _Repo extends InMemoryProgressRepository {
+  bool fail = false;
+  Completer<void>? gate;
   @override
-  Future<PracticeSession?> inProgressPracticeSession(String examId) {
-    throw StateError('progress repository unavailable');
+  Future<PracticeSession?> inProgressPracticeSession(String id) async {
+    if (fail) throw StateError('read error');
+    await gate?.future;
+    return super.inProgressPracticeSession(id);
   }
-
-  @override
-  Future<void> recordAnswerAttempt(AnswerAttempt attempt) =>
-      throw UnimplementedError();
-  @override
-  Future<List<AnswerAttempt>> answerAttemptsForExam(String examId) =>
-      throw UnimplementedError();
-  @override
-  Future<QuestionState> questionState(String examId, String questionId) =>
-      throw UnimplementedError();
-  @override
-  Future<void> saveQuestionState(QuestionState state) =>
-      throw UnimplementedError();
-  @override
-  Future<List<QuestionState>> questionStatesForExam(String examId) =>
-      throw UnimplementedError();
-  @override
-  Future<void> savePracticeSession(PracticeSession session) =>
-      throw UnimplementedError();
-  @override
-  Future<void> saveMockAttempt(MockAttempt attempt) =>
-      throw UnimplementedError();
-  @override
-  Future<MockAttempt?> mockAttempt(String attemptId) =>
-      throw UnimplementedError();
-  @override
-  Future<List<MockAttempt>> mockAttemptsForExam(String examId) =>
-      throw UnimplementedError();
-  @override
-  Future<void> saveReadinessSnapshot(ReadinessSnapshot snapshot) =>
-      throw UnimplementedError();
-  @override
-  Future<ReadinessSnapshot?> latestReadinessSnapshot(String examId) =>
-      throw UnimplementedError();
-  @override
-  Future<List<ReadinessSnapshot>> readinessSnapshotsForExam(String examId) =>
-      throw UnimplementedError();
-}
-
-/// Lets a test hold [inProgressPracticeSession] pending until it has
-/// asserted the loading state, then resolve it under explicit control —
-/// the real in-memory repository's `Future` (no real `await` inside)
-/// completes on the next microtask, too fast for a single [WidgetTester
-/// .pump] to reliably observe [ConnectionState.waiting] beforehand.
-class _ControlledProgressRepository extends InMemoryProgressRepository {
-  final Completer<PracticeSession?> _completer = Completer<PracticeSession?>();
-  void complete(PracticeSession? session) => _completer.complete(session);
-  @override
-  Future<PracticeSession?> inProgressPracticeSession(String examId) =>
-      _completer.future;
-}
-
-Widget _wrap(Widget home) {
-  final BootstrapSessionController controller = BootstrapSessionController(
-    BootstrapReady(
-      selectedExamId: DebugDemoEnvironment.demoExamId,
-      contentPackage: DebugDemoEnvironment.demoContentPackage,
-      profile: null,
-      themePreference: ThemePreference.system,
-      readinessSnapshot: null,
-      entitlement: Entitlement.free(lastVerifiedAt: DateTime.utc(2026, 1, 1)),
-      onboardingComplete: true,
-      examDateSelection: null,
-      experienceLevel: null,
-    ),
-  );
-  return MaterialApp(
-    theme: AppTheme.lightTheme,
-    home: BootstrapSessionScope(controller: controller, child: home),
-    routes: {
-      ExamOverviewScreen.route: (_) => const ExamOverviewScreen(),
-    },
-  );
 }
 
 void main() {
-  group('no progress repository (production default)', () {
-    testWidgets(
-        'shows the honest "no study tasks yet" empty state immediately, '
-        'with no loading flash', (tester) async {
-      await tester.pumpWidget(_wrap(const HomeScreen()));
-      // A single pump (not pumpAndSettle): if this ever showed a loading
-      // state first, it would still be visible right here.
-      await tester.pump();
-
-      expect(find.text('Build your confidence'), findsOneWidget);
-      expect(find.text('Start Practicing'), findsOneWidget);
-      expect(find.text('Continue'), findsNothing);
-      expect(find.byType(CircularProgressIndicator), findsNothing);
-    });
-
-    testWidgets('Start Practicing navigates to ExamOverviewScreen',
-        (tester) async {
-      await tester.pumpWidget(_wrap(const HomeScreen()));
-      await tester.pumpAndSettle();
-
-      await tester.tap(find.text('Start Practicing'));
-      await tester.pumpAndSettle();
-
-      expect(find.byType(ExamOverviewScreen), findsOneWidget);
-    });
+  final now = DateTime.utc(2026, 9, 11);
+  final package = fixture(count: 80);
+  late _Repo repo;
+  setUp(() {
+    repo = _Repo();
   });
+  BootstrapSessionController bootstrap({bool empty = false}) =>
+      BootstrapSessionController(
+          BootstrapReady(
+              profile: null,
+              selectedExamId: package.exam.id,
+              contentPackage: empty ? fixture(count: 0) : package,
+              themePreference: ThemePreference.system,
+              readinessSnapshot: null,
+              entitlement: Entitlement.free(lastVerifiedAt: now),
+              onboardingComplete: true,
+              examDateSelection: null,
+              experienceLevel: null),
+          progressRepository: repo);
+  Widget app({bool empty = false, bool dark = false, double scale = 1}) =>
+      MaterialApp(
+          theme: dark ? AppTheme.darkTheme : AppTheme.lightTheme,
+          home: MediaQuery(
+              data: MediaQueryData(textScaler: TextScaler.linear(scale)),
+              child: BootstrapSessionScope(
+                  controller: bootstrap(empty: empty),
+                  child:
+                      HomeScreen(progressRepository: repo, now: () => now))));
+  Future<PracticeSession> seed(
+      {PracticeMode mode = PracticeMode.planned}) async {
+    final qs = package.questions.take(3).toList();
+    final s = PracticeSession(
+        id: 'legacy-session',
+        examId: package.exam.id,
+        mode: mode,
+        questionIds: qs.map((q) => q.id).toList(),
+        answerOrder: {
+          for (final q in qs) q.id: q.answers.reversed.map((a) => a.id).toList()
+        },
+        status: SessionStatus.inProgress,
+        startedAt: now,
+        planDate: '2026-09-10');
+    await repo.savePracticeSession(s);
+    final c = PracticeSessionController(
+        session: s, questions: qs, progressRepository: repo, now: () => now);
+    await c.submitAnswer(qs.first.correctAnswerId);
+    return s;
+  }
 
-  group('progress repository with a real in-progress session', () {
-    testWidgets(
-        'shows a loading state while the query is in flight, then the '
-        'resolved session — never a flash of the wrong (empty) content',
-        (tester) async {
-      final repository = _ControlledProgressRepository();
-      await tester
-          .pumpWidget(_wrap(HomeScreen(progressRepository: repository)));
-
-      // The query is still pending — a loading state, not a flash of the
-      // wrong (empty) content.
-      await tester.pump();
-      expect(find.byType(CircularProgressIndicator), findsOneWidget);
-      expect(find.text('Build your confidence'), findsNothing);
-
-      repository.complete(DebugDemoEnvironment.demoInProgressPracticeSession);
+  testWidgets('empty history has no invented statistics or calendar',
+      (tester) async {
+    await tester.pumpWidget(app());
+    await tester.pumpAndSettle();
+    expect(find.textContaining('Your first answer'), findsOneWidget);
+    expect(find.text('Answer accuracy'), findsNothing);
+    expect(find.text('Study calendar'), findsNothing);
+    expect(find.textContaining('Today'), findsNothing);
+    expect(find.byType(PrimaryButton), findsOneWidget);
+    await tester.tap(find.text('Start learning'));
+    await tester.pumpAndSettle();
+    expect(find.byType(PracticeQuestionScreen), findsOneWidget);
+    expect(await repo.practiceSessionsForExam(package.exam.id), hasLength(1));
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
+  testWidgets('no content disables start but saved library remains accessible',
+      (tester) async {
+    await tester.pumpWidget(app(empty: true));
+    await tester.pumpAndSettle();
+    expect(tester.widget<PrimaryButton>(find.byType(PrimaryButton)).onPressed,
+        isNull);
+    expect(find.textContaining('Questions are being prepared'), findsOneWidget);
+    await tester.ensureVisible(find.text('Saved questions'));
+    await tester.tap(find.text('Saved questions'));
+    await tester.pumpAndSettle();
+    expect(find.byType(SavedQuestionsScreen), findsOneWidget);
+  });
+  testWidgets(
+      'loading never flashes a new session and read error retries safely',
+      (tester) async {
+    final s = await seed();
+    repo.gate = Completer<void>();
+    await tester.pumpWidget(app());
+    await tester.pump();
+    expect(tester.widget<PrimaryButton>(find.byType(PrimaryButton)).onPressed,
+        isNull);
+    repo.fail = true;
+    repo.gate!.complete();
+    await tester.pumpAndSettle();
+    // Reconstruct to exercise the failing read, not an empty repository.
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pumpWidget(app());
+    await tester.pumpAndSettle();
+    expect(find.text('Retry'), findsOneWidget);
+    expect(find.textContaining('Your first answer'), findsNothing);
+    repo.fail = false;
+    await tester.tap(find.text('Retry'));
+    await tester.pumpAndSettle();
+    expect(find.text('Continue learning'), findsOneWidget);
+    expect((await repo.inProgressPracticeSession(package.exam.id))!.id, s.id);
+  });
+  testWidgets(
+      'legacy planned session resumes exact saved answers and order after restart',
+      (tester) async {
+    final s = await seed();
+    for (var i = 0; i < 2; i++) {
+      await tester.pumpWidget(app());
       await tester.pumpAndSettle();
-
-      expect(find.text('Continue'), findsOneWidget);
-      expect(find.text('Continue'), findsOneWidget);
-      expect(find.text('Build your confidence'), findsNothing);
-      expect(find.text('Start Practicing'), findsNothing);
-    });
-
-    testWidgets(
-        'reproduces the audited defect: HomeScreen must reflect a real '
-        'unfinished session as "Continue", not the generic empty state',
-        (tester) async {
-      await tester.pumpWidget(_wrap(
-        HomeScreen(
-            progressRepository: DebugDemoEnvironment.buildProgressRepository()),
-      ));
-
+      expect(find.text('100%'), findsOneWidget);
+      await tester.tap(find.text('Continue learning'));
       await tester.pumpAndSettle();
-
-      expect(find.text('Continue'), findsOneWidget);
-      expect(find.text('Continue'), findsOneWidget);
-      expect(find.text('Build your confidence'), findsNothing);
-      expect(find.text('Start Practicing'), findsNothing);
-    });
-
-    testWidgets('Continue resumes the real question screen directly',
-        (tester) async {
-      await tester.pumpWidget(_wrap(
-        HomeScreen(
-            progressRepository: DebugDemoEnvironment.buildProgressRepository()),
-      ));
-      await tester.pumpAndSettle();
-
-      await tester.ensureVisible(find.text('Continue'));
-      await tester.tap(find.text('Continue'));
-      await tester.pumpAndSettle();
-
       expect(find.byType(PracticeQuestionScreen), findsOneWidget);
-    });
+      final c = PracticeSessionScope.of(
+          tester.element(find.byType(PracticeQuestionScreen)));
+      expect(c.answeredCount, 1);
+      expect(c.session.id, s.id);
+      expect(c.session.answerOrder, s.answerOrder);
+      await tester.pumpWidget(const SizedBox.shrink());
+    }
+    expect(await repo.practiceSessionsForExam(package.exam.id), hasLength(1));
+    expect(await repo.answerAttemptsForExam(package.exam.id), hasLength(1));
   });
-
-  group('progress repository present but no in-progress session', () {
-    testWidgets('still shows the honest empty state, not a fabricated one',
-        (tester) async {
-      // A repository seeded with only a *completed* session (no
-      // in-progress one) — every SeedX field left at its default empty
-      // list except the practice-session one, so this stays independent
-      // of DebugDemoEnvironment's in-progress fixture. Reusing the real
-      // InMemoryProgressRepository, not a second fake implementation.
-      final repository = DebugDemoEnvironment.buildProgressRepository();
-      // Drain the seeded in-progress session so only the completed one
-      // remains — proves the "no session" branch, not just "no
-      // repository at all".
-      await repository.savePracticeSession(
-        DebugDemoEnvironment.demoInProgressPracticeSession
-            .copyWith(status: SessionStatus.abandoned),
-      );
-
-      await tester
-          .pumpWidget(_wrap(HomeScreen(progressRepository: repository)));
-      await tester.pumpAndSettle();
-
-      expect(find.text('Free practice'), findsOneWidget);
-      expect(find.text('Browse practice modes'), findsOneWidget);
-      expect(find.text('Continue'), findsNothing);
-    });
+  testWidgets(
+      'active starting check opens diagnostic rather than another practice',
+      (tester) async {
+    await seed(mode: PracticeMode.diagnostic);
+    await tester.pumpWidget(app());
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Continue learning'));
+    await tester.pumpAndSettle();
+    expect(find.byType(DiagnosticScreen), findsOneWidget);
+    expect(find.text('Resume diagnostic'), findsOneWidget);
+    expect(await repo.practiceSessionsForExam(package.exam.id), hasLength(1));
   });
-
-  group('progress repository failure', () {
-    testWidgets('shows a retryable error, never fabricates an empty session',
+  for (final dark in [false, true]) {
+    testWidgets('starting check selection and save at 4x text dark=$dark',
         (tester) async {
-      await tester.pumpWidget(
-        _wrap(HomeScreen(progressRepository: _ThrowingProgressRepository())),
-      );
-      await tester.pumpAndSettle();
+      tester.view.physicalSize = const Size(320, 568);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      final semantics = tester.ensureSemantics();
+      try {
+        await tester.pumpWidget(MaterialApp(
+            theme: dark ? AppTheme.darkTheme : AppTheme.lightTheme,
+            home: MediaQuery(
+                data: const MediaQueryData(textScaler: TextScaler.linear(4)),
+                child: DiagnosticScreen(session: bootstrap()))));
+        await tester.pumpAndSettle();
+        await tester.ensureVisible(find.text('Start diagnostic'));
+        await tester.tap(find.text('Start diagnostic'));
+        await tester.pumpAndSettle();
+        await tester.ensureVisible(find.text('Correct fixture answer'));
+        await tester.tap(find.text('Correct fixture answer'));
+        await tester.pumpAndSettle();
+        await tester.ensureVisible(find.text('Save and continue'));
+        await tester.tap(find.text('Save and continue'));
+        await tester.pumpAndSettle();
+        expect(find.text('Question 2 of 15'), findsOneWidget);
+        expect(
+            (await repo.answerAttemptsForExam(package.exam.id))
+                .single
+                .isCorrect,
+            isTrue);
+        expect(tester.takeException(), isNull);
+      } finally {
+        semantics.dispose();
+      }
+      await tester.pumpWidget(const SizedBox.shrink());
+    });
+  }
+  for (final dark in [false, true]) {
+    testWidgets('small screen large text dark=$dark', (tester) async {
+      tester.view.physicalSize = const Size(320, 568);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      final semantics = tester.ensureSemantics();
 
+      await tester.pumpWidget(app(dark: dark, scale: 4));
+      await tester.pumpAndSettle();
+      expect(find.bySemanticsLabel('Settings'), findsOneWidget);
+      await tester.ensureVisible(find.text('Starting check'));
+      await tester.pumpAndSettle();
       expect(tester.takeException(), isNull);
-      expect(find.text('Could not load your study plan. Please retry.'),
-          findsOneWidget);
-      expect(find.text('Retry'), findsOneWidget);
-      expect(find.text('Free practice'), findsOneWidget);
-      expect(find.text('Browse practice modes'), findsOneWidget);
-      expect(find.text('Continue'), findsNothing);
+      semantics.dispose();
     });
-  });
+  }
 }

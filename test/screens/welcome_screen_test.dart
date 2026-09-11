@@ -1,4 +1,3 @@
-import '../study_plan/onboarding_helper.dart';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -8,7 +7,6 @@ import 'package:danb_rhs_prep/bootstrap/app_bootstrap_service.dart';
 import 'package:danb_rhs_prep/bootstrap/bootstrap_session_controller.dart';
 import 'package:danb_rhs_prep/bootstrap/bootstrap_session_scope.dart';
 import 'package:danb_rhs_prep/domain/models/entitlement.dart';
-import 'package:danb_rhs_prep/domain/models/experience_level.dart';
 import 'package:danb_rhs_prep/domain/repositories/bootstrap_local_store.dart';
 import 'package:danb_rhs_prep/domain/repositories/fakes/in_memory_bootstrap_local_store.dart';
 import 'package:danb_rhs_prep/domain/repositories/fakes/in_memory_user_settings_repository.dart';
@@ -18,7 +16,6 @@ import 'package:danb_rhs_prep/features/content/domain/content_package.dart';
 import 'package:danb_rhs_prep/domain/models/user_profile.dart';
 import 'package:danb_rhs_prep/features/exams/domain/exam_config.dart';
 import 'package:danb_rhs_prep/screens/exam_date_screen.dart';
-import 'package:danb_rhs_prep/screens/experience_level_screen.dart';
 import 'package:danb_rhs_prep/screens/main_shell.dart';
 import 'package:danb_rhs_prep/screens/welcome_screen.dart';
 import 'package:danb_rhs_prep/services/analytics_service.dart';
@@ -311,19 +308,11 @@ void main() {
       await tester.pump();
       await tester.tap(find.text('Continue'));
       await tester.pumpAndSettle();
-      expect(find.byType(ExperienceLevelScreen), findsOneWidget);
-
-      await tester.tap(find.text('Just starting'));
-      await tester.pump();
-      await tester.tap(find.text('Continue'));
-      await tester.pumpAndSettle();
-
-      await selectAvailability(tester);
       expect(find.byType(MainShell), findsOneWidget);
       final UserProfile? saved =
           await userSettingsRepository.loadProfile(kDefaultExamId);
       expect(saved, isNotNull);
-      expect(saved!.experienceLevel, ExperienceLevel.justStarting);
+      expect(saved!.experienceLevel, isNull);
       expect(saved.onboardingComplete, isTrue);
     });
   });

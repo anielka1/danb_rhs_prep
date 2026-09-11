@@ -8,7 +8,6 @@ import 'package:danb_rhs_prep/bootstrap/bootstrap_session_scope.dart';
 import 'package:danb_rhs_prep/debug/debug_demo_environment.dart';
 import 'package:danb_rhs_prep/main_demo.dart' as demo;
 import 'package:danb_rhs_prep/screens/exam_date_screen.dart';
-import 'package:danb_rhs_prep/screens/experience_level_screen.dart';
 import 'package:danb_rhs_prep/screens/main_shell.dart';
 import 'package:danb_rhs_prep/screens/practice_question_screen.dart';
 import 'package:danb_rhs_prep/screens/welcome_screen.dart';
@@ -34,14 +33,7 @@ Future<void> _clickThroughOnboarding(WidgetTester tester) async {
   await tester.tap(find.text('Continue'));
   await tester.pumpAndSettle();
   expect(tester.takeException(), isNull);
-  expect(find.byType(ExperienceLevelScreen), findsOneWidget);
-
-  // Likewise, no experience level is pre-seeded.
-  await tester.tap(find.text('Studying already'));
-  await tester.pumpAndSettle();
-  await tester.tap(find.text('Continue'));
-  await tester.pumpAndSettle();
-  await selectAvailability(tester);
+  await skipStartingCheck(tester);
   expect(tester.takeException(), isNull);
 }
 
@@ -59,8 +51,8 @@ void main() {
     final snapshot = BootstrapSessionScope.snapshotOf(
         tester.element(find.byType(MainShell)));
     expect(snapshot.profile!.examId, DebugDemoEnvironment.demoProfile.examId);
-    expect(snapshot.profile!.studyPlanPreferences!.minutes, 30);
-    expect(snapshot.profile!.studyPlanPreferences!.weekdays, {1});
+    expect(snapshot.profile!.studyPlanPreferences, isNull);
+    expect(snapshot.experienceLevel, isNull);
     expect(snapshot.profile!.dailyGoalQuestions,
         DebugDemoEnvironment.demoProfile.dailyGoalQuestions);
     expect(
@@ -120,7 +112,7 @@ void main() {
     await _clickThroughOnboarding(tester);
 
     expect(find.byType(MainShell), findsOneWidget);
-    expect(find.text('Your study day'), findsOneWidget);
+    expect(find.text('Your study space'), findsOneWidget);
 
     await tester.tap(find.text('Practice'));
     await tester.pumpAndSettle();

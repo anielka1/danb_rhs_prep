@@ -35,9 +35,7 @@ Future<void> _completeOnboarding(WidgetTester tester) async {
   await _tapText(tester, 'Start Preparing');
   await _tapText(tester, "I haven't scheduled it yet");
   await _tapText(tester, 'Continue');
-  await _tapText(tester, 'Just starting');
-  await _tapText(tester, 'Continue');
-  await selectAvailability(tester);
+  await skipStartingCheck(tester);
   expect(find.byType(MainShell), findsOneWidget);
 }
 
@@ -48,9 +46,9 @@ void main() {
     await _completeOnboarding(tester);
     expect(find.byTooltip('Settings'), findsOneWidget);
     expect(tester.getCenter(find.byTooltip('Settings')).dy,
-        lessThan(tester.getBottomLeft(find.text('Your study day')).dy + 40));
+        lessThan(tester.getBottomLeft(find.text('Your study space')).dy + 40));
     expect(find.byIcon(Icons.wb_sunny_outlined), findsNothing);
-    await _tapText(tester, 'Browse practice modes');
+    await _tapText(tester, 'Practice your way');
     await _tapText(tester, 'Start Practice Exam');
     await tester.tap(find.bySemanticsLabel('Bookmark question'));
     await tester.pumpAndSettle();
@@ -81,11 +79,8 @@ void main() {
     await _tapText(tester, 'Save changes');
     expect(find.byType(ProfileSettingsScreen), findsOneWidget);
     expect(find.text('In 1–3 months'), findsOneWidget);
-    await _tapText(tester, 'Study experience');
-    await _tapText(tester, 'Studying already');
-    await _tapText(tester, 'Save changes');
-    expect(find.byType(ProfileSettingsScreen), findsOneWidget);
-    expect(find.text('Studying already'), findsOneWidget);
+    expect(find.text('Study experience'), findsNothing);
+    expect(find.text('Study availability'), findsNothing);
     await _tapText(tester, 'Exam timeframe');
     await tester.tap(find.bySemanticsLabel('Back'));
     await tester.pumpAndSettle();
@@ -98,7 +93,7 @@ void main() {
 
     // Free practice remains a working secondary route; the main Continue
     // now resumes questions directly (covered by Home integration tests).
-    await _tapText(tester, 'Browse practice modes');
+    await _tapText(tester, 'Practice your way');
 
     await _tapText(tester, 'Start Practice Exam');
 
