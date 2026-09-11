@@ -165,6 +165,7 @@ class RevenueCatSubscriptionService implements SubscriptionService {
   Future<List<SubscriptionOffer>> loadOffers(
       SubscriptionProductIds products) async {
     try {
+      _packages.clear();
       await _initialize();
       if (!_validUrl(termsUrl) || !_validUrl(privacyUrl)) {
         throw const SubscriptionFailure('Purchases are currently unavailable.');

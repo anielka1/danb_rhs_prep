@@ -53,7 +53,7 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
   }
 
   Future<void> _load() async {
-    setState(() { _loading = true; _message = null; });
+    setState(() { _loading = true; _message = null; _offers = const []; _selected = null; });
     try {
       final offers = await widget.controller.service.loadOffers(widget.products);
       if (!mounted) return;

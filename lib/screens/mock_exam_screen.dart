@@ -35,6 +35,7 @@ class _MockExamScreenState extends State<MockExamScreen> {
   ContentPackage? _content;
   ProgressRepository? _repository;
   Entitlement? _entitlement;
+  bool _opening = false;
   bool _initialized = false;
   bool _loading = true;
   bool _failed = false;
@@ -95,6 +96,16 @@ class _MockExamScreenState extends State<MockExamScreen> {
   }
 
   Future<void> _open() async {
+    if (_opening) return;
+    _opening = true;
+    try {
+      await _openOnce();
+    } finally {
+      _opening = false;
+    }
+  }
+
+  Future<void> _openOnce() async {
     final subscriptions = SubscriptionScope.maybeOf(context);
     if (subscriptions != null) {
       _entitlement = await subscriptions.refresh();
