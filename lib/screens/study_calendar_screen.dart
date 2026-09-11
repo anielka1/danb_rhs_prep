@@ -111,13 +111,28 @@ class _StudyCalendarScreenState extends State<StudyCalendarScreen> {
                           children: [
                         Text('${dateKey(day.date)} · ${day.type.name}',
                             style: context.textStyles.h3),
-                        Text(
-                            '${day.status.name} · ${day.newIds.length} new · ${day.reviewIds.length} reviews',
-                            style: context.textStyles.body),
-                        Text(
-                            'About ${(day.estimatedSeconds / 60).ceil()} min / ${day.budgetSeconds ~/ 60} min available',
-                            style: context.textStyles.bodySmall),
-                        if (day.date.isAfter(calendarDate(widget.now())) &&
+                        Text(day.status.name, style: context.textStyles.body),
+                        if (day.recordedAnswers > 0)
+                          Text(
+                              '${day.recordedAnswers} answers recorded · ${(day.spentSeconds / 60).ceil()} min spent',
+                              style: context.textStyles.body),
+                        if (day.type == StudyDayType.exam)
+                          const Text(
+                              'Exam day · change the exam date in Settings')
+                        else if (day.type == StudyDayType.rest)
+                          const Text('Day off · no study scheduled')
+                        else if (day.status == StudyDayStatus.missed)
+                          const Text('Session not completed')
+                        else if (day.status != StudyDayStatus.completed) ...[
+                          Text(
+                              '${day.newIds.length} new · ${day.reviewIds.length} reviews remaining',
+                              style: context.textStyles.body),
+                          Text(
+                              'About ${(day.estimatedSeconds / 60).ceil()} min / ${day.budgetSeconds ~/ 60} min available',
+                              style: context.textStyles.bodySmall),
+                        ],
+                        if (day.type != StudyDayType.exam &&
+                            day.date.isAfter(calendarDate(widget.now())) &&
                             day.status == StudyDayStatus.projected)
                           Wrap(spacing: AppSpacing.sm, children: [
                             for (final type in [

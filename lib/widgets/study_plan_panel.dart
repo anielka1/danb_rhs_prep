@@ -70,10 +70,10 @@ class _StudyPlanPanelState extends State<StudyPlanPanel>
   Future<void> _load() async {
     try {
       final snapshot = widget.session.snapshot;
-      final attempts = await widget.repository
-          .answerAttemptsForExam(snapshot.selectedExamId);
       final active = await widget.repository
           .inProgressPracticeSession(snapshot.selectedExamId);
+      final attempts = await widget.repository
+          .answerAttemptsForExam(snapshot.selectedExamId);
       final schedule = widget.repository is StudyScheduleRepository
           ? await (widget.repository as StudyScheduleRepository)
               .studySchedule(snapshot.selectedExamId)
@@ -248,28 +248,47 @@ class _StudyPlanPanelState extends State<StudyPlanPanel>
             '${plan.uniqueAnswered} / ${plan.availableQuestions} approved questions explored',
             style: context.textStyles.body),
         const SizedBox(height: AppSpacing.md),
+        if (_active != null) ...[
+          Text('Pick up where you left off', style: context.textStyles.h3),
+          PrimaryButton(
+              label: _active!.mode == PracticeMode.planned
+                  ? 'Continue planned session'
+                  : 'Continue',
+              isLoading: _busy,
+              onPressed: _start),
+        ],
         if (plan.condition == PlanCondition.needsAvailability) ...[
           const Text(
               'Choose study days and minutes to create your plan. Your existing question goal stays unchanged.'),
-          PrimaryButton(
-              label: 'Set study availability', onPressed: _availability),
+          if (_active == null)
+            PrimaryButton(
+                label: 'Set study availability', onPressed: _availability)
+          else
+            TextButton(
+                onPressed: _availability,
+                child: const Text('Set study availability')),
         ] else ...[
+          if ((today?.recordedAnswers ?? 0) > 0)
+            Text('${today!.recordedAnswers} answers recorded today',
+                style: context.textStyles.body),
           Text(
-              switch (plan.condition) {
-                PlanCondition.emptyPool =>
-                  'Approved study questions are not available yet. Your preferences are saved.',
-                PlanCondition.examReached =>
-                  'Your exam date has arrived. Update it in Settings to plan more study.',
-                PlanCondition.noStudyDays =>
-                  'No selected study days before your exam. Adjust your availability.',
-                PlanCondition.shortReview =>
-                  'A short review today. There is limited time to cover new material.',
-                PlanCondition.allAnswered =>
-                  'You have explored the available pool. Keep revisiting due questions.',
-                _ => today == null
-                    ? 'A day off. Your next session is shown in the calendar.'
-                    : '${today.newIds.length} new · ${today.reviewIds.length} reviews · about ${(today.estimatedSeconds / 60).ceil()} min',
-              },
+              today?.status == StudyDayStatus.completed
+                  ? "Today's plan completed"
+                  : switch (plan.condition) {
+                      PlanCondition.emptyPool =>
+                        'Approved study questions are not available yet. Your preferences are saved.',
+                      PlanCondition.examReached =>
+                        'Your exam date has arrived. Update it in Settings to plan more study.',
+                      PlanCondition.noStudyDays =>
+                        'No selected study days before your exam. Adjust your availability.',
+                      PlanCondition.shortReview =>
+                        'A short review today. There is limited time to cover new material.',
+                      PlanCondition.allAnswered =>
+                        'You have explored the available pool. Keep revisiting due questions.',
+                      _ => today == null
+                          ? 'A day off. Your next session is shown in the calendar.'
+                          : '${today.newIds.length} new · ${today.reviewIds.length} reviews · about ${(today.estimatedSeconds / 60).ceil()} min',
+                    },
               style: context.textStyles.body),
           if (plan.availableQuestions > 0 && plan.missingDomains.isNotEmpty)
             Text(
@@ -283,11 +302,9 @@ class _StudyPlanPanelState extends State<StudyPlanPanel>
                 style: context.textStyles.bodySmall),
           if ((today?.reviewBacklog ?? 0) > 0)
             Text('${today!.reviewBacklog} reviews remain in your queue.'),
-          if (_active != null || (today?.questionIds.isNotEmpty ?? false))
+          if (_active == null && (today?.questionIds.isNotEmpty ?? false))
             PrimaryButton(
-                label: _active != null
-                    ? 'Continue planned session'
-                    : "Start today's session",
+                label: "Start today's session",
                 isLoading: _busy,
                 onPressed: _start),
           if (_metrics != null && plan.availableQuestions > 0)

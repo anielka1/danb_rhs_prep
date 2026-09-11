@@ -61,6 +61,7 @@ void main() {
     await tester.tap(find.text('Home'));
     await tester.pumpAndSettle();
     expect(find.text('Pick up where you left off'), findsNothing);
-    expect(find.text('Build your confidence'), findsOneWidget);
+    expect(find.text('Browse practice modes'), findsOneWidget);
+    expect(find.text('Continue'), findsNothing);
   });
 }

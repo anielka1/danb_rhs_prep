@@ -1,13 +1,11 @@
 import '../widgets/study_plan_panel.dart';
 import 'package:flutter/material.dart';
 import '../bootstrap/bootstrap_session_scope.dart';
-import '../domain/models/practice_session.dart';
 import '../domain/repositories/progress_repository.dart';
 import '../theme/app_theme.dart';
 import '../widgets/app_card.dart';
 import '../widgets/study_page_heading.dart';
 import '../widgets/app_scaffold.dart';
-import '../widgets/loading_state.dart';
 import '../widgets/primary_button.dart';
 import 'exam_overview_screen.dart';
 import 'profile_settings_screen.dart';
@@ -28,7 +26,7 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  Future<PracticeSession?>? _session;
+  bool _initialized = false;
   bool _wasActive = false;
   int _planRevision = 0;
 
@@ -37,18 +35,11 @@ class _HomeScreenState extends State<HomeScreen> {
     super.didChangeDependencies();
     final active = MainShellScope.activeTabOf(context) == AppTab.home;
     if (widget.progressRepository != null &&
-        (_session == null || (active && !_wasActive))) {
-      _session = _loadSession();
+        (!_initialized || (active && !_wasActive))) {
+      _initialized = true;
       _planRevision++;
     }
     _wasActive = active;
-  }
-
-  Future<PracticeSession?> _loadSession() async {
-    final state = BootstrapSessionScope.maybeControllerOf(context);
-    if (state == null) return null;
-    return widget.progressRepository
-        ?.inProgressPracticeSession(state.snapshot.selectedExamId);
   }
 
   Future<void> _openPractice() async {
@@ -62,9 +53,7 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
     ));
     if (mounted) {
-      final next = _loadSession();
       setState(() {
-        _session = next;
         _planRevision++;
       });
     }
@@ -126,49 +115,27 @@ class _HomeScreenState extends State<HomeScreen> {
                   now: widget.now),
               const SizedBox(height: AppSpacing.xxl),
             ],
-            FutureBuilder<PracticeSession?>(
-              future: _session,
-              builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const LoadingState(message: 'Checking your progress…');
-                }
-                final active = snapshot.data != null;
-                return AppCard(
-                  backgroundColor: colors.primary,
-                  padding: const EdgeInsets.all(AppSpacing.xxl),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Icon(Icons.auto_stories_rounded,
-                          color: colors.onPrimary, size: 32),
-                      const SizedBox(height: AppSpacing.xl),
-                      Text('TODAY’S PRACTICE',
-                          style:
-                              styles.label.copyWith(color: colors.onPrimary)),
-                      const SizedBox(height: AppSpacing.sm),
-                      Text(
-                          active
-                              ? 'Pick up where you left off'
-                              : 'Build your confidence',
-                          style: styles.h2.copyWith(color: colors.onPrimary)),
-                      const SizedBox(height: AppSpacing.sm),
-                      Text(
-                          active
-                              ? "You have a practice session you haven't finished yet."
-                              : 'Focused questions. Clear explanations. Your pace.',
-                          style: styles.body.copyWith(color: colors.onPrimary)),
-                      const SizedBox(height: AppSpacing.xl),
+            AppCard(
+              child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                        widget.progressRepository == null
+                            ? 'Build your confidence'
+                            : 'Free practice',
+                        style: styles.h3),
+                    Text(
+                        'Choose topics, saved questions or another practice mode.',
+                        style: styles.bodySmall),
+                    if (widget.progressRepository == null)
                       PrimaryButton(
-                        label: active ? 'Continue' : 'Start Practicing',
-                        trailingIcon: Icons.arrow_forward_rounded,
-                        color: colors.surfaceContainer,
-                        textColor: colors.onSurface,
-                        onPressed: _openPractice,
-                      ),
-                    ],
-                  ),
-                );
-              },
+                          label: 'Start Practicing', onPressed: _openPractice)
+                    else
+                      TextButton.icon(
+                          onPressed: _openPractice,
+                          icon: const Icon(Icons.auto_stories_rounded),
+                          label: const Text('Browse practice modes')),
+                  ]),
             ),
             const SizedBox(height: AppSpacing.xxl),
             Text('Your learning', style: styles.h3),

@@ -1,3 +1,5 @@
+import 'package:danb_rhs_prep/domain/repositories/fakes/in_memory_progress_repository.dart';
+import 'package:danb_rhs_prep/screens/practice_question_screen.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -70,51 +72,12 @@ class _ThrowingProgressRepository implements ProgressRepository {
 /// the real in-memory repository's `Future` (no real `await` inside)
 /// completes on the next microtask, too fast for a single [WidgetTester
 /// .pump] to reliably observe [ConnectionState.waiting] beforehand.
-class _ControlledProgressRepository implements ProgressRepository {
+class _ControlledProgressRepository extends InMemoryProgressRepository {
   final Completer<PracticeSession?> _completer = Completer<PracticeSession?>();
-
   void complete(PracticeSession? session) => _completer.complete(session);
-
   @override
   Future<PracticeSession?> inProgressPracticeSession(String examId) =>
       _completer.future;
-
-  @override
-  Future<void> recordAnswerAttempt(AnswerAttempt attempt) =>
-      throw UnimplementedError();
-  @override
-  Future<List<AnswerAttempt>> answerAttemptsForExam(String examId) =>
-      throw UnimplementedError();
-  @override
-  Future<QuestionState> questionState(String examId, String questionId) =>
-      throw UnimplementedError();
-  @override
-  Future<void> saveQuestionState(QuestionState state) =>
-      throw UnimplementedError();
-  @override
-  Future<List<QuestionState>> questionStatesForExam(String examId) =>
-      throw UnimplementedError();
-  @override
-  Future<void> savePracticeSession(PracticeSession session) =>
-      throw UnimplementedError();
-  @override
-  Future<void> saveMockAttempt(MockAttempt attempt) =>
-      throw UnimplementedError();
-  @override
-  Future<MockAttempt?> mockAttempt(String attemptId) =>
-      throw UnimplementedError();
-  @override
-  Future<List<MockAttempt>> mockAttemptsForExam(String examId) =>
-      throw UnimplementedError();
-  @override
-  Future<void> saveReadinessSnapshot(ReadinessSnapshot snapshot) =>
-      throw UnimplementedError();
-  @override
-  Future<ReadinessSnapshot?> latestReadinessSnapshot(String examId) =>
-      throw UnimplementedError();
-  @override
-  Future<List<ReadinessSnapshot>> readinessSnapshotsForExam(String examId) =>
-      throw UnimplementedError();
 }
 
 Widget _wrap(Widget home) {
@@ -209,7 +172,7 @@ void main() {
       expect(find.text('Start Practicing'), findsNothing);
     });
 
-    testWidgets('Continue navigates to the same real ExamOverviewScreen',
+    testWidgets('Continue resumes the real question screen directly',
         (tester) async {
       await tester.pumpWidget(_wrap(
         HomeScreen(
@@ -221,7 +184,7 @@ void main() {
       await tester.tap(find.text('Continue'));
       await tester.pumpAndSettle();
 
-      expect(find.byType(ExamOverviewScreen), findsOneWidget);
+      expect(find.byType(PracticeQuestionScreen), findsOneWidget);
     });
   });
 
@@ -246,13 +209,14 @@ void main() {
           .pumpWidget(_wrap(HomeScreen(progressRepository: repository)));
       await tester.pumpAndSettle();
 
-      expect(find.text('Build your confidence'), findsOneWidget);
-      expect(find.text('Start Practicing'), findsOneWidget);
+      expect(find.text('Free practice'), findsOneWidget);
+      expect(find.text('Browse practice modes'), findsOneWidget);
+      expect(find.text('Continue'), findsNothing);
     });
   });
 
   group('progress repository failure', () {
-    testWidgets('falls back to the honest empty state, never crashes',
+    testWidgets('shows a retryable error, never fabricates an empty session',
         (tester) async {
       await tester.pumpWidget(
         _wrap(HomeScreen(progressRepository: _ThrowingProgressRepository())),
@@ -260,8 +224,12 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(tester.takeException(), isNull);
-      expect(find.text('Build your confidence'), findsOneWidget);
-      expect(find.text('Start Practicing'), findsOneWidget);
+      expect(find.text('Could not load your study plan. Please retry.'),
+          findsOneWidget);
+      expect(find.text('Retry'), findsOneWidget);
+      expect(find.text('Free practice'), findsOneWidget);
+      expect(find.text('Browse practice modes'), findsOneWidget);
+      expect(find.text('Continue'), findsNothing);
     });
   });
 }
