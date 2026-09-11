@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
   "examId": "danb_rhs",
-  "note": "No reviewer decisions exist yet — no candidate questions have been drafted or submitted for review. This file is a valid, empty starter template. Every decision entry must reference a real question ID from candidate_questions.json, a real reviewer identity, an ISO-8601 review date, the exact contentFingerprint of the question version that was reviewed, and contentFingerprintAlgorithm set explicitly to 'sha256-canonical-json-v1' (the algorithm is never inferred from the fingerprint's shape; any other or missing value is treated as an unsupported/legacy approval requiring renewed review — see docs/DANB_RHS_CONTENT_APPROVAL_WORKFLOW.md). No decision in this file was fabricated; none exist.",
+  "note": "No human reviewer decisions have been recorded for the first draft batch. Each future decision must be entered by a qualified human with their real identity, review date, question ID, exact current contentFingerprint and explicit contentFingerprintAlgorithm 'sha256-canonical-json-v1'. Structural validation is not approval. See docs/DANB_RHS_CONTENT_APPROVAL_WORKFLOW.md.",
   "decisions": []
 }

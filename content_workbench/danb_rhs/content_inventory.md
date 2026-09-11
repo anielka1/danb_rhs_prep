@@ -1,120 +1,42 @@
-# DANB RHS Content Inventory & Source-Material Gate
+# DANB RHS content inventory
 
-Status: **gate failed for all three configured domains — no candidate questions
-drafted.** This document is the record of that check. It is re-run (and this
-file updated) every time new source material becomes available.
+Updated 2026-09-11 after public-source research. This replaces the earlier repository-only search that found no clinical material. Legal online access plus precise reference metadata is sufficient; a full document need not be committed.
 
 ## 1. Source inventory
 
-Every source found by inspecting the repository (`assets/content/`, `docs/`,
-`lib/`, and the root-level product/architecture specs) for exam-blueprint or
-clinical/technical reference material.
+See [source_register.md](source_register.md) for each title, institution, date/version, exact URL, section, access date, currency check and access limitation. Read material includes the official 2025 DANB outline, ADA 2024/2026 guidance summaries, FDA imaging guidance and CDC detailed dental infection-control pages. Supplementary ACR/RSNA patient-education pages support limited positioning/preparation facts. Full JADA articles and textbooks were not accessible/read and are not represented as verified sources.
 
-| Source | Authority | Version/date | Domains supported | Sufficient for factual validation? |
-| --- | --- | --- | --- | --- |
-| `exam.domains[]` structure inside `assets/content/danb_rhs/content.json` (domain/topic IDs and blueprint weights) | Derived from the DANB RHS exam outline — structural taxonomy only, not the outline document itself | Labeled `sourceVersion: "danb-rhs-outline-effective-2025-03-12"`; the outline document this was derived from is not present in the repo to verify | `purpose_technique`, `radiation_protection`, `infection_control` (domain/topic naming and weights only) | **No** — establishes domain IDs, topic IDs, and blueprint weights for allocation purposes; contains no clinical, technical, or procedural detail a question could be checked against |
-| `rhs-dev-001`/`rhs-dev-002` questions' `references[].title/source/url` fields (e.g. "RHS Exam Outline and References", `https://www.danb.org/exams/exam/rhs-exam`) | Points to DANB's public exam page | Not fetched, bundled, or dated in this task | `purpose_technique`, `radiation_protection` (the two domains these two draft questions happen to touch) | **No** — a citation pointing at a URL is not source content; nothing at that URL has been retrieved, licensed, or bundled into the repo for this task |
-| `docs/PROTOTYPE_CONTENT_AUDIT.md` | Internal engineering audit | 2026 (this project) | None (UX/content-source tracking, not clinical) | No — confirms only that real content authoring hasn't happened yet |
-| `EXAMPREP_PRODUCT_AND_SCREEN_SPEC.md`, `EXAMPREP_FLUTTER_ARCHITECTURE.md`, `docs/DANB_RHS_APP_STORE_ROADMAP.md` | Internal product/engineering specs | 2026 (this project) | None (product scope, screens, architecture — not clinical) | No |
-| Official DANB RHS exam outline (full document) | DANB | — | — | **Not present in the repository** |
-| CDC dental infection-control guidance | CDC | — | — | **Not present in the repository** |
-| FDA/ADA dental radiography guidance | FDA/ADA | — | — | **Not present in the repository** |
-| Recognized dental-radiography textbook/training material | — | — | — | **Not present in the repository** |
+## 2. Sourcing gate
 
-No PDFs, licensed documents, or reference text of any kind exist anywhere in
-this repository beyond the structural JSON above. Nothing under
-`assets/`, `docs/`, or elsewhere constitutes a usable clinical or technical
-source.
+This is an **authoring-source gate**, not human approval of a question.
 
-## 2. Gate result
-
-Per the mandated rule — *"the public exam outline may establish domains and
-weights, but an outline alone is not sufficient evidence for detailed
-clinical facts"* — the only material found (the domain/topic/weight
-structure) is explicitly insufficient on its own, and no domain has any
-additional authoritative source behind it.
-
-| Domain | Authoritative source present? | Gate result |
+| Domain | Gate for this batch | Limits |
 | --- | --- | --- |
-| `purpose_technique` (Purpose and Technique) | No | **Blocked** |
-| `radiation_protection` (Radiation Characteristics and Protection) | No | **Blocked** |
-| `infection_control` (Infection Prevention and Control) | No | **Blocked** |
+| `purpose_technique` | Passed for the specific sourced objectives in the reviewer packet | No anatomy questions; no detailed intraoral projection geometry or angulation-error questions. Selection questions cite ADA’s public summary, not unread full tables. |
+| `radiation_protection` | Passed for the specific sourced objectives | No numerical dose limits, state-law claims, or detailed tube-production calculations. Shielding item explicitly scopes the ADA recommendation. |
+| `infection_control` | Passed for the specific sourced objectives | No universal sensor reprocessing protocol or disinfectant contact time; device/product IFUs remain necessary. |
 
-**All three domains are blocked.** No candidate questions were drafted from
-general model knowledge, per the explicit instruction not to invent clinical
-facts from memory.
+The outline establishes scope only. Clinical and technical keys have separate references. Conflicts, particularly legacy shielding wording, and superseded 2012 recommendations are addressed in the source register.
 
-## 3. Existing draft inventory (unchanged)
+## 3. Production inventory (unchanged)
 
-| Question ID | Domain | Status | Action taken |
-| --- | --- | --- | --- |
-| `rhs-dev-001` | `radiation_protection` | `draft` | None — left unchanged, no factual/structural defect reported |
-| `rhs-dev-002` | `purpose_technique` | `draft` | None — left unchanged, no factual/structural defect reported |
+`rhs-dev-001` and `rhs-dev-002` remain draft in the production content file. There are **zero approved production questions**. No production source metadata, threshold, app setting or readiness calculation was changed. The workbench candidates are not bundled.
 
-## 4. Candidate drafting outcome
+## 4. First editorial batch
 
-| Domain | Draft target | Candidates drafted this task | Remaining gap |
-| --- | --- | ---: | ---: |
-| `purpose_technique` | 14 | 0 | 14 |
-| `radiation_protection` | 8 | 0 | 8 |
-| `infection_control` | 8 | 0 | 8 |
-| **Total** | **30** | **0** | **30** |
+Prepared: **26 draft candidates**, with exact inventory and reviewer content in [first_batch_review.md](first_batch_review.md).
 
-`content_workbench/danb_rhs/candidate_questions.json` is a valid, empty
-starter template (`"candidates": []`) — the pipeline, schema, and tooling
-around it are ready to receive real candidates the moment sourcing exists.
+| Domain | Editorial target | Drafts | Gap |
+| --- | ---: | ---: | ---: |
+| Purpose and Technique | 14 | 10 | 4 |
+| Radiation Characteristics and Protection | 8 | 8 | 0 |
+| Infection Prevention and Control | 8 | 8 | 0 |
+| Total | 30 | 26 | 4 |
 
-## 5. What must be supplied before drafting can resume
+These are editorial counts, not exam weights or a mock-exam blueprint. The configured 50/25/25 weights remain unchanged. Draft difficulty labels are provisional author judgments on the existing 1–5 scale, not psychometric calibration. No review decisions are entered.
 
-For **each** domain, a qualified reviewer needs access to one or more of
-the acceptable source types. **How that source is made available depends
-on its licensing — it does not automatically mean committing the document
-to this repository.** See the safe source-storage policy below.
+## 5. Missing material and safe source storage
 
-- **`purpose_technique`**: the official DANB RHS exam outline (full text, not
-  just the domain/topic list already present) and/or a recognized dental
-  radiography textbook or training manual covering image acquisition
-  technique, error correction, and patient management.
-- **`radiation_protection`**: FDA/ADA dental radiography guidance and/or a
-  radiation physics/biology reference covering the specific topics already
-  named in the blueprint (`radiation_physics`, `radiation_biology`,
-  `patient_operator_protection`).
-- **`infection_control`**: current CDC dental infection-control guidance
-  (or the equivalent OSAP/ADA summary) — this domain has no content at all
-  today, drafted or otherwise, so it needs source material before any
-  question — even a first draft — can be written responsibly.
+The four unfilled slots need an actually accessed technical reference covering anatomical landmarks, paralleling geometry, horizontal overlap and vertical/receptor-placement errors. The source register identifies two DANB-listed editions suitable to investigate, without inventing chapter/page references. Full 2026 selection and 2024 safety papers would strengthen expert review of recommendation-specific questions. Do not fill gaps from memory or repeat the same learning objective simply to reach 30.
 
-### Safe source-storage policy
-
-A citation is not proof that this application may redistribute the
-source, so where a source *lives* depends on its licensing:
-
-- **Committable to this repository**: only when redistribution is clearly
-  permitted (e.g. a genuinely public-domain or openly licensed document)
-  *and* keeping a repository copy is genuinely appropriate — that is a
-  deliberate, per-document decision, never a default.
-- **Never committed merely to support this workflow**: licensed textbooks,
-  paid training materials, restricted PDFs, and scans. CDC guidance is
-  generally public and citable by URL; a purchased radiography textbook or
-  a DANB outline distributed under restrictive terms is not something to
-  paste into version control just because a reviewer has legitimate access
-  to it.
-- **What this repository stores regardless**: source *metadata* — title,
-  publisher/authority, edition/version, publication/effective date,
-  chapter/section/page (or URL anchor), public URL when available, access
-  date, and a licensing/access note — recorded in each candidate
-  question's `references[]` field, not the source document itself.
-- **Where a restricted source actually lives**: in the reviewer's own
-  authorized private storage (their own licensed copy, their
-  organization's document system, or — for a personal local working copy
-  only — the git-ignored `content_workbench/private_sources/` directory;
-  see its `README.md`). Never committed.
-- Regardless of where sourcing lives, questions must remain original —
-  written from the source's *facts*, not copied or closely paraphrased
-  from the source's *wording* beyond what is legally necessary.
-
-Once a reviewer has access to adequate sourcing for a domain (by whichever
-appropriate means — committed public document, personal license, or
-organizational access), re-run this inventory, re-derive the table in
-Section 2, and drafting can proceed domain-by-domain as sourcing becomes
-sufficient (a domain does not need to wait for the others).
+Keep licensed textbooks, paid materials, restricted PDFs and scans in authorized private storage (optionally the ignored `content_workbench/private_sources/` directory), never commit them merely to support this review. Even public access does not establish redistribution permission. This batch stores links, metadata and original wording only. The qualified human reviewer must open the cited sections, apply the repository checklist, and personally record the real identity/date/decision and matching fingerprint. A structural validator pass is not factual approval.
