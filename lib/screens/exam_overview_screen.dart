@@ -214,9 +214,9 @@ class _ExamOverviewScreenState extends State<ExamOverviewScreen> {
           } catch (_) {
             // Fail CLOSED, not open: a free user's limit demonstrably
             // applies here, it simply couldn't be checked — unlike
-            // history-read failures elsewhere in this method (resuming,
-            // saving), which are allowed to be best-effort because
-            // nothing they guard is a hard business rule. Silently
+            // recoverable new-write failures, which retain their payload
+            // for retry. Resume history must also be read successfully,
+            // before displaying the saved session. Silently
             // treating "couldn't read" as "no limit" would let a free
             // user bypass their daily cap merely by having a temporarily
             // broken local database. See [_limitCheckFailed]'s own doc
@@ -322,20 +322,30 @@ class _ExamOverviewScreenState extends State<ExamOverviewScreen> {
     // starts empty, which is only correct for the brand-new-session
     // branch below. See PracticeSessionController.resume's own doc
     // comment.
-    final PracticeSessionController controller =
-        existing != null && repository != null
-            ? await PracticeSessionController.resume(
-                session: session,
-                questions: questions,
-                progressRepository: repository,
-                now: nowFn,
-              )
-            : PracticeSessionController(
-                session: session,
-                questions: questions,
-                progressRepository: repository,
-                now: nowFn,
-              );
+    final PracticeSessionController controller;
+    try {
+      controller = existing != null && repository != null
+          ? await PracticeSessionController.resume(
+              session: session,
+              questions: questions,
+              progressRepository: repository,
+              now: nowFn,
+            )
+          : PracticeSessionController(
+              session: session,
+              questions: questions,
+              progressRepository: repository,
+              now: nowFn,
+            );
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _starting = false;
+        _unavailableReason =
+            'Could not restore your saved answers. Please try again.';
+      });
+      return;
+    }
 
     if (existing == null) await controller.saveSession();
     if (!mounted) return;

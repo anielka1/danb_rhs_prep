@@ -96,11 +96,19 @@ A planned session stores ordered IDs and which IDs were reviews before opening a
 question. Resume restores that same set and feedback. New starts share the existing
 content validator and eligibility gate, enforce the existing UTC practice cap,
 and fail closed on unreadable storage. Existing practice modes remain available.
+A failed answer-history read during resume propagates instead of producing a
+controller with zero answers. This includes failure of the second read after the
+planned-session preflight read succeeded. Retry restores the same saved IDs and
+historical feedback; a successful empty read is a distinct, valid state.
 
 The optional diagnostic reads its count from freeTier.diagnosticQuestions and uses
 largest-remainder domain quotas. It records diagnostic attempts, separate from the
 practice allowance, and offers Skip when the pool is insufficient. Results describe
-performance per area, never exam readiness.
+performance per area, never exam readiness. Content/eligibility failures show the
+reason and Skip; a transient start failure keeps a visible Retry diagnostic
+button. Retrying uses the normal start/resume path, so a session already persisted
+before an error is reused rather than duplicated. A successful retry clears the
+error message. These recovery changes do not alter schema 4 or historical data.
 
 A mock requires a separate configured-duration slot (currently 60 minutes), content
 availability and remaining access. An optional first-mock reserve is made only from
