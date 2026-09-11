@@ -63,6 +63,66 @@ void main() {
               .copyWith(textScaler: TextScaler.linear(scale)),
           child: child!),
       home: child);
+  testWidgets('Home always opens Study calendar without content',
+      (tester) async {
+    final s = session(count: 0);
+    await tester.pumpWidget(wrap(
+        BootstrapSessionScope(
+            controller: s,
+            child: HomeScreen(
+                progressRepository: s.progressRepository, now: () => day)),
+        false,
+        1));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('Study calendar'));
+    await tester.tap(find.text('Study calendar'));
+    await tester.pumpAndSettle();
+    expect(find.byType(StudyCalendarScreen), findsOneWidget);
+    expect(find.text('September 2026'), findsOneWidget);
+    expect(find.textContaining('No question plan'), findsOneWidget);
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
+
+  testWidgets('Home day counts match calendar and selected day opens directly',
+      (tester) async {
+    final s = session();
+    await tester.pumpWidget(wrap(
+        BootstrapSessionScope(
+            controller: s,
+            child: HomeScreen(
+                progressRepository: s.progressRepository, now: () => day)),
+        false,
+        1));
+    await tester.pumpAndSettle();
+    final key = ValueKey('week-${dateKey(day)}');
+    final texts = tester.widgetList<Text>(
+        find.descendant(of: find.byKey(key), matching: find.byType(Text)));
+    final countLabel = texts
+        .map((t) => t.data)
+        .whereType<String>()
+        .firstWhere((t) => t.endsWith(' Q'));
+    await tester.ensureVisible(find.byKey(key));
+    await tester.tap(find.byKey(key));
+    await tester.pumpAndSettle();
+    expect(
+        find.descendant(
+            of: find.byKey(ValueKey('calendar-${dateKey(day)}')),
+            matching: find.text(countLabel)),
+        findsOneWidget);
+    expect(find.text('${dateKey(day)} · study'), findsOneWidget);
+    await tester.ensureVisible(find.byTooltip('Next month'));
+    await tester.tap(find.byTooltip('Next month'));
+    await tester.pumpAndSettle();
+    expect(find.text('October 2026'), findsOneWidget);
+    expect(
+        tester
+            .widget<IconButton>(find.byWidgetPredicate(
+                (w) => w is IconButton && w.tooltip == 'Next month'))
+            .onPressed,
+        isNull);
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
+
   for (final dark in [false, true]) {
     for (final scale in [1.0, 4.0]) {
       testWidgets(
@@ -133,7 +193,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(s.snapshot.profile!.studyPlanPreferences!.minutes, 30);
     expect((await repo.answerAttemptsForExam(package.exam.id)).length, 1);
-    expect(find.text("Today's plan"), findsOneWidget);
+    expect(find.text("Today"), findsOneWidget);
     await tester.pumpWidget(const SizedBox.shrink());
   });
   testWidgets(
@@ -260,6 +320,8 @@ void main() {
             now: () => day),
         false,
         1));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(ValueKey('calendar-${dateKey(yesterday)}')));
     await tester.pumpAndSettle();
     expect(find.text('2 answers recorded · 2 min answer time'), findsOneWidget);
   });
@@ -392,7 +454,7 @@ void main() {
         1));
     await tester.pumpAndSettle();
     for (final label in [
-      'Open calendar',
+      'Study calendar',
       'Adjust availability',
       '45 min',
       'Save availability'
@@ -403,7 +465,7 @@ void main() {
     }
     expect(s.snapshot.profile!.studyPlanPreferences!.minutes, 45);
     expect(find.byType(StudyCalendarScreen), findsNothing);
-    expect(find.text("Today's plan"), findsOneWidget);
+    expect(find.text("Today"), findsOneWidget);
     expect(find.text("Start today's session"), findsOneWidget);
     await tester.pumpWidget(const SizedBox.shrink());
   });
@@ -463,6 +525,12 @@ void main() {
           false,
           1));
       await tester.pumpAndSettle();
+      await tester.ensureVisible(find.text('September 2026'));
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(
+          find.byKey(ValueKey('calendar-${dateKey(yesterday)}')));
+      await tester.tap(find.byKey(ValueKey('calendar-${dateKey(yesterday)}')));
+      await tester.pumpAndSettle();
       expect(find.text('Partially completed'), findsOneWidget);
       expect(find.text('1 new · 1 review remaining'), findsOneWidget);
       expect(find.textContaining('Missed work stays'), findsOneWidget);
@@ -476,8 +544,8 @@ void main() {
           isTrue);
       expect(s.snapshot.examDateSelection!.date, DateTime(2026, 10, 10));
       expect(find.text('Move session'), findsNothing);
-      final nextDay =
-          find.textContaining('${dateKey(day.add(const Duration(days: 1)))} ·');
+      final nextDay = find.byKey(
+          ValueKey('calendar-${dateKey(day.add(const Duration(days: 1)))}'));
       await tester.ensureVisible(nextDay);
       await tester.tap(nextDay);
       await tester.pumpAndSettle();

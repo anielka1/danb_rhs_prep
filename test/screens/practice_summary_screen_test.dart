@@ -48,6 +48,50 @@ void main() {
   Widget wrap(Widget child) =>
       MaterialApp(theme: AppTheme.lightTheme, home: child);
 
+  testWidgets('perfect session has no dead mistakes action', (tester) async {
+    final controller = buildDemoPracticeSessionController();
+    for (var i = 0; i < controller.questions.length; i++) {
+      controller.moveTo(i);
+      await controller.submitAnswer(controller.currentQuestion.correctAnswerId);
+    }
+    await controller.complete();
+    await tester.pumpWidget(wrap(PracticeSessionScope(
+        controller: controller, child: const PracticeSummaryScreen())));
+    await tester.pumpAndSettle();
+    expect(find.text('100%'), findsWidgets);
+    expect(find.text('Review Mistakes'), findsNothing);
+    expect(find.text('No mistakes in this session'), findsOneWidget);
+    await tester.ensureVisible(find.text('Back to Home'));
+    await tester.tap(find.text('Back to Home'));
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('rounded 100 percent still reviews an actual mistake',
+      (tester) async {
+    final questions = List.generate(
+        201,
+        (i) => _question(
+            id: 'round-$i', topicId: 'demo_topic', correctAnswerId: 'a'));
+    final c = PracticeSessionController(
+        session: PracticeSession(
+            id: 'rounding',
+            examId: DebugDemoEnvironment.demoExamId,
+            mode: PracticeMode.quickPractice,
+            questionIds: questions.map((q) => q.id).toList(),
+            status: SessionStatus.inProgress,
+            startedAt: DateTime.utc(2026)),
+        questions: questions);
+    for (var i = 0; i < questions.length; i++) {
+      c.moveTo(i);
+      await c.submitAnswer(i == 0 ? 'b' : 'a');
+    }
+    await tester.pumpWidget(wrap(PracticeSessionScope(
+        controller: c, child: const PracticeSummaryScreen())));
+    expect(find.text('100%'), findsWidgets);
+    expect(find.text('Review mistakes (1)'), findsOneWidget);
+    expect(find.text('No mistakes in this session'), findsNothing);
+  });
+
   testWidgets('review shows only mistakes and leaves the score unchanged',
       (tester) async {
     final controller = buildDemoPracticeSessionController();
@@ -66,11 +110,22 @@ void main() {
       controller: controller,
       child: const PracticeSummaryScreen(),
     )));
-    await tester.ensureVisible(find.text('Review Mistakes'));
-    await tester.tap(find.text('Review Mistakes'));
+    await tester.ensureVisible(find.text('Review mistakes (1)'));
+    await tester.tap(find.text('Review mistakes (1)'));
     await tester.pumpAndSettle();
     expect(find.text(controller.questions.first.questionText), findsOneWidget);
     expect(find.text(controller.questions[1].questionText), findsNothing);
+    final feedback = controller.feedbackFor(controller.questions.first.id)!;
+    final answers = controller.questions.first.answers;
+    expect(
+        find.text(
+            'Your answer: ${answers.firstWhere((a) => a.id == feedback.selectedAnswerId).text}'),
+        findsOneWidget);
+    expect(
+        find.text(
+            'Correct answer: ${answers.firstWhere((a) => a.id == feedback.correctAnswerId).text}'),
+        findsOneWidget);
+
     expect(
         find.text(
             controller.feedbackFor(controller.questions.first.id)!.explanation),

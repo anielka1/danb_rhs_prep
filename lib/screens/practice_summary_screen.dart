@@ -262,16 +262,18 @@ class PracticeSummaryScreen extends StatelessWidget {
               ),
               const SizedBox(height: AppSpacing.md),
             ],
-            SecondaryButton(
-              label: 'Review Mistakes',
-              onPressed: controller.questions.any(
-                (question) => controller.isCorrectFor(question.id) == false,
+            if (controller.questions
+                .any((q) => controller.isCorrectFor(q.id) == false))
+              SecondaryButton(
+                label:
+                    'Review mistakes (${controller.questions.where((q) => controller.isCorrectFor(q.id) == false).length})',
+                onPressed: () => Navigator.of(context).push(
+                    MaterialPageRoute<void>(
+                        builder: (_) =>
+                            _MistakesReview(controller: controller))),
               )
-                  ? () => Navigator.of(context).push(MaterialPageRoute<void>(
-                        builder: (_) => _MistakesReview(controller: controller),
-                      ))
-                  : null,
-            ),
+            else
+              const Text('No mistakes in this session'),
             const SizedBox(height: AppSpacing.md),
             if (BootstrapSessionScope.maybeControllerOf(context)
                         ?.progressRepository !=

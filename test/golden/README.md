@@ -143,3 +143,12 @@ Actions were used. Pixel comparison thresholds are unchanged. The existing
 
 These are widget-test captures: the debug banner and placeholder icon glyphs are
 properties of the existing test harness, not screenshots from a physical iPhone.
+
+The Home/calendar/diagnostic follow-up adds `planned_home` and
+`diagnostic_question` in both themes (42 matrix images total). The diagnostic's
+random source is seeded only by the test; runtime session randomization is
+unchanged. Calendar partial-history captures now select their historical date in
+the month view. Twelve existing Home/summary/daily-journey baselines were updated
+for intended UI changes, and all changed/new images were inspected. These renders
+are not native simulator screenshots; see
+`docs/verification/2026-09-11-home-calendar-diagnostic.md` for the execution limit.

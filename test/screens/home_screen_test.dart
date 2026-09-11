@@ -149,7 +149,7 @@ void main() {
       repository.complete(DebugDemoEnvironment.demoInProgressPracticeSession);
       await tester.pumpAndSettle();
 
-      expect(find.text('Pick up where you left off'), findsOneWidget);
+      expect(find.text('Continue'), findsOneWidget);
       expect(find.text('Continue'), findsOneWidget);
       expect(find.text('Build your confidence'), findsNothing);
       expect(find.text('Start Practicing'), findsNothing);
@@ -166,7 +166,7 @@ void main() {
 
       await tester.pumpAndSettle();
 
-      expect(find.text('Pick up where you left off'), findsOneWidget);
+      expect(find.text('Continue'), findsOneWidget);
       expect(find.text('Continue'), findsOneWidget);
       expect(find.text('Build your confidence'), findsNothing);
       expect(find.text('Start Practicing'), findsNothing);

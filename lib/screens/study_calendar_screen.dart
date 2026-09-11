@@ -1,3 +1,5 @@
+import '../widgets/study_week_preview.dart';
+import 'profile_settings_screen.dart';
 import 'study_availability_screen.dart';
 import 'package:flutter/material.dart';
 import '../bootstrap/bootstrap_session_controller.dart';
@@ -12,10 +14,12 @@ class StudyCalendarScreen extends StatefulWidget {
   const StudyCalendarScreen(
       {super.key,
       required this.plan,
+      this.initialDate,
       required this.session,
       required this.repository,
       required this.now});
   final StudyPlanProjection plan;
+  final DateTime? initialDate;
   final BootstrapSessionController session;
   final ProgressRepository repository;
   final DateTime Function() now;
@@ -25,6 +29,26 @@ class StudyCalendarScreen extends StatefulWidget {
 
 class _StudyCalendarScreenState extends State<StudyCalendarScreen> {
   bool _saving = false;
+  final _detailsKey = GlobalKey();
+  void _select(DateTime date) {
+    setState(() => _selectedDate = date);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final details = _detailsKey.currentContext;
+      if (mounted && details != null) {
+        Scrollable.ensureVisible(details,
+            duration: const Duration(milliseconds: 200), alignment: 0.1);
+      }
+    });
+  }
+
+  late DateTime _month;
+  @override
+  void initState() {
+    super.initState();
+    _selectedDate = calendarDate(widget.initialDate ?? widget.now());
+    _month = DateTime.utc(_selectedDate!.year, _selectedDate!.month);
+  }
+
   DateTime? _selectedDate;
   String? _message;
   Future<void> _change(StudyPlanDay day, StudyDayType type,
@@ -97,9 +121,8 @@ class _StudyCalendarScreenState extends State<StudyCalendarScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
             const BackButton(),
-            Text('Your study calendar', style: context.textStyles.h1),
-            Text(
-                'Select a day to review its tasks. Future sessions are estimates. Completed answers stay in your history.',
+            Text('Your study calendar', style: context.textStyles.h2),
+            Text('Tap a date for details. Future counts are forecasts.',
                 style: context.textStyles.body),
             if (widget.plan.limitedCoverage &&
                 widget.session.snapshot.examDateSelection?.date != null) ...[
@@ -125,7 +148,36 @@ class _StudyCalendarScreenState extends State<StudyCalendarScreen> {
             if (_message != null)
               Text(_message!, style: context.textStyles.body),
             const SizedBox(height: AppSpacing.lg),
-            for (final day in widget.plan.days)
+            if (widget.plan.availableQuestions == 0)
+              const Text(
+                  'No question plan yet. Approved study questions are not available. Your calendar dates are still available.'),
+            if (widget.session.snapshot.examDateSelection?.date == null)
+              TextButton(
+                  onPressed: () async {
+                    await Navigator.of(context, rootNavigator: true).pushNamed(
+                        ProfileSettingsScreen.route,
+                        arguments: widget.session);
+                    if (context.mounted) Navigator.pop(context);
+                  },
+                  child: const Text('Set exam date in Settings')),
+            if (widget.plan.condition == PlanCondition.needsAvailability)
+              TextButton(
+                  onPressed: () async {
+                    await Navigator.of(context).push(MaterialPageRoute(
+                        builder: (_) =>
+                            StudyAvailabilityScreen(session: widget.session)));
+                    if (context.mounted) Navigator.pop(context);
+                  },
+                  child: const Text('Set study availability')),
+            _monthGrid(context),
+            const Text('Today · Day off · Completed ✓ · Exam ⚑'),
+            const SizedBox(height: AppSpacing.md),
+            SizedBox(key: _detailsKey),
+            if (projectedDay(widget.plan, _selectedDate!) == null)
+              Text(
+                  '${dateKey(_selectedDate!)} · No recorded tasks or question plan'),
+            for (final day
+                in widget.plan.days.where((d) => d.date == _selectedDate))
               Padding(
                   padding: const EdgeInsets.only(bottom: AppSpacing.md),
                   child: AppCard(
@@ -151,6 +203,8 @@ class _StudyCalendarScreenState extends State<StudyCalendarScreen> {
                                   StudyDayStatus.missed => 'Not completed'
                                 },
                                 style: context.textStyles.body),
+                            Text(
+                                '${dayQuestionCount(day)} questions · ${day.recordedAnswers} completed · ${day.questionIds.length} remaining'),
                             if (day.recordedAnswers > 0)
                               Text(
                                   day.spentSeconds > 0
@@ -162,8 +216,7 @@ class _StudyCalendarScreenState extends State<StudyCalendarScreen> {
                                   'Exam day · change the exam date in Settings')
                             else if (day.type == StudyDayType.rest)
                               const Text('Day off · no study scheduled')
-                            else if (day.status !=
-                                StudyDayStatus.completed) ...[
+                            else ...[
                               Text(
                                   '${day.newIds.length} new · ${day.reviewIds.length} review${day.reviewIds.length == 1 ? '' : 's'} remaining',
                                   style: context.textStyles.body),
@@ -201,4 +254,123 @@ class _StudyCalendarScreenState extends State<StudyCalendarScreen> {
                               ]),
                           ]))),
           ])));
+  Widget _monthGrid(BuildContext context) {
+    final today = calendarDate(widget.now());
+    final exam = widget.session.snapshot.examDateSelection?.date;
+    final end = calendarDate(exam ?? today.add(const Duration(days: 365)));
+    final lastMonth = DateTime.utc(end.year, end.month);
+    final earliest =
+        widget.plan.days.isEmpty ? today : widget.plan.days.first.date;
+    final firstMonth = DateTime.utc(earliest.year, earliest.month);
+    final length = DateTime.utc(_month.year, _month.month + 1, 0).day;
+    final offset = _month.weekday - 1;
+    const months = [
+      'January',
+      'February',
+      'March',
+      'April',
+      'May',
+      'June',
+      'July',
+      'August',
+      'September',
+      'October',
+      'November',
+      'December'
+    ];
+    return Column(children: [
+      Row(children: [
+        IconButton(
+            tooltip: 'Previous month',
+            onPressed: _month.isAfter(firstMonth)
+                ? () => setState(
+                    () => _month = DateTime.utc(_month.year, _month.month - 1))
+                : null,
+            icon: const Icon(Icons.chevron_left)),
+        Expanded(
+            child: Text('${months[_month.month - 1]} ${_month.year}',
+                style: context.textStyles.h3)),
+        IconButton(
+            tooltip: 'Next month',
+            onPressed: _month.isBefore(lastMonth)
+                ? () => setState(
+                    () => _month = DateTime.utc(_month.year, _month.month + 1))
+                : null,
+            icon: const Icon(Icons.chevron_right)),
+      ]),
+      LayoutBuilder(builder: (context, constraints) {
+        final scale = MediaQuery.textScalerOf(context).scale(14) / 14;
+        final width =
+            (constraints.maxWidth < 336 ? 336.0 : constraints.maxWidth) *
+                (scale > 1.4 ? scale / 1.4 : 1);
+        return SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: SizedBox(
+                width: width,
+                child: Column(children: [
+                  Row(children: [
+                    for (final name in ['M', 'T', 'W', 'T', 'F', 'S', 'S'])
+                      Expanded(child: Center(child: Text(name)))
+                  ]),
+                  for (var row = 0; row < ((length + offset) / 7).ceil(); row++)
+                    Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          for (var col = 0; col < 7; col++)
+                            SizedBox(
+                                width: width / 7,
+                                child: row * 7 + col - offset + 1 < 1 ||
+                                        row * 7 + col - offset + 1 > length
+                                    ? const SizedBox.shrink()
+                                    : _cell(DateTime.utc(
+                                        _month.year,
+                                        _month.month,
+                                        row * 7 + col - offset + 1))),
+                        ]),
+                ])));
+      }),
+    ]);
+  }
+
+  Widget _cell(DateTime date) {
+    final day = projectedDay(widget.plan, date);
+    final today = date == calendarDate(widget.now());
+    final noPlan = widget.plan.availableQuestions == 0 ||
+        widget.plan.condition == PlanCondition.needsAvailability;
+    final marker = day?.type == StudyDayType.exam
+        ? 'Exam'
+        : day?.status == StudyDayStatus.completed
+            ? '✓'
+            : day?.type == StudyDayType.rest && !noPlan
+                ? 'Off'
+                : day?.status == StudyDayStatus.inProgress
+                    ? 'Part'
+                    : '';
+    final label = (noPlan && (day?.recordedAnswers ?? 0) == 0) || day == null
+        ? '—'
+        : '${dayQuestionCount(day)} Q';
+    return Semantics(
+        label: '${dateKey(date)}, ${today ? 'Today, ' : ''}$marker, $label',
+        selected: date == _selectedDate,
+        child: InkWell(
+            key: ValueKey('calendar-${dateKey(date)}'),
+            onTap: () => _select(date),
+            child: Container(
+                margin: const EdgeInsets.all(1),
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(12),
+                    color: date == _selectedDate
+                        ? context.colors.primaryContainer
+                        : null,
+                    border: today
+                        ? Border.all(color: context.colors.primary, width: 2)
+                        : null),
+                child: Column(children: [
+                  Text('${date.day}', style: context.textStyles.label),
+                  Text(label, style: context.textStyles.bodySmall),
+                  if (marker.isNotEmpty)
+                    Text(marker, style: context.textStyles.bodySmall),
+                ]))));
+  }
 }

@@ -19,6 +19,16 @@ import 'package:danb_rhs_prep/theme/app_theme.dart';
 import 'fixtures.dart';
 
 class _FlakyRepository extends InMemoryProgressRepository {
+  bool failNextAnswer = false;
+  @override
+  Future<void> recordAnswerAttempt(AnswerAttempt answer) async {
+    if (failNextAnswer) {
+      failNextAnswer = false;
+      throw StateError('transient answer write');
+    }
+    await super.recordAnswerAttempt(answer);
+  }
+
   int historyReads = 0;
   int? failHistoryRead;
   bool failNextSave = false;
@@ -91,6 +101,62 @@ void main() {
     return c;
   }
 
+  testWidgets('completed diagnostic reopens its recorded result',
+      (tester) async {
+    final repo = _FlakyRepository();
+    final c = await const PlannedSessionService().start(
+        package: package,
+        repository: repo,
+        entitlement: entitlement,
+        now: () => now,
+        diagnostic: true);
+    for (var i = 0; i < c.questions.length; i++) {
+      c.moveTo(i);
+      await c.submitAnswer(c.currentQuestion.correctAnswerId);
+    }
+    await c.complete();
+    await tester
+        .pumpWidget(wrap(DiagnosticScreen(session: bootstrap(package, repo))));
+    await tester.pumpAndSettle();
+    expect(find.text('Your starting point'), findsOneWidget);
+    expect(find.text('Start diagnostic'), findsNothing);
+    expect(await repo.practiceSessionsForExam(package.exam.id), hasLength(1));
+  });
+
+  testWidgets(
+      'diagnostic answer write retries without losing or duplicating answer',
+      (tester) async {
+    final repo = _FlakyRepository();
+    await tester
+        .pumpWidget(wrap(DiagnosticScreen(session: bootstrap(package, repo))));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Start diagnostic'));
+    await tester.pumpAndSettle();
+    repo.failNextAnswer = true;
+    await tester.tap(find.text('Correct fixture answer'));
+    await tester.pump();
+    await tester.ensureVisible(find.text('Save and continue'));
+    await tester.tap(find.text('Save and continue'));
+    await tester.pumpAndSettle();
+    expect(find.text('Retry saving'), findsOneWidget);
+    expect(
+        tester
+            .widget<TextButton>(
+                find.widgetWithText(TextButton, 'Continue later'))
+            .onPressed,
+        isNull);
+    expect(await repo.answerAttemptsForExam(package.exam.id), isEmpty);
+    await tester.ensureVisible(find.text('Retry saving'));
+    await tester.tap(find.text('Retry saving'));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('Save and continue'));
+    await tester.tap(find.text('Save and continue'));
+    await tester.pumpAndSettle();
+    expect(find.text('Question 2 of 15'), findsOneWidget);
+    expect(await repo.answerAttemptsForExam(package.exam.id), hasLength(1));
+    expect(await repo.practiceSessionsForExam(package.exam.id), hasLength(1));
+  });
+
   for (final mode in PracticeMode.values) {
     test('second history read fails closed and retry restores ${mode.name}',
         () async {
@@ -138,6 +204,7 @@ void main() {
         ..persistBeforeFailure = persisted;
       await tester.pumpWidget(
           wrap(DiagnosticScreen(session: bootstrap(package, repo))));
+      await tester.pumpAndSettle();
       await tester.tap(find.text('Start diagnostic'));
       await tester.pumpAndSettle();
       expect(find.text('Could not start the diagnostic. Please retry.'),
@@ -179,7 +246,8 @@ void main() {
     repo.failHistoryRead = 2;
     await tester
         .pumpWidget(wrap(DiagnosticScreen(session: bootstrap(package, repo))));
-    await tester.tap(find.text('Start diagnostic'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Resume diagnostic'));
     await tester.pumpAndSettle();
     expect(repo.historyReads, 2);
     expect(find.text('Question 1 of 3'), findsNothing);
@@ -209,7 +277,7 @@ void main() {
     expect(find.text('Skip for now'), findsOneWidget);
     expect(find.text('Start diagnostic'), findsNothing);
     expect(find.text('Retry diagnostic'), findsNothing);
-    expect(repo.historyReads, 0);
+    expect(repo.historyReads, 1);
     expect(repo.saveCalls, 0);
   });
 

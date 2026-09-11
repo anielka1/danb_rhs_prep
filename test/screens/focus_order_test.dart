@@ -174,8 +174,7 @@ void main() {
 
       // Home is active: its content is reachable, the other three tabs'
       // screen-specific content is not.
-      expect(find.bySemanticsLabel('Small steps.\nSteady progress.'),
-          findsOneWidget);
+      expect(find.bySemanticsLabel('Your study day'), findsOneWidget);
       expect(find.bySemanticsLabel(RegExp('Let’s practice.')), findsNothing);
       expect(find.bySemanticsLabel(RegExp('Your Progress')), findsNothing);
 
@@ -196,8 +195,7 @@ void main() {
       expect(find.bySemanticsLabel(RegExp('Your Progress')), findsOneWidget);
       // Home's own content is no longer reachable now that it's the
       // inactive tab.
-      expect(find.bySemanticsLabel('Small steps.\nSteady progress.'),
-          findsNothing);
+      expect(find.bySemanticsLabel('Your study day'), findsNothing);
 
       handle.dispose();
     });

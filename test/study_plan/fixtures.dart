@@ -11,6 +11,11 @@ ContentPackage fixture(
   final raw = jsonDecode(
           File('assets/content/danb_rhs/content.json').readAsStringSync())
       as Map<String, dynamic>;
+  return fixtureFromJson(raw, count: count, status: status);
+}
+
+ContentPackage fixtureFromJson(Map<String, dynamic> raw,
+    {int count = 80, QuestionStatus status = QuestionStatus.approved}) {
   final exam = ExamConfig.fromJson(raw['exam'] as Map<String, dynamic>);
   final questions = <Question>[];
   for (var i = 0; i < count; i++) {
