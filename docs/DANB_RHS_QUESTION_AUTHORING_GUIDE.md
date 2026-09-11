@@ -40,7 +40,7 @@ plus the workbench's own review fields:
 | `correctAnswerId` | Must reference exactly one of `answers[].id`. |
 | `explanation` | Explains *why* the correct answer is correct, in enough depth for a subject-matter reviewer to check it against the cited source without re-deriving it themselves. |
 | `references` | At least one `{title, source, section, url?}` entry identifying the authoritative source, its edition/version/date, and the specific section, chapter, page, or URL anchor the fact came from. A reference naming only a publisher with no locator (no section/page/anchor) is not acceptable. |
-| `difficulty` | 1–5, per the existing schema. |
+| `difficulty` | 1–5 provisional complexity rating, using section 2.1; record the rationale in the review packet. |
 | `version` | Starts at `1`; increment on any material edit (see fingerprinting, below). |
 | `sourceVersion` | Identifies which authoritative source version this question was drafted against (e.g. `"cdc-dental-ic-summary-2016"`). |
 | `tags` | Free-form, optional; use for topic cross-referencing, not for review status. |
@@ -85,6 +85,49 @@ plus the workbench's own review fields:
   textbook question content. Every candidate must be original material
   written from the cited authoritative source's *facts*, not from someone
   else's *test item* built on those facts.
+
+## 2.1. Provisional difficulty: complexity rubric (1–5)
+
+`difficulty` is a **provisional editorial estimate of cognitive complexity**,
+not an observed success rate, a DANB rating, or evidence of clinical approval.
+Assign it to the task as actually worded, including the options. A clinical
+story around a recall question does not make it an application question.
+
+| Level | Task demanded of the learner | Evidence required in the review packet |
+| --- | --- | --- |
+| **1 — Recognition / recall** | Identify a fact, purpose, definition or directly stated rule. A single explicit cue can call for a familiar action. | Name the fact or rule. Explain why the stem does not require resolving competing conditions. |
+| **2 — Simple application / interpretation** | Apply a rule to distinguish plausible alternatives using a relevant condition, or interpret a small comparison. | Identify the deciding condition or comparison and the misconception behind each alternative. A scenario alone is insufficient. |
+| **3 — Integrated application** | Combine at least two independently relevant principles to select a sequence or action. | Show the reasoning steps and how changing either condition could change the answer. Cite support for each step. |
+| **4 — Multi-step analysis** | Analyze several relevant findings, prioritize competing constraints, and reject alternatives that satisfy only part of the case. | Explain the necessary sequence of inferences and why the competing actions fail a stated constraint. |
+| **5 — Complex synthesis** | Integrate several evidence sources or constraints in a complex but fully specified case to reach one defensible decision. | Document the complete reasoning and source support. Require expert scrutiny of scope and ambiguity; do not manufacture complexity by omitting information. |
+
+These anchors are an editorial convention, not a validated psychometric scale.
+Use the lowest level supported by the actual reasoning required. Safety
+importance, obscure vocabulary, longer text, trick negatives, unrealistic
+options, or a desired distribution do not justify a higher rating. Plausible
+distractors improve item quality but do not automatically increase complexity.
+Do not force this small packet to contain levels 3–5. If evidence cannot support
+a clear key, flag the precise issue for expert revision rather than assigning
+a higher number.
+
+For each candidate, the review packet must record a knowledge objective,
+**difficulty rationale**, each distractor's intended **misconception**, and a
+concrete source locator. The reviewer should assess those claims independently.
+After authorized use with a suitable learner population, calibrate against
+observed proportion correct, discrimination and distractor selection patterns;
+record the population and sample limitations. Empirical difficulty and editorial
+complexity are related but distinct. Any later change to `difficulty` remains a
+material, versioned edit requiring a new fingerprint and review.
+
+### Static option order and review labels
+
+Avoid recurring correct-position patterns across a packet. Review the stored
+option order explicitly; do not randomize content during a build. Keep answer
+IDs and the key-to-ID relationship stable when reordering options. In a review
+packet, **display position A–D is not the stable answer ID a–d**: show both and
+identify the correct answer by both. An answer-order edit is material even if
+its text and stable ID stay unchanged. Runtime shuffling belongs to a separate
+implementation change and is not implied by an editorial revision.
 
 ## 3. Human-approval boundary
 

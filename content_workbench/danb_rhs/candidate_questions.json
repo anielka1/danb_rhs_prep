@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "examId": "danb_rhs",
-  "note": "First original editorial batch: 26 English draft candidates, with per-question revision metadata, sourced 2026-09-11. All await qualified human review; see source_register.md and first_batch_review.md. No candidate is approved or included in production content.",
+  "note": "Editorial revision of the 26 first-batch English draft candidates from PR #65. All difficulty ratings are provisional complexity judgments. All await qualified human review; see first_batch_review.md and source_register.md. No promotion to production.",
   "candidates": [
     {
       "id": "rhs-cand-purpose_technique-001",
@@ -9,27 +9,27 @@
       "domainId": "purpose_technique",
       "topicId": "image_purpose",
       "status": "draft",
-      "questionText": "A patient asks why the dentist might request images after examining the mouth. What additional information can radiographs provide?",
+      "questionText": "Which information can a dental radiograph add to the clinical examination?",
       "answers": [
         {
-          "id": "a",
-          "text": "Conditions hidden from direct clinical inspection"
-        },
-        {
           "id": "b",
-          "text": "A replacement for the medical history"
+          "text": "A record of the patient’s medication use"
         },
         {
           "id": "c",
-          "text": "A definitive diagnosis of every oral lesion"
+          "text": "A measurement of the patient’s pain intensity"
+        },
+        {
+          "id": "a",
+          "text": "Findings in structures not directly visible"
         },
         {
           "id": "d",
-          "text": "Proof that future dental disease cannot develop"
+          "text": "A history of changes in the patient’s symptoms"
         }
       ],
       "correctAnswerId": "a",
-      "explanation": "Radiographs can reveal otherwise unseen disease. They supplement history and examination; they neither diagnose every lesion nor predict freedom from future disease.",
+      "explanation": "Radiographs can reveal hidden findings. Medication use, pain experience and symptom history require information from the patient rather than interpretation of a radiograph.",
       "references": [
         {
           "title": "X-rays",
@@ -38,14 +38,14 @@
           "url": "https://www.mouthhealthy.org/all-topics-a-z/x-rays/"
         }
       ],
-      "difficulty": 2,
-      "version": 1,
+      "difficulty": 1,
+      "version": 2,
       "sourceVersion": "ADA-PATIENT; undated page; refers to 2024 recommendations; accessed 2026-09-11",
       "tags": [
         "first-editorial-batch",
         "complement-clinical-examination"
       ],
-      "updatedAt": "2026-09-11T12:25:20.174574Z"
+      "updatedAt": "2026-09-11T12:58:14.174527Z"
     },
     {
       "id": "rhs-cand-purpose_technique-002",
@@ -56,40 +56,46 @@
       "questionText": "According to the ADA’s 2026 summary, which imaging approach is primary for an initial endodontic evaluation?",
       "answers": [
         {
-          "id": "a",
-          "text": "Routine CBCT before clinical examination"
+          "id": "b",
+          "text": "Intraoral two-dimensional radiography"
         },
         {
-          "id": "b",
-          "text": "Intraoral two-dimensional radiographs"
+          "id": "a",
+          "text": "Cone-beam computed tomography"
         },
         {
           "id": "c",
-          "text": "Panoramic imaging as the only assessment"
+          "text": "Panoramic radiography"
         },
         {
           "id": "d",
-          "text": "CBCT instead of all intraoral imaging"
+          "text": "Conventional medical computed tomography"
         }
       ],
       "correctAnswerId": "b",
-      "explanation": "Intraoral 2D imaging is the primary initial modality. CBCT may follow clinical and 2D assessment when indicated; neither automatic CBCT nor panoramic imaging alone is the stated primary approach.",
+      "explanation": "ADA identifies intraoral 2D imaging as the primary initial approach. CBCT may follow clinical and 2D assessment when indicated. Panoramic radiography and conventional medical CT are not the primary approach named here.",
       "references": [
         {
           "title": "New ADA recommendations confirm dental imaging most effectively used in moderation",
           "source": "American Dental Association, ADA News; January 2026 article; reports recommendations published January 5, 2026; accessed 2026-09-11",
           "section": "Specialty recommendations: endodontic evaluation bullet",
           "url": "https://adanews.ada.org/ada-news/2026/january/new-ada-recommendations-confirm-dental-imaging-most-effectively-used-in-moderation/"
+        },
+        {
+          "title": "Dental Cone-beam Computed Tomography",
+          "source": "U.S. Food and Drug Administration; undated web page; accessed 2026-09-11",
+          "section": "Description: comparison of dental CBCT and conventional CT",
+          "url": "https://www.fda.gov/radiation-emitting-products/medical-x-ray-imaging/dental-cone-beam-computed-tomography"
         }
       ],
-      "difficulty": 2,
-      "version": 1,
-      "sourceVersion": "ADA-NEWS-2026; January 2026 article; reports recommendations published January 5, 2026; accessed 2026-09-11",
+      "difficulty": 1,
+      "version": 2,
+      "sourceVersion": "ADA-NEWS-2026; January 2026 article; reports recommendations published January 5, 2026; accessed 2026-09-11; supplementary references re-read 2026-09-11",
       "tags": [
         "first-editorial-batch",
         "initial-endodontic-imaging"
       ],
-      "updatedAt": "2026-09-11T12:25:20.175199Z"
+      "updatedAt": "2026-09-11T12:58:14.174959Z"
     },
     {
       "id": "rhs-cand-purpose_technique-003",
@@ -97,43 +103,49 @@
       "domainId": "purpose_technique",
       "topicId": "image_purpose",
       "status": "draft",
-      "questionText": "What distinguishes the image data produced by dental CBCT from a conventional two-dimensional dental radiograph?",
+      "questionText": "What image output characterizes dental CBCT?",
       "answers": [
         {
           "id": "a",
-          "text": "A single flat projection"
+          "text": "A single two-dimensional projection"
         },
         {
           "id": "b",
-          "text": "A set of external facial photographs"
-        },
-        {
-          "id": "c",
-          "text": "A three-dimensional reconstruction"
+          "text": "A series of unreconstructed projection views"
         },
         {
           "id": "d",
-          "text": "A continuous two-dimensional display"
+          "text": "A continuous two-dimensional projection display"
+        },
+        {
+          "id": "c",
+          "text": "A reconstructed three-dimensional volume"
         }
       ],
       "correctAnswerId": "c",
-      "explanation": "CBCT reconstructs a volume from X-ray projections. A single flat projection, external photographs, or a continuous 2D display does not describe that volumetric result.",
+      "explanation": "CBCT reconstructs volumetric data from projections. A flat image, unreconstructed inputs, and a continuous projection display do not describe that output.",
       "references": [
         {
           "title": "Dental Cone-beam Computed Tomography",
           "source": "U.S. Food and Drug Administration; undated web page; accessed 2026-09-11",
           "section": "Description",
           "url": "https://www.fda.gov/radiation-emitting-products/medical-x-ray-imaging/dental-cone-beam-computed-tomography"
+        },
+        {
+          "title": "Medical X-ray Imaging",
+          "source": "U.S. Food and Drug Administration; undated web page; accessed 2026-09-11",
+          "section": "Description: radiography, fluoroscopy and CT image outputs",
+          "url": "https://www.fda.gov/radiation-emitting-products/medical-imaging/medical-x-ray-imaging"
         }
       ],
       "difficulty": 1,
-      "version": 2,
-      "sourceVersion": "FDA-CBCT; undated web page; accessed 2026-09-11",
+      "version": 3,
+      "sourceVersion": "FDA-CBCT; undated web page; accessed 2026-09-11; supplementary references re-read 2026-09-11",
       "tags": [
         "first-editorial-batch",
         "cbct-dimensional-data"
       ],
-      "updatedAt": "2026-09-11T12:25:20.175226Z"
+      "updatedAt": "2026-09-11T12:58:14.174968Z"
     },
     {
       "id": "rhs-cand-purpose_technique-004",
@@ -141,27 +153,27 @@
       "domainId": "purpose_technique",
       "topicId": "error_correction",
       "status": "draft",
-      "questionText": "Before a panoramic exposure, earrings lie within the imaging region. What should the team do to reduce interference?",
+      "questionText": "Before a panoramic exposure, removable earrings lie within the imaging region. Which preparation addresses this source of interference?",
       "answers": [
         {
           "id": "a",
-          "text": "Increase exposure time"
-        },
-        {
-          "id": "b",
-          "text": "Correct all interference afterward"
-        },
-        {
-          "id": "c",
-          "text": "Leave them in place if the patient is still"
+          "text": "Select a longer exposure with the earrings in place"
         },
         {
           "id": "d",
-          "text": "Ask the patient to remove them"
+          "text": "Ask the patient to remove the earrings before exposure"
+        },
+        {
+          "id": "b",
+          "text": "Plan to adjust image contrast with the earrings in place"
+        },
+        {
+          "id": "c",
+          "text": "Secure the earrings against movement with adhesive tape"
         }
       ],
       "correctAnswerId": "d",
-      "explanation": "Metal in the imaging region can interfere with the image. Removal addresses this risk; extra exposure, stillness alone, or assumed software correction does not remove the object.",
+      "explanation": "Remove interfering metal before imaging. Longer exposure, display adjustment and taping do not remove the metal from the region.",
       "references": [
         {
           "title": "Panoramic Dental X-ray",
@@ -170,14 +182,14 @@
           "url": "https://www.radiologyinfo.org/en/info/panoramic-xray"
         }
       ],
-      "difficulty": 2,
-      "version": 1,
+      "difficulty": 1,
+      "version": 2,
       "sourceVersion": "RI-PAN; last reviewed 2024-09-09; accessed 2026-09-11",
       "tags": [
         "first-editorial-batch",
         "remove-external-metal"
       ],
-      "updatedAt": "2026-09-11T12:25:20.175229Z"
+      "updatedAt": "2026-09-11T12:58:14.174974Z"
     },
     {
       "id": "rhs-cand-purpose_technique-005",
@@ -185,43 +197,43 @@
       "domainId": "purpose_technique",
       "topicId": "acquisition_technique",
       "status": "draft",
-      "questionText": "What is the purpose of correct bite-block and head positioning during panoramic acquisition?",
+      "questionText": "What is the main purpose of the bite-block and head supports during panoramic imaging?",
       "answers": [
         {
-          "id": "a",
-          "text": "Align the teeth and head for a clear image"
+          "id": "b",
+          "text": "Select the exposure settings for image acquisition"
         },
         {
-          "id": "b",
-          "text": "Replace the need to keep still"
+          "id": "a",
+          "text": "Position the teeth and head for image acquisition"
         },
         {
           "id": "c",
-          "text": "Determine whether imaging is clinically indicated"
+          "text": "Adjust the displayed contrast after image acquisition"
         },
         {
           "id": "d",
-          "text": "Set the exposure automatically for every patient"
+          "text": "Remove metal interference during image acquisition"
         }
       ],
       "correctAnswerId": "a",
-      "explanation": "Positioning supports image clarity and alignment. It does not replace stillness, establish clinical need, or determine a universal exposure setting.",
+      "explanation": "The supports establish alignment. They do not select exposure, edit displayed contrast or remove interfering metal.",
       "references": [
         {
           "title": "Panoramic Dental X-ray",
           "source": "RadiologyInfo.org, American College of Radiology / Radiological Society of North America; last reviewed 2024-09-09; accessed 2026-09-11",
-          "section": "How is the procedure performed?",
+          "section": "What does the equipment look like?; How is the procedure performed?; How does the procedure work?; How should I prepare?",
           "url": "https://www.radiologyinfo.org/en/info/panoramic-xray"
         }
       ],
-      "difficulty": 2,
-      "version": 1,
+      "difficulty": 1,
+      "version": 2,
       "sourceVersion": "RI-PAN; last reviewed 2024-09-09; accessed 2026-09-11",
       "tags": [
         "first-editorial-batch",
         "panoramic-positioning-purpose"
       ],
-      "updatedAt": "2026-09-11T12:25:20.175231Z"
+      "updatedAt": "2026-09-11T12:58:14.174982Z"
     },
     {
       "id": "rhs-cand-purpose_technique-006",
@@ -229,27 +241,27 @@
       "domainId": "purpose_technique",
       "topicId": "acquisition_technique",
       "status": "draft",
-      "questionText": "During a dental CBCT acquisition, what instruction should the patient follow as the source and detector move?",
+      "questionText": "Once positioned for dental CBCT, what should the patient do while the scanner rotates?",
       "answers": [
         {
           "id": "a",
-          "text": "Turn the head to follow the detector"
-        },
-        {
-          "id": "b",
-          "text": "Remain still in the position established by the team"
+          "text": "Relax the head position after the first projection"
         },
         {
           "id": "c",
-          "text": "Reposition the chin at each projection"
+          "text": "Turn slightly toward the scanner as it passes"
         },
         {
           "id": "d",
-          "text": "Open and close the mouth throughout the scan"
+          "text": "Readjust the chin when the scanner reaches the other side"
+        },
+        {
+          "id": "b",
+          "text": "Keep the established head position throughout acquisition"
         }
       ],
       "correctAnswerId": "b",
-      "explanation": "The team positions the patient before acquisition; the patient then remains still. Following the detector, moving the chin, or repeatedly moving the jaw conflicts with that instruction.",
+      "explanation": "The patient remains still while the equipment moves. Relaxing, following the scanner or readjusting mid-acquisition changes the established position.",
       "references": [
         {
           "title": "Dental Cone Beam CT",
@@ -258,14 +270,14 @@
           "url": "https://www.radiologyinfo.org/en/info/dentalconect"
         }
       ],
-      "difficulty": 2,
-      "version": 1,
+      "difficulty": 1,
+      "version": 2,
       "sourceVersion": "RI-CBCT; last reviewed 2026-06-01; accessed 2026-09-11",
       "tags": [
         "first-editorial-batch",
         "cbct-stillness"
       ],
-      "updatedAt": "2026-09-11T12:25:20.175233Z"
+      "updatedAt": "2026-09-11T12:58:14.174988Z"
     },
     {
       "id": "rhs-cand-purpose_technique-007",
@@ -273,43 +285,55 @@
       "domainId": "purpose_technique",
       "topicId": "image_quality",
       "status": "draft",
-      "questionText": "An operator repeatedly raises digital exposure to make image noise less noticeable. Which concern does this illustrate?",
+      "questionText": "A quality review compares digital images for the same clinical task. Which pattern most strongly suggests exposure creep?",
       "answers": [
         {
+          "id": "c",
+          "text": "Exposure rises for smoother images despite adequate diagnostic detail"
+        },
+        {
           "id": "a",
-          "text": "A reduction in patient exposure"
+          "text": "Exposure rises to correct documented underexposure that obscured needed detail"
         },
         {
           "id": "b",
-          "text": "Removal of the need for quality control"
-        },
-        {
-          "id": "c",
-          "text": "Exposure creep"
+          "text": "Display brightness changes while acquisition settings stay unchanged"
         },
         {
           "id": "d",
-          "text": "A substitute for patient positioning"
+          "text": "Exposure falls after a lower-dose protocol meets diagnostic requirements"
         }
       ],
       "correctAnswerId": "c",
-      "explanation": "Exposure creep describes dose increases made to suppress visible noise. It increases rather than reduces exposure and does not replace quality control or positioning.",
+      "explanation": "Increasing dose to suppress noise in already adequate images fits exposure creep. Correcting documented underexposure, changing display brightness and validating dose reduction describe different situations.",
       "references": [
         {
           "title": "X-Rays/Radiographs",
           "source": "American Dental Association; updated 2026-03-26; accessed 2026-09-11",
           "section": "Dental Radiographic Technology: paragraph on image noise",
           "url": "https://www.ada.org/resources/ada-library/oral-health-topics/x-rays-radiographs"
+        },
+        {
+          "title": "Medical X-ray Imaging",
+          "source": "U.S. Food and Drug Administration; undated web page; accessed 2026-09-11",
+          "section": "Principles of radiation protection: justification and optimization, item 2",
+          "url": "https://www.fda.gov/radiation-emitting-products/medical-imaging/medical-x-ray-imaging"
+        },
+        {
+          "title": "Panoramic Dental X-ray",
+          "source": "RadiologyInfo.org, American College of Radiology / Radiological Society of North America; last reviewed 2024-09-09; accessed 2026-09-11",
+          "section": "How does the procedure work?: digital brightness and contrast",
+          "url": "https://www.radiologyinfo.org/en/info/panoramic-xray"
         }
       ],
       "difficulty": 2,
-      "version": 1,
-      "sourceVersion": "ADA-TOPIC; updated 2026-03-26; accessed 2026-09-11",
+      "version": 2,
+      "sourceVersion": "ADA-TOPIC; updated 2026-03-26; accessed 2026-09-11; supplementary references re-read 2026-09-11",
       "tags": [
         "first-editorial-batch",
         "digital-exposure-creep"
       ],
-      "updatedAt": "2026-09-11T12:25:20.175234Z"
+      "updatedAt": "2026-09-11T12:58:14.174993Z"
     },
     {
       "id": "rhs-cand-purpose_technique-008",
@@ -317,27 +341,27 @@
       "domainId": "purpose_technique",
       "topicId": "image_quality",
       "status": "draft",
-      "questionText": "When selecting exposure for a justified dental image, which quality goal fits optimization?",
+      "questionText": "For a justified image, protocol L gives inadequate detail, M gives adequate detail, and H gives a smoother image without additional diagnostic information. Their doses increase from L to H. Which choice best fits optimization?",
       "answers": [
         {
           "id": "a",
-          "text": "The smoothest image regardless of dose"
+          "text": "Protocol H, to prioritize visual smoothness"
         },
         {
           "id": "b",
-          "text": "The lowest setting even if anatomy is unreadable"
-        },
-        {
-          "id": "c",
-          "text": "The same setting for every patient"
+          "text": "Protocol L, to prioritize the smallest dose"
         },
         {
           "id": "d",
-          "text": "Diagnostic adequacy at the lowest reasonably needed dose"
+          "text": "Protocol M, to achieve adequate diagnostic detail"
+        },
+        {
+          "id": "c",
+          "text": "Protocols L and M, to compare both images"
         }
       ],
       "correctAnswerId": "d",
-      "explanation": "Optimization balances usable diagnostic information with dose reduction. Cosmetic smoothness, unreadable minimum-dose images, and universal settings fail that balance.",
+      "explanation": "M meets the diagnostic need at the lowest dose among these choices. H adds dose without diagnostic benefit, L is inadequate, and taking both L and M adds unnecessary exposure.",
       "references": [
         {
           "title": "Medical X-ray Imaging",
@@ -347,13 +371,13 @@
         }
       ],
       "difficulty": 2,
-      "version": 1,
+      "version": 2,
       "sourceVersion": "FDA-XRAY; undated web page; accessed 2026-09-11",
       "tags": [
         "first-editorial-batch",
         "diagnostic-adequacy"
       ],
-      "updatedAt": "2026-09-11T12:25:20.175236Z"
+      "updatedAt": "2026-09-11T12:58:14.174999Z"
     },
     {
       "id": "rhs-cand-purpose_technique-009",
@@ -361,27 +385,27 @@
       "domainId": "purpose_technique",
       "topicId": "patient_management",
       "status": "draft",
-      "questionText": "A patient is worried about a recommended CBCT examination. What is the most appropriate response before proceeding?",
+      "questionText": "A patient wants to understand a recommended CBCT examination before agreeing to it. Which discussion best addresses that decision?",
       "answers": [
         {
-          "id": "a",
-          "text": "Invite discussion with the dentist about its purpose, benefits, risks and alternatives"
-        },
-        {
           "id": "b",
-          "text": "Promise that the examination has no radiation risk"
+          "text": "Its appointment length, preparation, price and payment options"
         },
         {
           "id": "c",
-          "text": "State that owning a scanner makes the examination necessary"
+          "text": "Its scanner design, image display, storage and transfer"
         },
         {
           "id": "d",
-          "text": "Explain that questions should wait until after exposure"
+          "text": "Its scheduling, referral paperwork, reporting and follow-up"
+        },
+        {
+          "id": "a",
+          "text": "Its clinical purpose, benefits, risks and alternatives"
         }
       ],
       "correctAnswerId": "a",
-      "explanation": "FDA encourages informed discussion before imaging. Zero-risk assurances are inaccurate; equipment availability is not justification, and postponing questions prevents that discussion.",
+      "explanation": "The decision requires discussion of expected benefit, risk and alternatives for the clinical purpose. Logistics and equipment information may help but do not replace that discussion.",
       "references": [
         {
           "title": "Dental Cone-beam Computed Tomography",
@@ -390,14 +414,14 @@
           "url": "https://www.fda.gov/radiation-emitting-products/medical-x-ray-imaging/dental-cone-beam-computed-tomography"
         }
       ],
-      "difficulty": 2,
-      "version": 1,
+      "difficulty": 1,
+      "version": 2,
       "sourceVersion": "FDA-CBCT; undated web page; accessed 2026-09-11",
       "tags": [
         "first-editorial-batch",
         "patient-imaging-discussion"
       ],
-      "updatedAt": "2026-09-11T12:25:20.175238Z"
+      "updatedAt": "2026-09-11T12:58:14.175003Z"
     },
     {
       "id": "rhs-cand-purpose_technique-010",
@@ -405,43 +429,43 @@
       "domainId": "purpose_technique",
       "topicId": "image_purpose",
       "status": "draft",
-      "questionText": "For periodontal evaluation, which approach does the ADA’s 2026 summary identify as the established standard?",
+      "questionText": "A practice is updating its periodontal imaging policy. Which approach best reflects the ADA’s 2026 summary?",
       "answers": [
         {
-          "id": "a",
-          "text": "Routine CBCT without clinical examination"
+          "id": "b",
+          "text": "Use a 2D full-mouth series with examination when individually indicated"
         },
         {
-          "id": "b",
-          "text": "A 2D full-mouth series together with clinical examination"
+          "id": "a",
+          "text": "Use routine CBCT with examination for periodontal assessments"
         },
         {
           "id": "c",
-          "text": "A panoramic image without clinical findings"
+          "text": "Use annual full-mouth series with examination on a fixed schedule"
         },
         {
           "id": "d",
-          "text": "Imaging only after all treatment is finished"
+          "text": "Use panoramic imaging with examination as the standard replacement"
         }
       ],
       "correctAnswerId": "b",
-      "explanation": "The summary supports a full-mouth 2D series plus examination. Routine CBCT, an isolated panoramic image, or deferring all imaging until after treatment does not describe that approach.",
+      "explanation": "The summary pairs full-mouth 2D imaging with clinical examination, with imaging decisions based on individual findings and history. It does not support routine CBCT, an automatic annual series or panoramic imaging as the stated replacement standard.",
       "references": [
         {
           "title": "New ADA recommendations confirm dental imaging most effectively used in moderation",
           "source": "American Dental Association, ADA News; January 2026 article; reports recommendations published January 5, 2026; accessed 2026-09-11",
-          "section": "Periodontal disease management paragraph",
+          "section": "Clinical examination before imaging; Periodontal disease management paragraph",
           "url": "https://adanews.ada.org/ada-news/2026/january/new-ada-recommendations-confirm-dental-imaging-most-effectively-used-in-moderation/"
         }
       ],
       "difficulty": 2,
-      "version": 1,
+      "version": 2,
       "sourceVersion": "ADA-NEWS-2026; January 2026 article; reports recommendations published January 5, 2026; accessed 2026-09-11",
       "tags": [
         "first-editorial-batch",
         "periodontal-baseline-imaging"
       ],
-      "updatedAt": "2026-09-11T12:25:20.175239Z"
+      "updatedAt": "2026-09-11T12:58:14.175008Z"
     },
     {
       "id": "rhs-cand-radiation_protection-001",
@@ -449,27 +473,27 @@
       "domainId": "radiation_protection",
       "topicId": "radiation_physics",
       "status": "draft",
-      "questionText": "As an X-ray beam passes through a patient, what happens to its photons?",
+      "questionText": "Which description matches the passage of an X-ray beam through a patient?",
       "answers": [
         {
           "id": "a",
-          "text": "All are stored in the tissues"
+          "text": "Photons reaching the detector represent the original beam without tissue interaction"
         },
         {
           "id": "b",
-          "text": "All reach the detector unchanged"
+          "text": "Photons absorbed in tissues form the pattern transmitted to the detector"
         },
         {
           "id": "c",
-          "text": "Some are absorbed or scattered, while others are transmitted"
+          "text": "Some photons are absorbed or scattered; others pass through to the detector"
         },
         {
           "id": "d",
-          "text": "All are converted into visible light before reaching the detector"
+          "text": "Scattered photons form the intended transmitted pattern rather than photons passing through"
         }
       ],
       "correctAnswerId": "c",
-      "explanation": "The detector receives the transmitted pattern after absorption and scattering within the patient. Storage, unchanged transmission of every photon, and complete conversion to visible light are not this process.",
+      "explanation": "FDA distinguishes absorption and scattering from transmission to the detector. Absorbed photons do not constitute the transmitted beam; the description is not unchanged passage or a primarily scattered pattern.",
       "references": [
         {
           "title": "Radiography",
@@ -479,13 +503,13 @@
         }
       ],
       "difficulty": 1,
-      "version": 1,
+      "version": 2,
       "sourceVersion": "FDA-RAD; undated web page; accessed 2026-09-11",
       "tags": [
         "first-editorial-batch",
         "beam-interaction"
       ],
-      "updatedAt": "2026-09-11T12:25:20.175241Z"
+      "updatedAt": "2026-09-11T12:58:14.175013Z"
     },
     {
       "id": "rhs-cand-radiation_protection-002",
@@ -493,27 +517,27 @@
       "domainId": "radiation_protection",
       "topicId": "radiation_biology",
       "status": "draft",
-      "questionText": "Why does ionizing radiation used in dental imaging require protection measures?",
+      "questionText": "Which statement explains a biological reason to limit unnecessary X-ray exposure?",
       "answers": [
         {
           "id": "a",
-          "text": "It makes every exposed patient develop cancer"
-        },
-        {
-          "id": "b",
-          "text": "Its effects are limited to warming the skin"
-        },
-        {
-          "id": "c",
-          "text": "It cannot interact with living cells"
+          "text": "Visible skin reddening is expected after routine dental imaging"
         },
         {
           "id": "d",
-          "text": "It can damage DNA"
+          "text": "Ionizing radiation can damage DNA and increase later cancer risk"
+        },
+        {
+          "id": "b",
+          "text": "Later cancer risk is assessed from immediate symptoms after exposure"
+        },
+        {
+          "id": "c",
+          "text": "A digital receptor makes tissue effects unrelated to radiation exposure"
         }
       ],
       "correctAnswerId": "d",
-      "explanation": "Ionizing radiation can damage DNA and increase cancer risk. Risk is not a certainty of cancer; neither heat alone nor an inability to interact with cells describes the concern.",
+      "explanation": "FDA describes possible DNA damage and increased cancer risk. Routine imaging is not expected to cause skin reddening, immediate symptoms do not measure later risk, and a digital receptor does not remove the biological concern.",
       "references": [
         {
           "title": "Medical X-ray Imaging",
@@ -523,13 +547,13 @@
         }
       ],
       "difficulty": 1,
-      "version": 1,
+      "version": 2,
       "sourceVersion": "FDA-XRAY; undated web page; accessed 2026-09-11",
       "tags": [
         "first-editorial-batch",
         "ionization-dna"
       ],
-      "updatedAt": "2026-09-11T12:25:20.175243Z"
+      "updatedAt": "2026-09-11T12:58:14.175018Z"
     },
     {
       "id": "rhs-cand-radiation_protection-003",
@@ -537,27 +561,27 @@
       "domainId": "radiation_protection",
       "topicId": "radiation_biology",
       "status": "draft",
-      "questionText": "Why is particular attention to radiation protection appropriate for children?",
+      "questionText": "Which combination helps explain children’s greater radiation-related lifetime risk per unit dose compared with adults?",
       "answers": [
         {
           "id": "a",
-          "text": "They are more radiosensitive and have more remaining years for effects to develop"
+          "text": "Greater radiosensitivity and more remaining years for effects to develop"
         },
         {
           "id": "b",
-          "text": "They receive no natural background radiation"
+          "text": "Lower radiosensitivity and more remaining years for effects to develop"
         },
         {
           "id": "c",
-          "text": "They cannot benefit from diagnostically necessary images"
+          "text": "Greater radiosensitivity and fewer remaining years for effects to develop"
         },
         {
           "id": "d",
-          "text": "They have the same risk per unit dose as every adult"
+          "text": "Lower radiosensitivity and fewer remaining years for effects to develop"
         }
       ],
       "correctAnswerId": "a",
-      "explanation": "FDA identifies greater radiosensitivity and a longer remaining lifetime. Background exposure is not absent, necessary imaging can benefit children, and equal risk per unit dose is not the stated basis.",
+      "explanation": "FDA identifies greater radiosensitivity and a longer remaining lifetime. The other combinations reverse one or both factors.",
       "references": [
         {
           "title": "Pediatric X-ray Imaging",
@@ -567,13 +591,13 @@
         }
       ],
       "difficulty": 1,
-      "version": 1,
+      "version": 2,
       "sourceVersion": "FDA-PED; undated web page; accessed 2026-09-11",
       "tags": [
         "first-editorial-batch",
         "pediatric-radiosensitivity"
       ],
-      "updatedAt": "2026-09-11T12:25:20.175245Z"
+      "updatedAt": "2026-09-11T12:58:14.175022Z"
     },
     {
       "id": "rhs-cand-radiation_protection-004",
@@ -581,27 +605,27 @@
       "domainId": "radiation_protection",
       "topicId": "patient_operator_protection",
       "status": "draft",
-      "questionText": "A small child needs a justified X-ray examination. How should exposure settings be selected?",
+      "questionText": "Two children of the same age but different body sizes need justified images for the same clinical task. What should guide protocol selection?",
       "answers": [
         {
           "id": "a",
-          "text": "Use adult settings because the equipment is the same"
-        },
-        {
-          "id": "b",
-          "text": "Use an appropriate pediatric protocol considering size and the clinical task"
+          "text": "Select the same age-group setting for both children"
         },
         {
           "id": "c",
-          "text": "Use age alone and disregard body size"
+          "text": "Select the adult preset for consistency between the children"
         },
         {
           "id": "d",
-          "text": "Use the maximum setting to avoid any chance of noise"
+          "text": "Use the smaller child’s setting for both to minimize exposure"
+        },
+        {
+          "id": "b",
+          "text": "Consider each child’s size using an appropriate pediatric protocol"
         }
       ],
       "correctAnswerId": "b",
-      "explanation": "FDA emphasizes patient size, the clinical task and pediatric protocols. Adult defaults, age alone, or maximum exposure can give inappropriate dose; adequate image quality remains necessary.",
+      "explanation": "FDA emphasizes size and the clinical task when selecting pediatric techniques. Age matching, adult defaults or borrowing another patient’s settings do not establish adequate individualized exposure.",
       "references": [
         {
           "title": "Pediatric X-ray Imaging",
@@ -611,13 +635,13 @@
         }
       ],
       "difficulty": 2,
-      "version": 1,
+      "version": 2,
       "sourceVersion": "FDA-PED; undated web page; accessed 2026-09-11",
       "tags": [
         "first-editorial-batch",
         "pediatric-exposure-selection"
       ],
-      "updatedAt": "2026-09-11T12:25:20.175247Z"
+      "updatedAt": "2026-09-11T12:58:14.175026Z"
     },
     {
       "id": "rhs-cand-radiation_protection-005",
@@ -625,27 +649,27 @@
       "domainId": "radiation_protection",
       "topicId": "patient_operator_protection",
       "status": "draft",
-      "questionText": "The dentist determines that a lower-exposure examination can supply all information needed for a clinical question. What supports radiation protection?",
+      "questionText": "A conventional lower-exposure dental examination can answer the clinical question. Which plan follows FDA’s CBCT selection principle?",
       "answers": [
         {
           "id": "a",
-          "text": "Add CBCT solely because it produces 3D images"
-        },
-        {
-          "id": "b",
-          "text": "Acquire both examinations routinely"
+          "text": "Use CBCT to obtain more views for possible future questions"
         },
         {
           "id": "c",
-          "text": "Use the adequate lower-exposure option"
+          "text": "Use the adequate lower-exposure examination for this question"
+        },
+        {
+          "id": "b",
+          "text": "Add CBCT to establish a three-dimensional baseline"
         },
         {
           "id": "d",
-          "text": "Use CBCT whenever the scanner is available"
+          "text": "Obtain both examinations to compare their image appearance"
         }
       ],
       "correctAnswerId": "c",
-      "explanation": "CBCT should be justified by information not adequately supplied by lower-exposure options. Routine duplication, 3D capability alone, and availability do not establish that need.",
+      "explanation": "CBCT should be justified by the current clinical need. Extra views, a speculative baseline and comparison images do not establish a benefit when the lower-exposure examination is adequate.",
       "references": [
         {
           "title": "Dental Cone-beam Computed Tomography",
@@ -654,14 +678,14 @@
           "url": "https://www.fda.gov/radiation-emitting-products/medical-x-ray-imaging/dental-cone-beam-computed-tomography"
         }
       ],
-      "difficulty": 2,
-      "version": 1,
+      "difficulty": 1,
+      "version": 2,
       "sourceVersion": "FDA-CBCT; undated web page; accessed 2026-09-11",
       "tags": [
         "first-editorial-batch",
         "cbct-justification"
       ],
-      "updatedAt": "2026-09-11T12:25:20.175248Z"
+      "updatedAt": "2026-09-11T12:58:14.175030Z"
     },
     {
       "id": "rhs-cand-radiation_protection-006",
@@ -669,27 +693,27 @@
       "domainId": "radiation_protection",
       "topicId": "patient_operator_protection",
       "status": "draft",
-      "questionText": "Which change directly restricts the X-ray beam to the region that needs imaging?",
+      "questionText": "For intraoral radiography, which measure restricts the X-ray beam to the area that needs imaging?",
       "answers": [
         {
           "id": "a",
-          "text": "Increase display brightness"
+          "text": "Crop the displayed image to the region of interest"
         },
         {
           "id": "b",
-          "text": "Lengthen the exposure"
-        },
-        {
-          "id": "c",
-          "text": "Enlarge the irradiated field"
+          "text": "Shorten exposure time for the planned image"
         },
         {
           "id": "d",
-          "text": "Use rectangular collimation"
+          "text": "Use rectangular collimation for the planned image"
+        },
+        {
+          "id": "c",
+          "text": "Adjust display contrast for the region of interest"
         }
       ],
       "correctAnswerId": "d",
-      "explanation": "Rectangular collimation limits the beam’s extent. Display brightness changes viewing, while longer exposure or a larger field does not restrict the irradiated region.",
+      "explanation": "Rectangular collimation restricts the irradiated area. Display cropping or contrast changes occur after exposure; shorter exposure time is not beam-size restriction.",
       "references": [
         {
           "title": "ADA Releases Updated Recommendations to Enhance Radiography Safety in Dentistry",
@@ -698,14 +722,14 @@
           "url": "https://www.ada.org/about/press-releases/ada-releases-updated-recommendations-to-enhance-radiography-safety-in-dentistry"
         }
       ],
-      "difficulty": 2,
-      "version": 1,
+      "difficulty": 1,
+      "version": 2,
       "sourceVersion": "ADA-SAFETY-2024; published 2024-02-01; accessed 2026-09-11",
       "tags": [
         "first-editorial-batch",
         "beam-size-restriction"
       ],
-      "updatedAt": "2026-09-11T12:25:20.175250Z"
+      "updatedAt": "2026-09-11T12:58:14.175035Z"
     },
     {
       "id": "rhs-cand-radiation_protection-007",
@@ -713,27 +737,27 @@
       "domainId": "radiation_protection",
       "topicId": "patient_operator_protection",
       "status": "draft",
-      "questionText": "What do the ADA’s 2024 recommendations advise about routine patient lead aprons and thyroid collars for dental imaging?",
+      "questionText": "A practice revises its patient lead-apron and thyroid-collar policy after reading ADA’s 2024 recommendations. What should it do before changing routine use?",
       "answers": [
         {
           "id": "a",
-          "text": "Discontinue routine use while following applicable regulations"
+          "text": "Consider the recommendation against routine use and check applicable requirements"
         },
         {
           "id": "b",
-          "text": "Require them for every patient regardless of regulations"
+          "text": "Treat the recommendation as authorization to override conflicting requirements"
         },
         {
           "id": "c",
-          "text": "Use them instead of limiting beam size"
+          "text": "Use the existing office policy instead of reviewing applicable requirements"
         },
         {
           "id": "d",
-          "text": "Use them to justify otherwise unnecessary imaging"
+          "text": "Let individual patient preference determine whether applicable requirements are followed"
         }
       ],
       "correctAnswerId": "a",
-      "explanation": "ADA advises against routine patient shielding and notes possible beam obstruction. Applicable rules still matter. Shielding neither replaces beam limitation nor justifies imaging; universal mandatory use is not the ADA recommendation.",
+      "explanation": "ADA recommends discontinuing routine patient shielding while also directing practices to follow applicable regulations. Guidance does not override those requirements; neither an unchanged policy nor patient preference resolves that duty.",
       "references": [
         {
           "title": "ADA Releases Updated Recommendations to Enhance Radiography Safety in Dentistry",
@@ -743,13 +767,13 @@
         }
       ],
       "difficulty": 2,
-      "version": 1,
+      "version": 2,
       "sourceVersion": "ADA-SAFETY-2024; published 2024-02-01; accessed 2026-09-11",
       "tags": [
         "first-editorial-batch",
         "ada-patient-shielding-recommendation"
       ],
-      "updatedAt": "2026-09-11T12:25:20.175252Z"
+      "updatedAt": "2026-09-11T12:58:14.175041Z"
     },
     {
       "id": "rhs-cand-radiation_protection-008",
@@ -757,27 +781,27 @@
       "domainId": "radiation_protection",
       "topicId": "patient_operator_protection",
       "status": "draft",
-      "questionText": "A new patient reports recent images from another dental office. What step may avoid unnecessary repeat exposure?",
+      "questionText": "A new patient reports recent dental images at another office. Which step helps the dentist decide whether new exposure is needed?",
       "answers": [
         {
           "id": "a",
-          "text": "Repeat the entire series before requesting records"
-        },
-        {
-          "id": "b",
-          "text": "Request the existing images for the dentist to assess"
+          "text": "Order a new series to match the receiving office’s usual image format"
         },
         {
           "id": "c",
-          "text": "Assume outside images are unusable"
+          "text": "Choose new images from the dates listed without examining the images"
+        },
+        {
+          "id": "b",
+          "text": "Request the existing images for assessment of their diagnostic adequacy"
         },
         {
           "id": "d",
-          "text": "Treat a change of office as an automatic indication for new images"
+          "text": "Order a new series to establish a baseline for the receiving office"
         }
       ],
       "correctAnswerId": "b",
-      "explanation": "Existing images may meet the dentist’s information needs. Their adequacy should be assessed; relocation, assumed unusability, or repeating before review does not establish a need for new exposure.",
+      "explanation": "Request prior images for assessment. Office format, dates without image review and a routine new-office baseline do not establish diagnostic need.",
       "references": [
         {
           "title": "X-rays",
@@ -786,14 +810,14 @@
           "url": "https://www.mouthhealthy.org/all-topics-a-z/x-rays/"
         }
       ],
-      "difficulty": 2,
-      "version": 1,
+      "difficulty": 1,
+      "version": 2,
       "sourceVersion": "ADA-PATIENT; undated page; refers to 2024 recommendations; accessed 2026-09-11",
       "tags": [
         "first-editorial-batch",
         "reuse-prior-images"
       ],
-      "updatedAt": "2026-09-11T12:25:20.175260Z"
+      "updatedAt": "2026-09-11T12:58:14.175045Z"
     },
     {
       "id": "rhs-cand-infection_control-001",
@@ -801,27 +825,27 @@
       "domainId": "infection_control",
       "topicId": "equipment_precautions",
       "status": "draft",
-      "questionText": "After removing a used barrier from an X-ray control surface, the assistant sees contamination underneath. What is required before the next patient?",
+      "questionText": "A used barrier is removed from an X-ray control surface and contamination is found underneath. Which decontamination step is needed before the next patient?",
       "answers": [
         {
           "id": "a",
-          "text": "Place a new barrier over the contamination"
+          "text": "Cover the contamination with a fresh surface barrier"
         },
         {
           "id": "b",
-          "text": "Wipe with a dry towel only"
-        },
-        {
-          "id": "c",
-          "text": "Clean and disinfect the surface, then replace the barrier"
+          "text": "Clean the surface and cover it without disinfection"
         },
         {
           "id": "d",
-          "text": "Leave the barrier off for the next patient"
+          "text": "Disinfect over the contamination without prior cleaning"
+        },
+        {
+          "id": "c",
+          "text": "Clean the surface and apply appropriate disinfection"
         }
       ],
       "correctAnswerId": "c",
-      "explanation": "A contaminated underlying surface needs cleaning and disinfection before a fresh barrier. Covering contamination, dry wiping alone, or omitting the barrier does not complete decontamination.",
+      "explanation": "Clean before disinfecting contaminated surfaces. A new barrier does not decontaminate, and cleaning or disinfection with cleaning omitted is incomplete. Subsequent barrier use is a separate surface-protection decision.",
       "references": [
         {
           "title": "Best Practices for Environmental Infection Prevention and Control",
@@ -830,14 +854,14 @@
           "url": "https://www.cdc.gov/dental-infection-control/hcp/dental-ipc-faqs/cleaning-disinfecting-environmental-surface.html"
         }
       ],
-      "difficulty": 2,
-      "version": 1,
+      "difficulty": 1,
+      "version": 2,
       "sourceVersion": "CDC-ENV; 2024-05-15; accessed 2026-09-11",
       "tags": [
         "first-editorial-batch",
         "contaminated-barrier-surface"
       ],
-      "updatedAt": "2026-09-11T12:25:20.175262Z"
+      "updatedAt": "2026-09-11T12:58:14.175050Z"
     },
     {
       "id": "rhs-cand-infection_control-002",
@@ -852,20 +876,20 @@
           "text": "An FDA-cleared high-level instrument disinfectant"
         },
         {
+          "id": "d",
+          "text": "An EPA-registered tuberculocidal hospital disinfectant"
+        },
+        {
           "id": "b",
           "text": "An EPA-registered low-level hospital disinfectant"
         },
         {
           "id": "c",
-          "text": "A detergent without a hospital-disinfectant claim"
-        },
-        {
-          "id": "d",
-          "text": "An EPA-registered tuberculocidal hospital disinfectant"
+          "text": "A cleaning product without a hospital-disinfectant claim"
         }
       ],
       "correctAnswerId": "d",
-      "explanation": "Visible blood calls for the specified intermediate-level product, used as labeled. Low-level disinfection or detergent alone is insufficient; high-level instrument chemicals should not be used on environmental surfaces.",
+      "explanation": "Visible blood requires the indicated intermediate-level product, used as labeled. Low-level products or cleaning alone are insufficient here; high-level instrument chemicals are inappropriate for environmental surfaces.",
       "references": [
         {
           "title": "Best Practices for Environmental Infection Prevention and Control",
@@ -875,13 +899,13 @@
         }
       ],
       "difficulty": 2,
-      "version": 2,
+      "version": 3,
       "sourceVersion": "CDC-ENV; 2024-05-15; accessed 2026-09-11",
       "tags": [
         "first-editorial-batch",
         "blood-contaminated-surface"
       ],
-      "updatedAt": "2026-09-11T12:25:20.175266Z"
+      "updatedAt": "2026-09-11T12:58:14.175054Z"
     },
     {
       "id": "rhs-cand-infection_control-003",
@@ -889,27 +913,27 @@
       "domainId": "infection_control",
       "topicId": "equipment_precautions",
       "status": "draft",
-      "questionText": "A reusable receptor holder contacts oral mucosa and its validated instructions permit heat sterilization. What processing is appropriate between patients?",
+      "questionText": "A reusable receptor holder contacts oral mucosa and its instructions permit heat sterilization. Which processing is appropriate between patients?",
       "answers": [
         {
-          "id": "a",
-          "text": "Clean and heat-sterilize it according to its instructions"
-        },
-        {
           "id": "b",
-          "text": "Rinse it and fit a new barrier only"
+          "text": "Clean, rinse and apply a new protective barrier"
         },
         {
           "id": "c",
-          "text": "Use surface disinfectant instead of sterilization"
+          "text": "Clean, rinse and apply an environmental surface disinfectant"
         },
         {
           "id": "d",
-          "text": "Store it until visible contamination dries"
+          "text": "Clean and use high-level disinfection as for a heat-sensitive item"
+        },
+        {
+          "id": "a",
+          "text": "Clean, package and heat-sterilize according to its instructions"
         }
       ],
       "correctAnswerId": "a",
-      "explanation": "This heat-tolerant semicritical item requires heat sterilization after cleaning. Rinsing/barriers, surface disinfection alone, and drying are not substitutes. This does not prescribe processing for electronic sensors.",
+      "explanation": "Heat-tolerant semicritical holders require cleaning and heat sterilization following instructions. A barrier or surface disinfectant is not a substitute; the heat-sensitive pathway does not fit this holder.",
       "references": [
         {
           "title": "Best Practices for Sterilization in Dental Settings",
@@ -919,13 +943,13 @@
         }
       ],
       "difficulty": 2,
-      "version": 1,
+      "version": 2,
       "sourceVersion": "CDC-STER; 2024-05-15; accessed 2026-09-11",
       "tags": [
         "first-editorial-batch",
         "heat-tolerant-holder"
       ],
-      "updatedAt": "2026-09-11T12:25:20.175267Z"
+      "updatedAt": "2026-09-11T12:58:14.175058Z"
     },
     {
       "id": "rhs-cand-infection_control-004",
@@ -933,27 +957,27 @@
       "domainId": "infection_control",
       "topicId": "equipment_precautions",
       "status": "draft",
-      "questionText": "A packaged, sterilized heat-tolerant receptor holder is found in a torn pouch before use. What should the assistant do?",
+      "questionText": "A sterilized heat-tolerant receptor holder is found in a torn pouch before use. What should happen next?",
       "answers": [
         {
-          "id": "a",
-          "text": "Use it if the original date is recent"
+          "id": "b",
+          "text": "Clean, repackage and heat-sterilize it before use"
         },
         {
-          "id": "b",
-          "text": "Reprocess it with cleaning, packaging and heat sterilization"
+          "id": "a",
+          "text": "Release it after checking the original sterilization date"
         },
         {
           "id": "c",
-          "text": "Tape the tear and use it"
+          "text": "Repair the pouch and retain the original processing label"
         },
         {
           "id": "d",
-          "text": "Move it to a new pouch without reprocessing"
+          "text": "Transfer it to a new pouch and retain the original label"
         }
       ],
       "correctAnswerId": "b",
-      "explanation": "A torn package compromises maintained sterility. CDC calls for complete reprocessing; a recent date, tape, or a replacement pouch alone cannot restore it.",
+      "explanation": "A torn pouch calls for complete reprocessing. Checking the date, patching the pouch or replacing packaging does not restore maintained sterility.",
       "references": [
         {
           "title": "Best Practices for Sterilization in Dental Settings",
@@ -962,14 +986,14 @@
           "url": "https://www.cdc.gov/dental-infection-control/hcp/dental-ipc-faqs/dental-sterilization.html"
         }
       ],
-      "difficulty": 2,
-      "version": 2,
+      "difficulty": 1,
+      "version": 3,
       "sourceVersion": "CDC-STER; 2024-05-15; accessed 2026-09-11",
       "tags": [
         "first-editorial-batch",
         "damaged-sterile-package"
       ],
-      "updatedAt": "2026-09-11T12:25:20.175270Z"
+      "updatedAt": "2026-09-11T12:58:14.175062Z"
     },
     {
       "id": "rhs-cand-infection_control-005",
@@ -977,27 +1001,27 @@
       "domainId": "infection_control",
       "topicId": "equipment_precautions",
       "status": "draft",
-      "questionText": "A receptor-positioning accessory is labeled single-use. What should happen after its use for one patient’s procedure?",
+      "questionText": "A receptor-positioning accessory is labeled single-use. What should the dental office do after its use for one patient’s procedure?",
       "answers": [
         {
           "id": "a",
-          "text": "Clean it for the next patient"
-        },
-        {
-          "id": "b",
-          "text": "Keep it until it looks worn"
+          "text": "Clean and retain it for another patient"
         },
         {
           "id": "c",
-          "text": "Dispose of it appropriately"
+          "text": "Discard it using the appropriate disposal process"
+        },
+        {
+          "id": "b",
+          "text": "Disinfect and retain it for another patient"
         },
         {
           "id": "d",
-          "text": "Sterilize it to convert it into a reusable item"
+          "text": "Sterilize and retain it for another patient"
         }
       ],
       "correctAnswerId": "c",
-      "explanation": "Single-use devices are not intended for routine reprocessing and reuse by the dental office. Cleaning, keeping, or sterilizing the accessory does not change its intended use.",
+      "explanation": "Single-use accessories should be discarded appropriately. Cleaning, disinfection or sterilization by the office does not authorize reuse.",
       "references": [
         {
           "title": "Best Practices for Single-Use (Disposable) Devices",
@@ -1006,14 +1030,14 @@
           "url": "https://www.cdc.gov/dental-infection-control/hcp/dental-ipc-faqs/single-use-devices.html"
         }
       ],
-      "difficulty": 2,
-      "version": 1,
+      "difficulty": 1,
+      "version": 2,
       "sourceVersion": "CDC-SINGLE; 2024-05-15; accessed 2026-09-11",
       "tags": [
         "first-editorial-batch",
         "single-use-accessory"
       ],
-      "updatedAt": "2026-09-11T12:25:20.175272Z"
+      "updatedAt": "2026-09-11T12:58:14.175066Z"
     },
     {
       "id": "rhs-cand-infection_control-006",
@@ -1021,27 +1045,27 @@
       "domainId": "infection_control",
       "topicId": "patient_operator_precautions",
       "status": "draft",
-      "questionText": "When does hand hygiene belong in the sequence for wearing examination gloves?",
+      "questionText": "Which routine includes the required hand hygiene around examination-glove use?",
       "answers": [
         {
           "id": "a",
-          "text": "Only at the start of the workday"
+          "text": "Before putting gloves on; after removal if a tear is noticed"
         },
         {
           "id": "b",
-          "text": "Only if a tear is visible"
-        },
-        {
-          "id": "c",
-          "text": "Only after all patients have been seen"
+          "text": "After removing gloves; before donning if hands look dirty"
         },
         {
           "id": "d",
-          "text": "Immediately before putting them on and after removing them"
+          "text": "Immediately before putting gloves on and after taking them off"
+        },
+        {
+          "id": "c",
+          "text": "At the start of the session; after its final glove removal"
         }
       ],
       "correctAnswerId": "d",
-      "explanation": "Gloves do not replace hand hygiene. Small defects and removal can contaminate hands, so waiting for visible damage or a workday boundary is inadequate.",
+      "explanation": "Both glove donning and removal require hand hygiene. Visible damage, visible dirt or session boundaries are not adequate substitutes for these times.",
       "references": [
         {
           "title": "Best Practices for Personal Protective Equipment",
@@ -1051,13 +1075,13 @@
         }
       ],
       "difficulty": 1,
-      "version": 1,
+      "version": 2,
       "sourceVersion": "CDC-PPE; 2024-05-15; accessed 2026-09-11",
       "tags": [
         "first-editorial-batch",
         "glove-hand-hygiene-timing"
       ],
-      "updatedAt": "2026-09-11T12:25:20.175273Z"
+      "updatedAt": "2026-09-11T12:58:14.175071Z"
     },
     {
       "id": "rhs-cand-infection_control-007",
@@ -1065,27 +1089,27 @@
       "domainId": "infection_control",
       "topicId": "patient_operator_precautions",
       "status": "draft",
-      "questionText": "After glove removal, an assistant’s hands are visibly soiled. Which hand-hygiene method should be used?",
+      "questionText": "After glove removal, an assistant’s hands are visibly soiled. Which method meets CDC’s hand-hygiene recommendation?",
       "answers": [
         {
           "id": "a",
-          "text": "Wash with soap and water"
+          "text": "Wash with soap and water, then dry"
         },
         {
           "id": "b",
-          "text": "Apply alcohol hand rub without washing"
+          "text": "Apply alcohol-based hand rub, then let it dry"
         },
         {
           "id": "c",
-          "text": "Cover the soil with clean gloves"
+          "text": "Rinse with water without soap, then dry"
         },
         {
           "id": "d",
-          "text": "Wipe the hands on a dry towel"
+          "text": "Wipe off the soil, then apply alcohol-based hand rub"
         }
       ],
       "correctAnswerId": "a",
-      "explanation": "CDC specifies soap and water for visibly soiled hands. Alcohol rub alone, covering with gloves, and dry wiping do not meet that recommendation.",
+      "explanation": "Visible soil calls for soap and water. Alcohol rub, water alone or wiping followed by rub does not meet that recommendation.",
       "references": [
         {
           "title": "Clinical Safety: Hand Hygiene for Healthcare Workers",
@@ -1094,14 +1118,14 @@
           "url": "https://www.cdc.gov/clean-hands/hcp/clinical-safety/index.html"
         }
       ],
-      "difficulty": 2,
-      "version": 1,
+      "difficulty": 1,
+      "version": 2,
       "sourceVersion": "CDC-HANDS; 2024-02-27; accessed 2026-09-11",
       "tags": [
         "first-editorial-batch",
         "visibly-soiled-hands"
       ],
-      "updatedAt": "2026-09-11T12:25:20.175275Z"
+      "updatedAt": "2026-09-11T12:58:14.175075Z"
     },
     {
       "id": "rhs-cand-infection_control-008",
@@ -1109,27 +1133,27 @@
       "domainId": "infection_control",
       "topicId": "equipment_precautions",
       "status": "draft",
-      "questionText": "A chemical indicator changed color in a sterilized instrument package. How should that finding be used?",
+      "questionText": "An internal chemical indicator shows the expected color change in an instrument package. What conclusion is justified from that finding?",
       "answers": [
         {
           "id": "a",
-          "text": "As permission to stop biological monitoring"
-        },
-        {
-          "id": "b",
-          "text": "Alongside mechanical and biological monitoring"
+          "text": "The package contents have been demonstrated to be sterile"
         },
         {
           "id": "c",
-          "text": "As a replacement for reviewing cycle parameters"
+          "text": "The cycle’s mechanical parameters have been independently verified"
         },
         {
           "id": "d",
-          "text": "As proof that cleaning before sterilization was unnecessary"
+          "text": "The biological monitoring result for the sterilizer has been established"
+        },
+        {
+          "id": "b",
+          "text": "The indicator responded to conditions; other monitoring is still needed"
         }
       ],
       "correctAnswerId": "b",
-      "explanation": "Chemical indicators are one part of monitoring, not a substitute for mechanical or biological checks. A color change also does not remove the need for cleaning.",
+      "explanation": "A chemical indicator’s response does not alone prove sterility. It does not establish mechanical readings or biological results; CDC uses chemical, mechanical and biological monitoring together.",
       "references": [
         {
           "title": "Best Practices for Sterilization Monitoring in Dental Settings",
@@ -1139,13 +1163,13 @@
         }
       ],
       "difficulty": 2,
-      "version": 1,
+      "version": 2,
       "sourceVersion": "CDC-MON; 2024-05-15; accessed 2026-09-11",
       "tags": [
         "first-editorial-batch",
         "combined-sterilization-monitoring"
       ],
-      "updatedAt": "2026-09-11T12:25:20.175276Z"
+      "updatedAt": "2026-09-11T12:58:14.175079Z"
     }
   ]
 }
