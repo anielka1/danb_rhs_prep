@@ -209,6 +209,17 @@ class _DanbRhsPrepAppState extends State<DanbRhsPrepApp> {
             PracticeSummaryScreen.route: (_) => const PracticeSummaryScreen(),
             MockExamResultsScreen.route: (_) => const MockExamResultsScreen(),
             MockExamScreen.route: (_) => const MockExamScreen(),
+            '/settings/exam-date': (context) {
+              final argument = ModalRoute.of(context)?.settings.arguments;
+              final session =
+                  argument is BootstrapSessionController ? argument : null;
+              return BootstrapSessionScope.carry(
+                  session,
+                  ExamDateScreen(
+                      localStore: _localStore,
+                      userSettingsRepository: _userSettingsRepository,
+                      editing: true));
+            },
             ProfileSettingsScreen.route: (context) {
               final argument = ModalRoute.of(context)?.settings.arguments;
               final session =

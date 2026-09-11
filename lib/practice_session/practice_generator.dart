@@ -1,3 +1,4 @@
+import 'dart:math';
 import '../domain/models/answer_attempt.dart';
 import '../domain/models/entitlement.dart';
 import '../domain/models/question_state.dart';
@@ -41,7 +42,8 @@ enum PracticeFocus {
 /// **not** Section 16's much larger weighted adaptive-priority engine,
 /// which is separate, later work.
 ///
-/// Practice question selection remains deterministic (stable question-ID sort).
+/// Selection defaults to a stable question-ID sort. An injected Random shuffles
+/// the eligible pool before capping it (the one-question Home launcher).
 /// Answer ordering is a separate persisted session concern. Mock selection uses
 /// exposure-ranked randomness only when starting a new mock, not in this engine.
 class PracticeGenerator {
@@ -100,6 +102,7 @@ class PracticeGenerator {
     String? topicId,
     PracticeFocus focus = PracticeFocus.any,
     Set<String> excludedQuestionIds = const {},
+    Random? random,
   }) {
     if (requestedCount <= 0) {
       throw ArgumentError.value(
@@ -181,6 +184,8 @@ class PracticeGenerator {
           'There are no eligible questions for this selection.');
     }
 
+    if (random != null) sorted.shuffle(random);
+
     final int cap = [
       requestedCount,
       if (maxCount != null) maxCount,
@@ -222,7 +227,7 @@ class PracticeGenerator {
 
   /// The questions selected — never empty (see [select]'s doc comment),
   /// never containing a duplicate [Question.id], in a stable,
-  /// deterministic order.
+  /// deterministic order unless an explicit random source was supplied.
   final List<Question> questions;
 
   /// What was originally asked for — compare against `questions.length`

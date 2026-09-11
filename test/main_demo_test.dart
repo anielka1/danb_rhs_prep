@@ -112,7 +112,7 @@ void main() {
     await _clickThroughOnboarding(tester);
 
     expect(find.byType(MainShell), findsOneWidget);
-    expect(find.text('Your study space'), findsOneWidget);
+    expect(find.text('Let’s study'), findsOneWidget);
 
     await tester.tap(find.text('Practice'));
     await tester.pumpAndSettle();

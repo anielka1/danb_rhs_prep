@@ -144,7 +144,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.byType(MainShell), findsOneWidget);
-      expect(find.text('Your study space'), findsOneWidget);
+      expect(find.text('Let’s study'), findsOneWidget);
       expect(find.byType(WelcomeScreen), findsNothing);
     });
 
@@ -329,7 +329,7 @@ void main() {
 
       expect(tester.takeException(), isNull);
       expect(find.byType(MainShell), findsOneWidget);
-      expect(find.text('Your study space'), findsOneWidget);
+      expect(find.text('Let’s study'), findsOneWidget);
     });
   });
 

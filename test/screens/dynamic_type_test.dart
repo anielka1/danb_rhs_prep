@@ -195,8 +195,10 @@ void main() {
         (tester) async {
       await tester.pumpWidget(appWith(const HomeScreen()));
       await tester.pumpAndSettle();
-      final size =
-          tester.getSize(find.widgetWithText(ElevatedButton, 'Start learning'));
+      final size = tester.getSize(find
+          .ancestor(
+              of: find.text('Random question'), matching: find.byType(InkWell))
+          .first);
       expect(size.width, greaterThanOrEqualTo(44));
       expect(size.height, greaterThanOrEqualTo(44));
       expect(find.byType(FloatingActionButton), findsNothing);

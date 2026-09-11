@@ -1,3 +1,4 @@
+import '../domain/models/practice_session.dart';
 import '../bootstrap/bootstrap_session_scope.dart';
 import '../practice_session/active_answer_timer.dart';
 import 'dart:async';
@@ -214,6 +215,9 @@ class _PracticeQuestionScreenState extends State<PracticeQuestionScreen>
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 PracticeSaveStatus(controller: controller),
+                if (controller.session.mode == PracticeMode.timedQuiz)
+                  Text('Timed quiz · active answering time',
+                      style: textStyles.label),
                 const SizedBox(height: 12),
                 Row(
                   children: [
@@ -241,7 +245,15 @@ class _PracticeQuestionScreenState extends State<PracticeQuestionScreen>
                         size: AppIconSize.medium - 2, color: colors.onSurface),
                     const SizedBox(width: AppSpacing.xs),
                     Flexible(
-                      child: Text(_formatElapsed(controller.elapsed),
+                      child: Text(
+                          _formatElapsed(controller.session.mode ==
+                                  PracticeMode.timedQuiz
+                              ? Duration(
+                                  seconds: controller.recordedAnswerSeconds +
+                                      (alreadyAnswered
+                                          ? 0
+                                          : _activeTime.elapsed.inSeconds))
+                              : controller.elapsed),
                           style: TextStyle(
                               fontWeight: FontWeight.w700,
                               color: colors.onSurface)),

@@ -97,7 +97,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(currentTab(tester), AppTab.home);
-      expect(find.text('Your study space'), findsOneWidget);
+      expect(find.text('Let’s study'), findsOneWidget);
     });
 
     testWidgets(

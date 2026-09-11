@@ -143,6 +143,10 @@ class PracticeSessionController {
       latestBySession[attempt.questionId] = attempt;
     }
     for (final attempt in latestBySession.values) {
+      if (attempt.activeDurationSeconds != null) {
+        controller._answerSeconds[attempt.questionId] =
+            attempt.activeDurationSeconds!;
+      }
       // Rebuilt entirely from what this *attempt* itself persisted —
       // never from `questions`/`currentQuestion` — so a resumed
       // session's feedback is the exact same snapshot the original
@@ -302,6 +306,10 @@ class PracticeSessionController {
   Future<void> persistBookmark(String questionId, bool value) =>
       _persistence.saveBookmark(session.examId, questionId, value);
 
+  final Map<String, int> _answerSeconds = {};
+  int get recordedAnswerSeconds =>
+      _answerSeconds.values.fold(0, (a, b) => a + b);
+
   Duration get elapsed =>
       (_session.completedAt ?? _now().toUtc()).difference(_session.startedAt);
 
@@ -369,6 +377,9 @@ class PracticeSessionController {
       contentVersion: session.contentVersion,
     );
     _feedback[question.id] = feedback;
+    if (activeDurationSeconds != null) {
+      _answerSeconds[question.id] = activeDurationSeconds;
+    }
 
     final ProgressRepository? repo = progressRepository;
     if (repo != null) {

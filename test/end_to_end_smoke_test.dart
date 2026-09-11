@@ -40,15 +40,28 @@ Future<void> _completeOnboarding(WidgetTester tester) async {
 }
 
 void main() {
+  testWidgets('Home Set exam date opens editable date without weekday setup',
+      (tester) async {
+    await _completeOnboarding(tester);
+    await _tapText(tester, 'Set exam date');
+    await _tapText(tester, 'I know the exact date');
+    await _tapText(tester, 'Choose a date');
+    await _tapText(tester, 'OK');
+    await _tapText(tester, 'Save changes');
+    expect(find.text('Let’s study'), findsOneWidget);
+    expect(find.text('Set exam date'), findsNothing);
+    expect(find.text('Monday'), findsNothing);
+    expect(find.text('Starting check'), findsNothing);
+  });
   testWidgets(
       'Home settings sits in the heading and saved library opens directly',
       (tester) async {
     await _completeOnboarding(tester);
     expect(find.byTooltip('Settings'), findsOneWidget);
     expect(tester.getCenter(find.byTooltip('Settings')).dy,
-        lessThan(tester.getBottomLeft(find.text('Your study space')).dy + 40));
+        lessThan(tester.getBottomLeft(find.text('Let’s study')).dy + 40));
     expect(find.byIcon(Icons.wb_sunny_outlined), findsNothing);
-    await _tapText(tester, 'Practice your way');
+    await _tapText(tester, 'Practice');
     await _tapText(tester, 'Start Practice Exam');
     await tester.tap(find.bySemanticsLabel('Bookmark question'));
     await tester.pumpAndSettle();
@@ -93,7 +106,7 @@ void main() {
 
     // Free practice remains a working secondary route; the main Continue
     // now resumes questions directly (covered by Home integration tests).
-    await _tapText(tester, 'Practice your way');
+    await _tapText(tester, 'Practice');
 
     await _tapText(tester, 'Start Practice Exam');
 
