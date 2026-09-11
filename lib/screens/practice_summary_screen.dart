@@ -1,3 +1,5 @@
+import '../bootstrap/bootstrap_session_scope.dart';
+import '../widgets/study_plan_panel.dart';
 import 'package:flutter/material.dart';
 import '../widgets/practice_save_status.dart';
 import '../features/questions/domain/question.dart';
@@ -92,8 +94,21 @@ class PracticeSummaryScreen extends StatelessWidget {
       if (topic.percent > strongest.percent) strongest = topic;
       if (topic.percent < weakest.percent) weakest = topic;
     }
+    if (strongest.percent == weakest.percent) return null;
     return _StrongestWeakest(strongest, weakest);
   }
+
+  String _topicName(BuildContext context, String id) =>
+      BootstrapSessionScope.maybeControllerOf(context)
+          ?.snapshot
+          .contentPackage
+          .exam
+          .domains
+          .expand((d) => d.topics)
+          .where((t) => t.id == id)
+          .firstOrNull
+          ?.name ??
+      id;
 
   @override
   Widget build(BuildContext context) {
@@ -138,6 +153,10 @@ class PracticeSummaryScreen extends StatelessWidget {
               textAlign: TextAlign.start,
               style: textStyles.body,
             ),
+            Text(
+                '${controller.answeredCount} questions answered · $correct correct'),
+            const Text(
+                'Session results are a small sample, not proof of topic mastery. Elapsed time includes pauses.'),
             const SizedBox(height: 30),
             AppCard(
               backgroundColor: colors.primaryContainer,
@@ -161,7 +180,8 @@ class PracticeSummaryScreen extends StatelessWidget {
                       children: [
                         Text(timeSpent, style: textStyles.statNumber),
                         const SizedBox(height: AppSpacing.xs),
-                        Text('Time Spent', style: textStyles.bodySmall),
+                        Text('Elapsed since start',
+                            style: textStyles.bodySmall),
                       ],
                     ),
                   ),
@@ -191,7 +211,7 @@ class PracticeSummaryScreen extends StatelessWidget {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Expanded(
-                          child: Text(t.topicId,
+                          child: Text(_topicName(context, t.topicId),
                               style: TextStyle(
                                   fontWeight: FontWeight.w700,
                                   fontSize: 15,
@@ -218,7 +238,7 @@ class PracticeSummaryScreen extends StatelessWidget {
                   const SizedBox(width: AppSpacing.xs),
                   Expanded(
                     child: Text(
-                      'Strongest area: ${strongestWeakest.strongest.topicId} '
+                      'Highest session accuracy: ${_topicName(context, strongestWeakest.strongest.topicId)} '
                       '(${strongestWeakest.strongest.percent}%)',
                       style: textStyles.bodySmall,
                     ),
@@ -233,7 +253,7 @@ class PracticeSummaryScreen extends StatelessWidget {
                   const SizedBox(width: AppSpacing.xs),
                   Expanded(
                     child: Text(
-                      'Weakest area: ${strongestWeakest.weakest.topicId} '
+                      'Lowest session accuracy: ${_topicName(context, strongestWeakest.weakest.topicId)} '
                       '(${strongestWeakest.weakest.percent}%)',
                       style: textStyles.bodySmall,
                     ),
@@ -253,10 +273,19 @@ class PracticeSummaryScreen extends StatelessWidget {
                   : null,
             ),
             const SizedBox(height: AppSpacing.md),
-            PrimaryButton(
-              label: 'Back to Home',
-              onPressed: () => _backToHome(context),
-            ),
+            if (BootstrapSessionScope.maybeControllerOf(context)
+                        ?.progressRepository !=
+                    null &&
+                !controller.hasUnsavedChanges)
+              StudyPlanPanel(
+                  session: BootstrapSessionScope.controllerOf(context),
+                  repository: BootstrapSessionScope.controllerOf(context)
+                      .progressRepository!,
+                  now: () => controller.localNow,
+                  onFinished: () => _backToHome(context))
+            else
+              PrimaryButton(
+                  label: 'Back to Home', onPressed: () => _backToHome(context)),
             const SizedBox(height: AppSpacing.lg),
           ],
         ),

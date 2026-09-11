@@ -172,6 +172,9 @@ void main() {
         .popUntil((route) => route.isFirst);
     await tester.pumpAndSettle();
     expect(find.text('Continue planned session'), findsOneWidget);
+    expect(
+        find.text('1 completed · ${active.questionIds.length - 1} remaining'),
+        findsOneWidget);
     await tester.ensureVisible(find.text('Continue planned session'));
     await tester.tap(find.text('Continue planned session'));
     await tester.pumpAndSettle();
@@ -258,7 +261,7 @@ void main() {
         false,
         1));
     await tester.pumpAndSettle();
-    expect(find.text('2 answers recorded · 2 min spent'), findsOneWidget);
+    expect(find.text('2 answers recorded · 2 min answer time'), findsOneWidget);
   });
   testWidgets(
       'Home session result Home restart and reset keep one current action',
@@ -283,6 +286,10 @@ void main() {
       await tester.ensureVisible(find.text(label));
       await tester.tap(find.text(label));
       await tester.pumpAndSettle();
+      if (label == 'Finish') {
+        expect(find.text('1 completed · 0 remaining'), findsOneWidget);
+        expect(find.text("Start today's session"), findsNothing);
+      }
     }
     expect(find.text("Today's plan completed"), findsOneWidget);
     expect(find.text("Start today's session"), findsNothing);
@@ -340,6 +347,146 @@ void main() {
     expect(find.text('Continue planned session'), findsNothing);
     expect(find.text("Today's plan completed"), findsOneWidget);
     await tester.pumpWidget(const SizedBox.shrink());
+  });
+  testWidgets(
+      'no exam date means an outlook, not an impossible deadline warning',
+      (tester) async {
+    final s = session();
+    s.update(s.snapshot.copyWith(
+        examDateSelection:
+            ExamDateSelection(precision: ExamDatePrecision.notScheduled)));
+    final p = const StudyPlanPolicy().project(
+        now: day,
+        localToday: day,
+        timezone: 'Test',
+        exam: package.exam,
+        preferences: prefs,
+        pool: package.questions,
+        attempts: []);
+    expect(p.limitedCoverage, isTrue);
+    await tester.pumpWidget(wrap(
+        StudyCalendarScreen(
+            plan: p,
+            session: s,
+            repository: s.progressRepository!,
+            now: () => day),
+        false,
+        1));
+    await tester.pumpAndSettle();
+    expect(
+        find.textContaining(
+            'cannot cover all remaining material before the exam'),
+        findsNothing);
+  });
+  testWidgets('calendar availability edit returns to a refreshed Home plan',
+      (tester) async {
+    final s = session();
+    await tester.pumpWidget(wrap(
+        Scaffold(
+            body: SingleChildScrollView(
+                child: StudyPlanPanel(
+                    session: s,
+                    repository: s.progressRepository!,
+                    now: () => day))),
+        false,
+        1));
+    await tester.pumpAndSettle();
+    for (final label in [
+      'Open calendar',
+      'Adjust availability',
+      '45 min',
+      'Save availability'
+    ]) {
+      await tester.ensureVisible(find.text(label));
+      await tester.tap(find.text(label));
+      await tester.pumpAndSettle();
+    }
+    expect(s.snapshot.profile!.studyPlanPreferences!.minutes, 45);
+    expect(find.byType(StudyCalendarScreen), findsNothing);
+    expect(find.text("Today's plan"), findsOneWidget);
+    expect(find.text("Start today's session"), findsOneWidget);
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
+  testWidgets('empty approved pool has no invented goal or Start',
+      (tester) async {
+    final s = session(count: 0);
+    await tester.pumpWidget(wrap(
+        Scaffold(
+            body: SingleChildScrollView(
+                child: StudyPlanPanel(
+                    session: s,
+                    repository: s.progressRepository!,
+                    now: () => day))),
+        false,
+        1));
+    await tester.pumpAndSettle();
+    expect(
+        find.text(
+            'Approved study questions are not available yet. Your preferences are saved.'),
+        findsOneWidget);
+    expect(find.textContaining('completed ·'), findsNothing);
+    expect(find.text("Start today's session"), findsNothing);
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
+  testWidgets(
+      'partial historic day retains split and capacity warning allows editing',
+      (tester) async {
+    final semantics = tester.ensureSemantics();
+    try {
+      final s = session();
+      final yesterday = day.subtract(const Duration(days: 1));
+      final saved = PracticeSession(
+          id: 'session-${yesterday.day}',
+          examId: package.exam.id,
+          mode: PracticeMode.planned,
+          questionIds: package.questions.take(3).map((q) => q.id).toList(),
+          reviewQuestionIds: [package.questions[2].id],
+          status: SessionStatus.inProgress,
+          startedAt: yesterday,
+          planDate: dateKey(yesterday));
+      final p = const StudyPlanPolicy().project(
+          now: day,
+          localToday: day,
+          timezone: 'Test',
+          exam: package.exam,
+          preferences: prefs,
+          pool: package.questions,
+          attempts: [answer(package.questions.first, yesterday, seconds: 60)],
+          sessions: [saved],
+          examDate: day.add(const Duration(days: 3)));
+      await tester.pumpWidget(wrap(
+          StudyCalendarScreen(
+              plan: p,
+              session: s,
+              repository: s.progressRepository!,
+              now: () => day),
+          false,
+          1));
+      await tester.pumpAndSettle();
+      expect(find.text('Partially completed'), findsOneWidget);
+      expect(find.text('1 new · 1 review remaining'), findsOneWidget);
+      expect(find.textContaining('Missed work stays'), findsOneWidget);
+      expect(find.textContaining('cannot cover all remaining material'),
+          findsOneWidget);
+      expect(find.text('Adjust availability'), findsOneWidget);
+      expect(
+          p.days
+              .where((d) => !d.date.isBefore(day))
+              .every((d) => d.estimatedSeconds <= d.budgetSeconds),
+          isTrue);
+      expect(s.snapshot.examDateSelection!.date, DateTime(2026, 10, 10));
+      expect(find.text('Move session'), findsNothing);
+      final nextDay =
+          find.textContaining('${dateKey(day.add(const Duration(days: 1)))} ·');
+      await tester.ensureVisible(nextDay);
+      await tester.tap(nextDay);
+      await tester.pumpAndSettle();
+      expect(find.text('Move session'), findsOneWidget);
+      expect(find.bySemanticsLabel('Move session'), findsOneWidget);
+      expect(find.text('Day off / cancel mock'), findsOneWidget);
+    } finally {
+      semantics.dispose();
+    }
   });
   testWidgets('short diagnostic gives reason and Skip; no fabricated attempts',
       (tester) async {

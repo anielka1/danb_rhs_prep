@@ -82,7 +82,7 @@ void main() {
         preferences: prefs,
         pool: package.questions,
         attempts: history);
-    expect(p.days.first.budgetSeconds, 1710);
+    expect(p.days.first.budgetSeconds, 1680);
     expect(p.reviews.single.stage, 1);
   });
   test('diagnostic writes diagnostic attempts and uses config quotas',

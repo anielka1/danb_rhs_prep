@@ -129,3 +129,17 @@ Two Home normal-text baselines (light/dark) were regenerated with Flutter 3.41.2
 on local Ubuntu 24.04 aarch64 and visually reviewed: a single Continue action in
 the plan panel and a secondary Free practice card. The other 30 images are byte
 identical. The pixel comparator and text scales are unchanged. No hosted Actions.
+
+## Daily journey coverage (local Linux, September 2026)
+
+`daily_journey_golden_test.dart` adds six snapshots: partial daily plan,
+partial calendar and completed daily result, each in light and dark themes.
+These use isolated synthetic approved fixtures, not production content. The
+existing 32-image matrix remains intact; Home and Summary normal-size baselines
+were updated for the intentional daily-journey copy changes. All changed images
+were rendered and visually reviewed locally with Linux Flutter 3.41.2; no hosted
+Actions were used. Pixel comparison thresholds are unchanged. The existing
+375x667 / 4x text interaction tests continue to cover scrolling and overflow.
+
+These are widget-test captures: the debug banner and placeholder icon glyphs are
+properties of the existing test harness, not screenshots from a physical iPhone.

@@ -46,6 +46,12 @@ class BootstrapSessionScope extends InheritedWidget {
     return controllerOf(context).snapshot;
   }
 
+  /// Capture before pushing a sibling route; its builder cannot inherit this route's scope.
+  static Widget carry(BootstrapSessionController? controller, Widget child) =>
+      controller == null
+          ? child
+          : BootstrapSessionScope(controller: controller, child: child);
+
   @override
   bool updateShouldNotify(BootstrapSessionScope oldWidget) =>
       !identical(controller, oldWidget.controller);

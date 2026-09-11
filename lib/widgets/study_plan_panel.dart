@@ -1,4 +1,5 @@
-import '../study_plan/study_schedule_service.dart';
+import '../study_plan/daily_study_overview.dart';
+import '../screens/profile_settings_screen.dart';
 import '../bootstrap/bootstrap_session_scope.dart';
 import '../screens/mock_exam_screen.dart';
 import '../study_plan/study_metrics.dart';
@@ -6,8 +7,6 @@ import '../screens/diagnostic_screen.dart';
 import 'dart:async';
 import 'package:flutter/material.dart';
 import '../bootstrap/bootstrap_session_controller.dart';
-import '../domain/models/study_schedule.dart';
-import '../domain/repositories/study_schedule_repository.dart';
 import '../domain/models/practice_session.dart';
 import '../domain/repositories/progress_repository.dart';
 import '../practice_session/practice_generator.dart';
@@ -26,10 +25,12 @@ class StudyPlanPanel extends StatefulWidget {
       {super.key,
       required this.session,
       required this.repository,
-      required this.now});
+      required this.now,
+      this.onFinished});
   final BootstrapSessionController session;
   final ProgressRepository repository;
   final DateTime Function() now;
+  final VoidCallback? onFinished;
   @override
   State<StudyPlanPanel> createState() => _StudyPlanPanelState();
 }
@@ -37,6 +38,7 @@ class StudyPlanPanel extends StatefulWidget {
 class _StudyPlanPanelState extends State<StudyPlanPanel>
     with WidgetsBindingObserver {
   StudyPlanProjection? _plan;
+  DailyStudyOverview? _overview;
   StudyMetrics? _metrics;
   PracticeSession? _active;
   Set<String> _reserve = {};
@@ -69,71 +71,23 @@ class _StudyPlanPanelState extends State<StudyPlanPanel>
 
   Future<void> _load() async {
     try {
+      final overview = await DailyStudyOverview.load(
+          widget.session, widget.repository, widget.now);
       final snapshot = widget.session.snapshot;
-      final active = await widget.repository
-          .inProgressPracticeSession(snapshot.selectedExamId);
-      final attempts = await widget.repository
-          .answerAttemptsForExam(snapshot.selectedExamId);
-      final schedule = widget.repository is StudyScheduleRepository
-          ? await (widget.repository as StudyScheduleRepository)
-              .studySchedule(snapshot.selectedExamId)
-          : <StudyScheduleEntry>[];
-      final sessions = widget.repository is StudyScheduleRepository
-          ? await (widget.repository as StudyScheduleRepository)
-              .practiceSessionsForExam(snapshot.selectedExamId)
-          : <PracticeSession>[];
-      final mocks =
-          await widget.repository.mockAttemptsForExam(snapshot.selectedExamId);
+      final plan = overview.plan;
       final now = widget.now();
-      final limit = maxFreePracticeQuestionsToday(
-          entitlement: snapshot.entitlement,
-          now: now,
-          answeredToday:
-              practiceAttemptsAnsweredToday(attempts: attempts, now: now),
-          dailyLimit:
-              snapshot.contentPackage.exam.freeTier.dailyPracticeQuestions);
-      final reserve = await effectiveMockReserve(
-          repository: widget.repository,
-          package: snapshot.contentPackage,
-          entitlement: snapshot.entitlement,
-          now: now,
-          examDate: snapshot.examDateSelection?.date);
-      final plan = const StudyPlanPolicy().project(
-          now: now,
-          localToday: now,
-          timezone: now.timeZoneName,
-          exam: snapshot.contentPackage.exam,
-          preferences: snapshot.profile?.studyPlanPreferences,
-          pool: snapshot.contentPackage.questions,
-          attempts: attempts,
-          examDate: snapshot.examDateSelection?.date,
-          dailyQuestionLimit: snapshot.entitlement.isActiveAt(now)
-              ? null
-              : snapshot.contentPackage.exam.freeTier.dailyPracticeQuestions,
-          remainingUtcQuota: limit,
-          sessions: sessions,
-          mockBudgets: {
-            for (final e in schedule)
-              if (e.minutes != null) e.date: e.minutes!
-          },
-          reservedIds: reserve,
-          additionalSeenIds: mocks.expand((m) => m.answers.keys).toSet(),
-          overrides: {
-            for (final e in schedule)
-              e.date: StudyDayType.values.firstWhere((t) => t.name == e.kind,
-                  orElse: () => StudyDayType.study)
-          });
       if (mounted) {
         setState(() {
-          _reserve = reserve;
-          _quota = limit;
+          _overview = overview;
+          _reserve = overview.reserve;
+          _quota = overview.quota;
           _metrics = StudyMetrics(
               pool: snapshot.contentPackage.questions,
-              history: attempts,
+              history: overview.attempts,
               reviews: plan.reviews,
               today: now);
           _plan = plan;
-          _active = active;
+          _active = overview.active;
           _error = null;
           _day = dateKey(now);
         });
@@ -170,8 +124,11 @@ class _StudyPlanPanelState extends State<StudyPlanPanel>
           reservedIds: _reserve);
       if (!mounted) return;
       await Navigator.of(context).push(MaterialPageRoute(
-          builder: (_) => PracticeSessionScope(
-              controller: controller, child: const PracticeQuestionScreen())));
+          builder: (_) => BootstrapSessionScope.carry(
+              widget.session,
+              PracticeSessionScope(
+                  controller: controller,
+                  child: const PracticeQuestionScreen()))));
       if (mounted) await _load();
     } on PracticeGenerationUnavailable catch (e) {
       if (mounted) setState(() => _error = e.message);
@@ -191,6 +148,7 @@ class _StudyPlanPanelState extends State<StudyPlanPanel>
         .where((d) => d.date == calendarDate(widget.now()))
         .firstOrNull;
     final date = widget.session.snapshot.examDateSelection?.date;
+    final progress = _overview?.progress(widget.now());
     return AppCard(
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       Text("Today's plan", style: context.textStyles.h2),
@@ -200,6 +158,15 @@ class _StudyPlanPanelState extends State<StudyPlanPanel>
                 ? 'Exam date has passed'
                 : '${calendarDate(date).difference(calendarDate(widget.now())).inDays} days to your exam',
             style: context.textStyles.body),
+      if (date == null && widget.onFinished == null)
+        TextButton(
+            onPressed: () async {
+              await Navigator.of(context, rootNavigator: true).pushNamed(
+                  ProfileSettingsScreen.route,
+                  arguments: widget.session);
+              if (mounted) await _load();
+            },
+            child: const Text('Set exam date in Settings')),
       const SizedBox(height: AppSpacing.md),
       if (_error != null) ...[
         Text(_error!, style: context.textStyles.body),
@@ -211,7 +178,8 @@ class _StudyPlanPanelState extends State<StudyPlanPanel>
           Text(
               'Free practice renews at 00:00 UTC. Your calendar follows local dates.',
               style: context.textStyles.bodySmall),
-        if (plan.condition != PlanCondition.needsAvailability &&
+        if (widget.onFinished == null &&
+            plan.condition != PlanCondition.needsAvailability &&
             plan.availableQuestions > 0)
           SingleChildScrollView(
               scrollDirection: Axis.horizontal,
@@ -232,7 +200,10 @@ class _StudyPlanPanelState extends State<StudyPlanPanel>
                         "Sun"
                       ][d.date.weekday - 1]} ${d.date.day} · ${d.type.name}'))),
               ])),
-        if (today?.type == StudyDayType.mock)
+        if (_error == null &&
+            today?.type == StudyDayType.mock &&
+            _active == null &&
+            widget.onFinished == null)
           PrimaryButton(
               label: 'Open scheduled mock',
               onPressed: () async {
@@ -244,12 +215,31 @@ class _StudyPlanPanelState extends State<StudyPlanPanel>
                             now: widget.now))));
                 if (mounted) await _load();
               }),
-        Text(
-            '${plan.uniqueAnswered} / ${plan.availableQuestions} approved questions explored',
-            style: context.textStyles.body),
+        if (plan.availableQuestions > 0 && widget.onFinished == null)
+          Text(
+              '${plan.uniqueAnswered} / ${plan.availableQuestions} approved questions explored',
+              style: context.textStyles.body),
         const SizedBox(height: AppSpacing.md),
-        if (_active != null) ...[
+        if (plan.availableQuestions > 0 &&
+            plan.condition != PlanCondition.needsAvailability &&
+            progress != null) ...[
+          Text('${progress.done} completed · ${progress.remaining} remaining',
+              style: context.textStyles.h3),
+          if (!progress.completed)
+            Text(
+                '${progress.fresh} new · ${progress.reviews} review${progress.reviews == 1 ? '' : 's'} remaining · about ${((progress.fresh * plan.newSeconds + progress.reviews * plan.reviewSeconds) / 60).ceil()} min'),
+          if (progress.remaining > 0)
+            const Text(
+                'Approximate time includes answering and reading explanations.'),
+          if (progress.completed)
+            const Text(
+                'Daily goal complete. Extra practice is optional and does not increase this goal.'),
+        ],
+        if (_active != null && _error == null) ...[
           Text('Pick up where you left off', style: context.textStyles.h3),
+          if (_active!.mode == PracticeMode.planned &&
+              _active!.planDate != dateKey(widget.now()))
+            const Text('Continuing your saved plan from an earlier day.'),
           PrimaryButton(
               label: _active!.mode == PracticeMode.planned
                   ? 'Continue planned session'
@@ -257,7 +247,10 @@ class _StudyPlanPanelState extends State<StudyPlanPanel>
               isLoading: _busy,
               onPressed: _start),
         ],
-        if (plan.condition == PlanCondition.needsAvailability) ...[
+        if (plan.availableQuestions == 0) ...[
+          const Text(
+              'Approved study questions are not available yet. Your preferences are saved.'),
+        ] else if (plan.condition == PlanCondition.needsAvailability) ...[
           const Text(
               'Choose study days and minutes to create your plan. Your existing question goal stays unchanged.'),
           if (_active == null)
@@ -272,7 +265,7 @@ class _StudyPlanPanelState extends State<StudyPlanPanel>
             Text('${today!.recordedAnswers} answers recorded today',
                 style: context.textStyles.body),
           Text(
-              today?.status == StudyDayStatus.completed
+              progress?.completed == true
                   ? "Today's plan completed"
                   : switch (plan.condition) {
                       PlanCondition.emptyPool =>
@@ -287,7 +280,7 @@ class _StudyPlanPanelState extends State<StudyPlanPanel>
                         'You have explored the available pool. Keep revisiting due questions.',
                       _ => today == null
                           ? 'A day off. Your next session is shown in the calendar.'
-                          : '${today.newIds.length} new · ${today.reviewIds.length} reviews · about ${(today.estimatedSeconds / 60).ceil()} min',
+                          : 'Your saved session stays available until you finish',
                     },
               style: context.textStyles.body),
           if (plan.availableQuestions > 0 && plan.missingDomains.isNotEmpty)
@@ -296,19 +289,32 @@ class _StudyPlanPanelState extends State<StudyPlanPanel>
           if (plan.reviews.any((r) => r.afterExam))
             const Text(
                 'Some review intervals fall after your exam. Final review sessions prioritize them without counting them as retained.'),
-          if (plan.limitedCoverage)
+          if (plan.days.any((d) =>
+              d.date.isBefore(calendarDate(widget.now())) &&
+              (d.status == StudyDayStatus.missed ||
+                  d.status == StudyDayStatus.inProgress)))
+            const Text(
+                'Unfinished work remains in your plan across available days, within your study time. A started session stays available to continue.'),
+          if (plan.limitedCoverage && date != null)
             Text(
                 'Required pace: ${plan.requiredPace} new per study day. Your available time covers ${plan.projectedNewQuestions} of ${plan.remainingQuestions} remaining questions.',
                 style: context.textStyles.bodySmall),
           if ((today?.reviewBacklog ?? 0) > 0)
             Text('${today!.reviewBacklog} reviews remain in your queue.'),
-          if (_active == null && (today?.questionIds.isNotEmpty ?? false))
+          if (_error == null &&
+              _active == null &&
+              progress?.completed != true &&
+              (today?.questionIds.isNotEmpty ?? false))
             PrimaryButton(
                 label: "Start today's session",
                 isLoading: _busy,
                 onPressed: _start),
-          if (_metrics != null && plan.availableQuestions > 0)
+          if (widget.onFinished == null &&
+              _metrics != null &&
+              plan.availableQuestions > 0)
             ExpansionTile(title: const Text("Study progress"), children: [
+              const Text(
+                  "With fewer than five timed answers, estimates start at 2 min per new question and 1 min 15 sec per review, including explanation reading."),
               Text(
                   'First-answer accuracy: ${_metrics!.firstAccuracy == null ? "Not enough data" : "${(_metrics!.firstAccuracy! * 100).round()}%"}',
                   style: context.textStyles.bodySmall),
@@ -334,33 +340,39 @@ class _StudyPlanPanelState extends State<StudyPlanPanel>
                       }} · ${topic.questions} questions on ${topic.days} days'))
               ]),
             ]),
-          Wrap(spacing: AppSpacing.sm, children: [
-            TextButton(
-                onPressed: _availability,
-                child: const Text('Adjust availability')),
-            TextButton(
-                onPressed: () async {
-                  await Navigator.of(context).push(MaterialPageRoute(
-                      builder: (_) => StudyCalendarScreen(
-                          plan: plan,
-                          session: widget.session,
-                          repository: widget.repository,
-                          now: widget.now)));
-                  if (mounted) await _load();
-                },
-                child: const Text('Open calendar')),
-            TextButton(
-                onPressed: _busy
-                    ? null
-                    : () async {
-                        await Navigator.of(context).push(MaterialPageRoute(
-                            builder: (_) =>
-                                DiagnosticScreen(session: widget.session)));
-                        if (mounted) await _load();
-                      },
-                child: const Text('Optional diagnostic')),
-          ]),
+          if (widget.onFinished == null)
+            Wrap(spacing: AppSpacing.sm, children: [
+              TextButton(
+                  onPressed: _availability,
+                  child: const Text('Adjust availability')),
+              TextButton(
+                  onPressed: () async {
+                    await Navigator.of(context).push(MaterialPageRoute(
+                        builder: (_) => StudyCalendarScreen(
+                            plan: plan,
+                            session: widget.session,
+                            repository: widget.repository,
+                            now: widget.now)));
+                    if (mounted) await _load();
+                  },
+                  child: const Text('Open calendar')),
+              TextButton(
+                  onPressed: _busy
+                      ? null
+                      : () async {
+                          await Navigator.of(context).push(MaterialPageRoute(
+                              builder: (_) =>
+                                  DiagnosticScreen(session: widget.session)));
+                          if (mounted) await _load();
+                        },
+                  child: const Text('Optional diagnostic')),
+            ]),
         ],
+        if (widget.onFinished != null &&
+            (_active == null && (progress?.remaining ?? 0) == 0 ||
+                _error != null ||
+                plan.availableQuestions == 0))
+          PrimaryButton(label: 'Back to Home', onPressed: widget.onFinished),
       ],
     ]));
   }
