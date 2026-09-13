@@ -35,7 +35,7 @@ Future<void> _completeOnboarding(WidgetTester tester) async {
   await _tapText(tester, 'Start Preparing');
   await _tapText(tester, "I haven't scheduled it yet");
   await _tapText(tester, 'Continue');
-  await skipStartingCheck(tester);
+  expectOnboardingHome(tester);
   expect(find.byType(MainShell), findsOneWidget);
 }
 

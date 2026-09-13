@@ -1,17 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:danb_rhs_prep/bootstrap/app_bootstrap_service.dart';
-import 'package:danb_rhs_prep/bootstrap/bootstrap_session_controller.dart';
 import 'package:danb_rhs_prep/domain/models/answer_attempt.dart';
 import 'package:danb_rhs_prep/domain/models/entitlement.dart';
 import 'package:danb_rhs_prep/domain/models/practice_session.dart';
-import 'package:danb_rhs_prep/domain/models/user_profile.dart';
 import 'package:danb_rhs_prep/domain/repositories/fakes/in_memory_progress_repository.dart';
-import 'package:danb_rhs_prep/features/content/domain/content_package.dart';
-import 'package:danb_rhs_prep/features/questions/domain/question.dart';
 import 'package:danb_rhs_prep/practice_session/practice_session_controller.dart';
 import 'package:danb_rhs_prep/practice_session/practice_session_scope.dart';
-import 'package:danb_rhs_prep/screens/diagnostic_screen.dart';
 import 'package:danb_rhs_prep/screens/exam_overview_screen.dart';
 import 'package:danb_rhs_prep/screens/practice_question_screen.dart';
 import 'package:danb_rhs_prep/study_plan/planned_session_service.dart';
@@ -61,21 +55,6 @@ void main() {
   final package = fixture();
   final entitlement = Entitlement.free(lastVerifiedAt: now);
 
-  BootstrapSessionController bootstrap(
-          ContentPackage content, _FlakyRepository repo) =>
-      BootstrapSessionController(
-          BootstrapReady(
-              selectedExamId: content.exam.id,
-              contentPackage: content,
-              profile: null,
-              themePreference: ThemePreference.light,
-              readinessSnapshot: null,
-              entitlement: entitlement,
-              onboardingComplete: true,
-              examDateSelection: null,
-              experienceLevel: null),
-          progressRepository: repo);
-
   Widget wrap(Widget child) =>
       MaterialApp(theme: AppTheme.lightTheme, home: child);
 
@@ -100,75 +79,6 @@ void main() {
     await c.submitAnswer('b', confident: false);
     return c;
   }
-
-  testWidgets('empty bank is unavailable material, not a storage retry',
-      (tester) async {
-    final repo = _FlakyRepository();
-    await tester.pumpWidget(
-        wrap(DiagnosticScreen(session: bootstrap(fixture(count: 0), repo))));
-    await tester.pumpAndSettle();
-    expect(find.text('Start diagnostic'), findsNothing);
-    expect(find.text('Retry diagnostic'), findsNothing);
-    expect(find.textContaining('No approved questions'), findsOneWidget);
-    expect(find.text('Skip for now'), findsOneWidget);
-    expect(await repo.practiceSessionsForExam(package.exam.id), isEmpty);
-  });
-
-  testWidgets('completed diagnostic reopens its recorded result',
-      (tester) async {
-    final repo = _FlakyRepository();
-    final c = await const PlannedSessionService().start(
-        package: package,
-        repository: repo,
-        entitlement: entitlement,
-        now: () => now,
-        diagnostic: true);
-    for (var i = 0; i < c.questions.length; i++) {
-      c.moveTo(i);
-      await c.submitAnswer(c.currentQuestion.correctAnswerId);
-    }
-    await c.complete();
-    await tester
-        .pumpWidget(wrap(DiagnosticScreen(session: bootstrap(package, repo))));
-    await tester.pumpAndSettle();
-    expect(find.text('Your starting point'), findsOneWidget);
-    expect(find.text('Start diagnostic'), findsNothing);
-    expect(await repo.practiceSessionsForExam(package.exam.id), hasLength(1));
-  });
-
-  testWidgets(
-      'diagnostic answer write retries without losing or duplicating answer',
-      (tester) async {
-    final repo = _FlakyRepository();
-    await tester
-        .pumpWidget(wrap(DiagnosticScreen(session: bootstrap(package, repo))));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Start diagnostic'));
-    await tester.pumpAndSettle();
-    repo.failNextAnswer = true;
-    await tester.tap(find.text('Correct fixture answer'));
-    await tester.pump();
-    await tester.ensureVisible(find.text('Save and continue'));
-    await tester.tap(find.text('Save and continue'));
-    await tester.pumpAndSettle();
-    expect(find.text('Retry saving'), findsOneWidget);
-    expect(
-        tester
-            .widget<TextButton>(
-                find.widgetWithText(TextButton, 'Continue later'))
-            .onPressed,
-        isNull);
-    expect(await repo.answerAttemptsForExam(package.exam.id), isEmpty);
-    await tester.ensureVisible(find.text('Retry saving'));
-    await tester.tap(find.text('Retry saving'));
-    await tester.pumpAndSettle();
-    await tester.ensureVisible(find.text('Save and continue'));
-    await tester.tap(find.text('Save and continue'));
-    await tester.pumpAndSettle();
-    expect(find.text('Question 2 of 15'), findsOneWidget);
-    expect(await repo.answerAttemptsForExam(package.exam.id), hasLength(1));
-    expect(await repo.practiceSessionsForExam(package.exam.id), hasLength(1));
-  });
 
   for (final mode in PracticeMode.values) {
     test('second history read fails closed and retry restores ${mode.name}',
@@ -207,92 +117,6 @@ void main() {
       expect(repo.saveCalls, 1);
     });
   }
-
-  for (final persisted in [false, true]) {
-    testWidgets(
-        'diagnostic retry creates exactly one session, persisted=$persisted',
-        (tester) async {
-      final repo = _FlakyRepository()
-        ..failNextSave = true
-        ..persistBeforeFailure = persisted;
-      await tester.pumpWidget(
-          wrap(DiagnosticScreen(session: bootstrap(package, repo))));
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('Start diagnostic'));
-      await tester.pumpAndSettle();
-      expect(find.text('Could not start the diagnostic. Please retry.'),
-          findsOneWidget);
-      expect(find.text('Question 1 of 15'), findsNothing);
-      expect(find.text('Retry diagnostic'), findsOneWidget);
-      final before = await repo.practiceSessionsForExam(package.exam.id);
-      expect(before, hasLength(persisted ? 1 : 0));
-      await tester.tap(find.text('Retry diagnostic'));
-      await tester.pumpAndSettle();
-      expect(find.text('Question 1 of 15'), findsOneWidget);
-      expect(find.text('Could not start the diagnostic. Please retry.'),
-          findsNothing);
-      expect(find.text('Retry diagnostic'), findsNothing);
-      final sessions = await repo.practiceSessionsForExam(package.exam.id);
-      expect(sessions, hasLength(1));
-      expect(sessions.single.mode, PracticeMode.diagnostic);
-      if (persisted) expect(sessions.single.id, before.single.id);
-      expect(await repo.answerAttemptsForExam(package.exam.id), isEmpty);
-      // A usable resumed/new controller records an answer in that same session.
-      await tester.tap(find.text('Correct fixture answer'));
-      await tester.pump();
-      await tester.ensureVisible(find.text('Save and continue'));
-      await tester.tap(find.text('Save and continue'));
-      await tester.pumpAndSettle();
-      expect(find.text('Question 2 of 15'), findsOneWidget);
-      expect(
-          (await repo.answerAttemptsForExam(package.exam.id)).single.sessionId,
-          sessions.single.id);
-      expect(await repo.practiceSessionsForExam(package.exam.id), hasLength(1));
-      expect(tester.takeException(), isNull);
-    });
-  }
-
-  testWidgets('diagnostic history retry restores existing answers',
-      (tester) async {
-    final repo = _FlakyRepository();
-    final original = await savedSession(repo, PracticeMode.diagnostic);
-    repo.failHistoryRead = 2;
-    await tester
-        .pumpWidget(wrap(DiagnosticScreen(session: bootstrap(package, repo))));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Resume diagnostic'));
-    await tester.pumpAndSettle();
-    expect(repo.historyReads, 2);
-    expect(find.text('Question 1 of 3'), findsNothing);
-    expect(find.text('Retry diagnostic'), findsOneWidget);
-    await tester.tap(find.text('Retry diagnostic'));
-    await tester.pumpAndSettle();
-    expect(find.text('Question 2 of 3'), findsOneWidget);
-    expect(find.text('Could not start the diagnostic. Please retry.'),
-        findsNothing);
-    expect((await repo.practiceSessionsForExam(package.exam.id)).single.id,
-        original.session.id);
-    expect(
-        (await repo.answerAttemptsForExam(package.exam.id))
-            .single
-            .selectedAnswerId,
-        'b');
-    expect(repo.saveCalls, 1);
-    expect(tester.takeException(), isNull);
-  });
-
-  testWidgets('draft-only content offers Skip rather than a storage retry',
-      (tester) async {
-    final repo = _FlakyRepository();
-    await tester.pumpWidget(wrap(DiagnosticScreen(
-        session: bootstrap(fixture(status: QuestionStatus.draft), repo))));
-    await tester.pumpAndSettle();
-    expect(find.text('Skip for now'), findsOneWidget);
-    expect(find.text('Start diagnostic'), findsNothing);
-    expect(find.text('Retry diagnostic'), findsNothing);
-    expect(repo.historyReads, 1);
-    expect(repo.saveCalls, 0);
-  });
 
   testWidgets(
       'practice setup catches resume failure and retries existing answers',

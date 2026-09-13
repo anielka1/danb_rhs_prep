@@ -185,3 +185,14 @@ fixed heading/legend word wrapping and indistinguishable progress colors.
 No tolerances, comparison implementation, scale presets or font controls changed.
 These are Flutter test renders, not native iPhone screenshots. See the
 [verification report](../../docs/verification/2026-09-13-current-progress.md).
+
+### Shared Settings palette and retired starting check (September 13, 2026)
+
+Eight Home captures (normal, AX5, dated and scrolled counters in both themes)
+now use ColorScheme surfaces and foregrounds shared with Settings. The six
+DiagnosticScreen captures were removed with that screen. The remaining 40
+cases retain the exact comparator, fonts and scale controls. Home renders were
+opened before accepting the intentional baseline changes; Settings, Progress
+and practice-question renders were also inspected in both themes.
+These are widget renders, not native screenshots; icons use the existing test
+font placeholders. See the PR's shared-theme verification report.

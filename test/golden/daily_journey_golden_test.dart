@@ -1,7 +1,4 @@
-import 'dart:math';
-import 'package:danb_rhs_prep/study_plan/planned_session_service.dart';
 import 'package:danb_rhs_prep/screens/home_screen.dart';
-import 'package:danb_rhs_prep/screens/diagnostic_screen.dart';
 import 'package:danb_rhs_prep/domain/models/exam_date_selection.dart';
 import 'package:danb_rhs_prep/domain/models/exam_date_precision.dart';
 import 'package:flutter/material.dart';
@@ -25,20 +22,10 @@ import '../support/golden_probe.dart';
 
 void main() {
   for (final dark in [false, true]) {
-    for (final screen in [
-      'daily_result_done',
-      'planned_home',
-      'diagnostic_selected',
-      'diagnostic_result',
-      'diagnostic_question'
-    ]) {
+    for (final screen in ['daily_result_done', 'planned_home']) {
       testWidgets('$screen dark=$dark', (tester) async {
         final today = DateTime(2026, 9, 11),
-            package = fixture(
-                count:
-                    screen.startsWith('diagnostic_') || screen == 'planned_home'
-                        ? 80
-                        : 3);
+            package = fixture(count: screen == 'planned_home' ? 80 : 3);
         final repo = InMemoryProgressRepository();
         final profile = UserProfile.fromOnboarding(
                 examId: package.exam.id,
@@ -92,28 +79,10 @@ void main() {
             await controller.complete();
           }
         }
-        if (screen == 'diagnostic_result') {
-          final diagnostic = await const PlannedSessionService().start(
-              package: package,
-              repository: repo,
-              entitlement: bootstrap.snapshot.entitlement,
-              now: () => today,
-              diagnostic: true,
-              random: Random(11));
-          for (var i = 0; i < diagnostic.questions.length; i++) {
-            diagnostic.moveTo(i);
-            await diagnostic.submitAnswer(i % 3 == 0 ? 'b' : 'a');
-          }
-          await diagnostic.complete();
-        }
         final Widget child = switch (screen) {
           'planned_home' => BootstrapSessionScope(
               controller: bootstrap,
               child: HomeScreen(progressRepository: repo, now: () => today)),
-          'diagnostic_question' ||
-          'diagnostic_selected' ||
-          'diagnostic_result' =>
-            DiagnosticScreen(session: bootstrap, random: Random(11)),
           _ => BootstrapSessionScope(
               controller: bootstrap,
               child: PracticeSessionScope(
@@ -123,16 +92,6 @@ void main() {
         await pumpGolden(tester, child,
             theme: dark ? AppTheme.darkTheme : AppTheme.lightTheme,
             textScale: GoldenTextScale.normal);
-        if (screen == 'diagnostic_question' ||
-            screen == 'diagnostic_selected') {
-          await tester.tap(find.text('Start diagnostic'));
-          await tester.pumpAndSettle();
-          expect(find.text('Question 1 of 15'), findsOneWidget);
-          if (screen == 'diagnostic_selected') {
-            await tester.tap(find.text('Alternative one'));
-            await tester.pumpAndSettle();
-          }
-        }
         if (screen == 'daily_result_done') {
           expect(find.textContaining('Lowest session accuracy'), findsNothing);
           expect(find.textContaining('Highest session accuracy'), findsNothing);

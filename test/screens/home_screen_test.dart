@@ -16,7 +16,6 @@ import 'package:danb_rhs_prep/domain/repositories/fakes/in_memory_progress_repos
 import 'package:danb_rhs_prep/practice_session/practice_session_controller.dart';
 import 'package:danb_rhs_prep/practice_session/practice_session_scope.dart';
 import 'package:danb_rhs_prep/screens/home_screen.dart';
-import 'package:danb_rhs_prep/screens/diagnostic_screen.dart';
 import 'package:danb_rhs_prep/screens/practice_question_screen.dart';
 import 'package:danb_rhs_prep/screens/saved_questions_screen.dart';
 import 'package:danb_rhs_prep/theme/app_theme.dart';
@@ -27,6 +26,15 @@ import '../study_plan/fixtures.dart';
 class _Repo extends InMemoryProgressRepository {
   bool fail = false;
   bool failHistory = false;
+  bool failRetirement = false;
+  @override
+  Future<void> savePracticeSession(PracticeSession session) async {
+    if (failRetirement && session.status == SessionStatus.abandoned) {
+      throw StateError('retirement save failed');
+    }
+    await super.savePracticeSession(session);
+  }
+
   @override
   Future<List<AnswerAttempt>> answerAttemptsForExam(String id) {
     if (failHistory) throw StateError('history unavailable');
@@ -272,16 +280,46 @@ void main() {
     expect(await repo.answerAttemptsForExam(package.exam.id), hasLength(1));
   });
   testWidgets(
-      'active starting check opens diagnostic rather than another practice',
+      'legacy diagnostic is abandoned without changing answers; new practice starts',
       (tester) async {
-    await seed(mode: PracticeMode.diagnostic);
+    final original = await seed(mode: PracticeMode.diagnostic);
+    final answers = await repo.answerAttemptsForExam(package.exam.id);
     await tester.pumpWidget(app());
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Continue session'));
+    expect(find.text('Continue session'), findsNothing);
+    expect(find.text('Optional starting check'), findsNothing);
+    final retired =
+        (await repo.practiceSessionsForExam(package.exam.id)).single;
+    expect(retired.status, SessionStatus.abandoned);
+    expect(retired.completedAt, isNull);
+    expect(retired.answerOrder, original.answerOrder);
+    expect(retired.questionIds, original.questionIds);
+    expect(await repo.answerAttemptsForExam(package.exam.id), answers);
+    await tester.ensureVisible(find.text('Practise questions'));
+    await tester.tap(find.text('Practise questions'));
     await tester.pumpAndSettle();
-    expect(find.byType(DiagnosticScreen), findsOneWidget);
-    expect(find.text('Resume diagnostic'), findsOneWidget);
-    expect(await repo.practiceSessionsForExam(package.exam.id), hasLength(1));
+    expect(find.byType(PracticeQuestionScreen), findsOneWidget);
+    expect((await repo.inProgressPracticeSession(package.exam.id))!.mode,
+        PracticeMode.quickPractice);
+    expect(await repo.answerAttemptsForExam(package.exam.id), answers);
+  });
+  testWidgets('failed retirement shows Retry and preserves legacy answers',
+      (tester) async {
+    final original = await seed(mode: PracticeMode.diagnostic);
+    final answers = await repo.answerAttemptsForExam(package.exam.id);
+    repo.failRetirement = true;
+    await tester.pumpWidget(app());
+    await tester.pumpAndSettle();
+    expect(find.text('Retry'), findsOneWidget);
+    expect(find.text('Continue session'), findsNothing);
+    expect(await repo.inProgressPracticeSession(package.exam.id), original);
+    expect(await repo.answerAttemptsForExam(package.exam.id), answers);
+    repo.failRetirement = false;
+    await tester.tap(find.text('Retry'));
+    await tester.pumpAndSettle();
+    expect(find.text('Retry'), findsNothing);
+    expect(await repo.inProgressPracticeSession(package.exam.id), isNull);
+    expect(await repo.answerAttemptsForExam(package.exam.id), answers);
   });
   testWidgets('random tile creates one question, not generic setup',
       (tester) async {
@@ -397,42 +435,6 @@ void main() {
     expect(find.byType(ExamOverviewScreen), findsNothing);
   });
   for (final dark in [false, true]) {
-    testWidgets('starting check selection and save at 4x text dark=$dark',
-        (tester) async {
-      tester.view.physicalSize = const Size(320, 568);
-      tester.view.devicePixelRatio = 1;
-      addTearDown(tester.view.reset);
-      final semantics = tester.ensureSemantics();
-      try {
-        await tester.pumpWidget(MaterialApp(
-            theme: dark ? AppTheme.darkTheme : AppTheme.lightTheme,
-            home: MediaQuery(
-                data: const MediaQueryData(textScaler: TextScaler.linear(4)),
-                child: DiagnosticScreen(session: bootstrap()))));
-        await tester.pumpAndSettle();
-        await tester.ensureVisible(find.text('Start diagnostic'));
-        await tester.tap(find.text('Start diagnostic'));
-        await tester.pumpAndSettle();
-        await tester.ensureVisible(find.text('Correct fixture answer'));
-        await tester.tap(find.text('Correct fixture answer'));
-        await tester.pumpAndSettle();
-        await tester.ensureVisible(find.text('Save and continue'));
-        await tester.tap(find.text('Save and continue'));
-        await tester.pumpAndSettle();
-        expect(find.text('Question 2 of 15'), findsOneWidget);
-        expect(
-            (await repo.answerAttemptsForExam(package.exam.id))
-                .single
-                .isCorrect,
-            isTrue);
-        expect(tester.takeException(), isNull);
-      } finally {
-        semantics.dispose();
-      }
-      await tester.pumpWidget(const SizedBox.shrink());
-    });
-  }
-  for (final dark in [false, true]) {
     testWidgets('small screen large text dark=$dark', (tester) async {
       tester.view.physicalSize = const Size(320, 568);
       tester.view.devicePixelRatio = 1;
@@ -442,7 +444,7 @@ void main() {
       await tester.pumpWidget(app(dark: dark, scale: 4));
       await tester.pumpAndSettle();
       expect(find.bySemanticsLabel('Settings'), findsOneWidget);
-      await tester.ensureVisible(find.text('Optional starting check'));
+      await tester.ensureVisible(find.text('Explore progress'));
       await tester.pumpAndSettle();
       expect(tester.takeException(), isNull);
       semantics.dispose();

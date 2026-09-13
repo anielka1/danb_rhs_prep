@@ -11,7 +11,7 @@ class StudyHelpScreen extends StatelessWidget {
 
   static const topics = <String, String>{
     'Where should I start?':
-        'Open Practice and start a short session. Read the explanation after each answer, then review your mistakes. The optional starting check is available when there are enough approved questions across all exam areas.',
+        'Open Practice and start a short session. Read the explanation after each answer, then review your mistakes.',
     'Practice or Mock Exam?':
         'Practice gives feedback after each answer. Mock Exam lets you answer and flag questions before seeing explanations at the end. Neither is an official DANB exam.',
     'What does my progress mean?':
