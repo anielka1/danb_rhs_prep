@@ -53,12 +53,15 @@ class _MockExamQuestionScreenState extends State<MockExamQuestionScreen> {
       await action();
       if (!mounted) return;
       if (!widget.controller.inProgress) {
+        setState(() => _busy = false);
         await Navigator.of(context).push(MaterialPageRoute<void>(
           settings: const RouteSettings(name: MockExamResultsScreen.route),
           builder: (_) =>
               MockExamResultsScreen(result: widget.controller.result),
         ));
-        if (mounted) Navigator.of(context).pop();
+        if (mounted && ModalRoute.of(context)?.isCurrent == true) {
+          Navigator.of(context).pop();
+        }
       } else {
         setState(() => _busy = false);
       }

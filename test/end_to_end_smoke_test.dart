@@ -61,12 +61,12 @@ void main() {
     expect(tester.getCenter(find.byTooltip('Settings')).dy,
         lessThan(tester.getBottomLeft(find.text('Let’s study')).dy + 40));
     expect(find.byIcon(Icons.wb_sunny_outlined), findsNothing);
-    await _tapText(tester, 'Practice');
-    await _tapText(tester, 'Start Practice Exam');
+    await _tapText(tester, 'Continue session');
     await tester.tap(find.bySemanticsLabel('Bookmark question'));
     await tester.pumpAndSettle();
     await tester.tap(find.bySemanticsLabel('Close'));
     await tester.pumpAndSettle();
+    expect(find.text('Let’s study'), findsOneWidget);
     await _tapText(tester, 'Home');
     await _tapText(tester, 'Saved questions');
     expect(find.byType(SavedQuestionsScreen), findsOneWidget);
@@ -77,6 +77,7 @@ void main() {
     await tester.pumpAndSettle();
     await tester.ensureVisible(find.byTooltip('Settings'));
     await tester.pumpAndSettle();
+    await tester.ensureVisible(find.byTooltip('Settings'));
     await tester.tap(find.byTooltip('Settings'));
     await tester.pumpAndSettle();
     expect(find.byType(ProfileSettingsScreen), findsOneWidget);
@@ -85,6 +86,7 @@ void main() {
   testWidgets('settings edits study answers and returns without onboarding',
       (tester) async {
     await _completeOnboarding(tester);
+    await tester.ensureVisible(find.byTooltip('Settings'));
     await tester.tap(find.byTooltip('Settings'));
     await tester.pumpAndSettle();
     await _tapText(tester, 'Exam timeframe');
@@ -106,9 +108,7 @@ void main() {
 
     // Free practice remains a working secondary route; the main Continue
     // now resumes questions directly (covered by Home integration tests).
-    await _tapText(tester, 'Practice');
-
-    await _tapText(tester, 'Start Practice Exam');
+    await _tapText(tester, 'Continue session');
 
     // Answer every question in the real (possibly resumed) session,
     // driven entirely by what the screen actually shows rather than an
@@ -146,7 +146,7 @@ void main() {
     // through end to end.
     await _tapText(tester, 'Progress');
     expect(find.text('No progress yet'), findsNothing);
-    expect(find.text('DOMAIN BREAKDOWN'), findsOneWidget);
+    expect(find.text('Progress by subject'), findsOneWidget);
   });
 
   testWidgets(
@@ -155,7 +155,7 @@ void main() {
     await _completeOnboarding(tester);
 
     // Mock Exam: start, answer, and finish a real attempt.
-    await _tapText(tester, 'Mock Exam');
+    await _tapText(tester, 'Mock exam');
     await _tapText(tester, 'Start Mock Exam');
     await _tapText(tester, 'Begin exam');
     await _tapText(tester, 'Finish mock exam');
@@ -169,10 +169,11 @@ void main() {
       anyOf(findsOneWidget, findsNothing),
     );
     expect(find.text('PASSED'), findsNothing);
-    await _tapText(tester, 'Back to Mock Exam');
+    await _tapText(tester, 'Back to Home');
 
     // Back to Home, then Settings: a real, working local preference.
     await _tapText(tester, 'Home');
+    await tester.ensureVisible(find.byTooltip('Settings'));
     await tester.tap(find.byTooltip('Settings'));
     await tester.pumpAndSettle();
 

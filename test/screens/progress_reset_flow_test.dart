@@ -42,11 +42,11 @@ void main() {
     final session = BootstrapSessionScope.maybeControllerOf(oldContext)!;
     final oldRepo = session.progressRepository!;
     final before = session.snapshot;
-    await tap(tester, 'Practice');
-    await tap(tester, 'Start Practice Exam');
+    await tap(tester, 'Continue session');
     final oldPractice = PracticeSessionScope.of(
         tester.element(find.byType(PracticeQuestionScreen)));
     await tap(tester, 'Home');
+    await tester.ensureVisible(find.bySemanticsLabel('Settings'));
     await tester.tap(find.bySemanticsLabel('Settings'));
     await tester.pumpAndSettle();
     await tap(tester, 'Dark');

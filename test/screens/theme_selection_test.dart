@@ -109,7 +109,7 @@ void main() {
     // application-level controller.
     await tester.tap(find.byIcon(Icons.chevron_left_rounded));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Practice'));
+    await tester.tap(find.text('Progress'));
     await tester.pumpAndSettle();
 
     expect(controller.value, ThemeMode.dark);

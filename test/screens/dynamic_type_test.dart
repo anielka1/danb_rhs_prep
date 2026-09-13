@@ -77,7 +77,7 @@ void main() {
       await pumpAtScale(tester, appWith(const MainShell()),
           viewport: ProbeViewport.smallPhone, textScale: 2.0);
 
-      for (final label in ['Practice', 'Mock Exam', 'Progress', 'Home']) {
+      for (final label in ['Progress', 'Home']) {
         // The bottom nav switches to a horizontally scrollable layout
         // (instead of shrinking or truncating labels) whenever they
         // don't all fit as four equal columns at the current text scale
@@ -183,7 +183,7 @@ void main() {
         of: find.byType(AppBottomNavigation),
         matching: find.byType(InkWell),
       );
-      expect(inkWells, findsNWidgets(4));
+      expect(inkWells, findsNWidgets(2));
       for (final element in inkWells.evaluate()) {
         final Size size = tester.getSize(find.byWidget(element.widget));
         expect(size.width, greaterThanOrEqualTo(AppTapTarget.minInteractive));
@@ -197,7 +197,8 @@ void main() {
       await tester.pumpAndSettle();
       final size = tester.getSize(find
           .ancestor(
-              of: find.text('Random question'), matching: find.byType(InkWell))
+              of: find.text('Practise questions'),
+              matching: find.byType(InkWell))
           .first);
       expect(size.width, greaterThanOrEqualTo(44));
       expect(size.height, greaterThanOrEqualTo(44));
@@ -277,7 +278,7 @@ void main() {
         viewport: ProbeViewport.smallPhone,
         textScale: 4.0,
       );
-      expect(find.text('DOMAIN BREAKDOWN'), findsOneWidget);
+      expect(find.text('Progress by subject'), findsOneWidget);
     });
 
     testWidgets(
@@ -286,7 +287,7 @@ void main() {
       await pumpAtScale(tester, appWith(const MainShell()),
           viewport: ProbeViewport.smallPhone, textScale: 4.0);
 
-      for (final label in ['Practice', 'Mock Exam', 'Progress', 'Home']) {
+      for (final label in ['Progress', 'Home']) {
         // The bottom nav switches to a horizontally scrollable layout
         // (instead of shrinking or truncating labels) whenever they
         // don't all fit as four equal columns at the current text scale
@@ -350,7 +351,7 @@ void main() {
         of: find.byType(AppBottomNavigation),
         matching: find.byType(InkWell),
       );
-      expect(inkWells, findsNWidgets(4));
+      expect(inkWells, findsNWidgets(2));
       for (final element in inkWells.evaluate()) {
         expect(tester.getSize(find.byWidget(element.widget)).width,
             greaterThan(0));

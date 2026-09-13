@@ -26,7 +26,7 @@ Version 1 is designed around these non-negotiable rules:
   promote a question to `approved`
 - **clear architecture boundaries** — UI does not read JSON, SQLite, StoreKit,
   or cloud services directly
-- **four-tab product shell** — Home, Practice, Mock Exam, and Progress
+- **two-tab product shell** — Home and Progress; practice and mock exams open from Home
 - **honest claims** — the app estimates readiness; it never claims that a user
   passed the official exam
 
@@ -107,7 +107,7 @@ The repository already contains meaningful foundations:
 - a versioned JSON content loader and codec
 - deterministic content validation with structured errors and warnings
 - a content-review workflow with provenance, fingerprints, and audit artifacts
-- semantic theme tokens, shared UI components, and the four-tab shell
+- semantic theme tokens, shared UI components, and the two-tab shell
 - bootstrap plus welcome, exam-date, and experience-level onboarding
 - automated model, validator, content, and widget tests
 
@@ -180,7 +180,7 @@ flutter run
 Run `./run_demo.command` (or double-click it on macOS) for the full offline demo.
 In VS Code, choose **Full app demo (clickable practice)** and Run.
 The equivalent command is `flutter run -t lib/main_demo.dart`.
-Complete onboarding, open **Practice**, then tap **Start Practice Exam**.
+Complete onboarding, then choose **Practise questions** or **Continue session** on Home.
 All screens and normal navigation remain available. Plain `flutter run` uses
 production content, whose draft questions are not eligible for practice yet.
 The entrypoint injects synthetic content, profile and readiness through the
@@ -191,7 +191,7 @@ only for the process lifetime; restarting restores the deterministic fixtures.
 
 `DebugDemoEnvironment.buildProgressRepository()` also provides independent
 seeded practice/mock history for repository consumers and tests. After accountless
-onboarding, the Mock Exam tab supports instructions, saved answers and flags,
+onboarding, the Home **Mock exam** tile opens instructions, saved answers and flags,
 question navigation, confirmation, and a result calculated from the attempt.
 It uses only `Above practice threshold` / `Below practice threshold`, always
 with the practice-estimate disclaimer. See [PREP-650](docs/MOCK_EXAM_FLOW.md)

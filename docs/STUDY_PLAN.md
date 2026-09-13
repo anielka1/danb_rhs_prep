@@ -13,17 +13,18 @@ or availability question. Completion is written after the profile saves; a failu
 stays retryable. Reopening preserves the timeframe and any diagnostic session.
 Skipping the check completes onboarding without creating answer history.
 
-Home is a practice chooser: Random question, Quick 10, Timed quiz, Review
-mistakes, Practice by topic, Mock exam and Saved questions. A compact Continue
-session action resumes existing practice/diagnostic or a saved mock. The starting
-check remains optional and secondary. See the [chooser verification report](verification/2026-09-11-home-chooser.md)
-for the precise mode mapping and time semantics.
+Home offers exactly Practise questions (one random question), Practice by topics,
+Saved questions, Review mistakes and Mock exam. Quick 10 and Timed quiz are no
+longer Home launchers; their saved sessions still resume with their answer order
+and feedback. Continue session resumes practice, diagnostic or mock. The bottom
+bar contains Home and Progress only; Settings remains in Home's header.
 
-The Today card uses recorded local-day practice/diagnostic answer events, not
-lifetime statistics or a daily allocation. Mock aggregate results do not provide
-per-answer dates and are explicitly outside this card's scope. Unknown active
-answer time displays Not available. A calendar icon edits the exam date; it does
-not open or recreate a study calendar. Summary returns to Home without a new goal.
+The navy **Your progress** card shows current unique Correct / Needs review and
+**Correct today**, a count of correct attempts on the local day. It does not show
+study time, accuracy, daily goals or a calendar plan. A compact exam-date action
+edits the existing date. See [progress aggregation](PROGRESS_AGGREGATION.md) for
+the common source used by Home, Progress and mistake practice, including historical
+mock limitations. The optional starting check remains secondary.
 
 ## Why keep the starting check?
 
@@ -31,7 +32,8 @@ It writes `AttemptSessionType.diagnostic` through the same atomic attempt/state
 transaction as practice. `QuestionState.timesSeen/timesCorrect/timesIncorrect`
 therefore include those answers. Progress displays that evidence, and
 `PracticeGenerator` uses the aggregate topic accuracy for `PracticeFocus.weakAreas`
-and mistakes for `incorrectQuestions`. It does not set a self-reported skill level,
+for weak areas. Mistake practice uses the latest saved grades through the shared
+`LearningProgress` aggregation. It does not set a self-reported skill level,
 change adaptive difficulty, or calculate the probability of passing. Small samples
 are described as a starting point. Diagnostic attempts do not consume the daily
 free practice allowance. The domain quota and approved-content gate are unchanged.

@@ -88,11 +88,10 @@ void main() {
 
     final SemanticsNode root = _rootSemanticsNode(tester);
     final List<String> order = semanticsLabelOrder(root);
-    final List<String> tabOrder = order
-        .where(['Home', 'Practice', 'Mock Exam', 'Progress'].contains)
-        .toList();
+    final List<String> tabOrder =
+        order.where(['Home', 'Progress'].contains).toList();
 
-    expect(tabOrder, ['Home', 'Practice', 'Mock Exam', 'Progress']);
+    expect(tabOrder, ['Home', 'Progress']);
     handle.dispose();
   });
 

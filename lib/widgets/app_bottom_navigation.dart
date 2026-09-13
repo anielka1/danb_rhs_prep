@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
 
-/// The four primary tabs, in their fixed display order. This is the only
+/// The two primary tabs, in their fixed display order. This is the only
 /// application-facing representation of "which tab is selected" — screens
 /// and the main shell pass this typed enum around, never a raw index or
 /// label, so a tab and its position can never drift out of sync.
-enum AppTab { home, practice, mockExam, progress }
+enum AppTab { home, progress }
 
 class _TabSpec {
   final AppTab tab;
@@ -16,8 +16,6 @@ class _TabSpec {
 
 const List<_TabSpec> _tabs = [
   _TabSpec(AppTab.home, Icons.home_rounded, 'Home'),
-  _TabSpec(AppTab.practice, Icons.menu_book_rounded, 'Practice'),
-  _TabSpec(AppTab.mockExam, Icons.assignment_rounded, 'Mock Exam'),
   _TabSpec(AppTab.progress, Icons.bar_chart_rounded, 'Progress'),
 ];
 
@@ -52,16 +50,16 @@ TextStyle _resolveLabelStyle(BuildContext context, {required bool selected}) {
       ));
 }
 
-/// Bottom tab bar shown by the main app shell for all four primary tabs.
+/// Bottom tab bar shown by the main app shell for all two primary tabs.
 /// Settings is intentionally not a tab — it's reached via a toolbar icon.
 ///
 /// At every text scale this bar is first measured (via [LayoutBuilder] +
 /// [TextPainter], configured with the exact same resolved style,
 /// [TextScaler], [TextDirection], and locale the rendered label uses —
 /// see [_resolveLabelStyle] and [_requiredItemWidth]) against the actual
-/// four-equal-column width. Whenever every label's widest single *word*
+/// two-equal-column width. Whenever every label's widest single *word*
 /// fits that column — true at every normal reading scale on every phone
-/// this app targets — the bar renders as a plain `Row` of four
+/// this app targets — the bar renders as a plain `Row` of two
 /// equal-width columns, each label wrapping onto a second line on its
 /// own (no manual line-splitting) if it has more than one word and
 /// doesn't fit on one line; the bar's height simply grows to fit
@@ -206,7 +204,7 @@ class _AppBottomNavigationState extends State<AppBottomNavigation> {
 
             if (!_isScrollable) {
               // Each item shares the row equally — the bar's classic
-              // four-equal-column design. Height is whatever the
+              // two-equal-column design. Height is whatever the
               // tallest item needs (a wrapped two-word label, or a
               // single-line one), not a fixed value.
               return Row(
@@ -275,7 +273,7 @@ class _NavItem extends StatelessWidget {
                   Icon(icon, color: color, size: AppIconSize.standard),
                   const SizedBox(height: AppSpacing.xs),
                   // No maxLines, no overflow, no FittedBox: the layout
-                  // above (four equal columns vs. a horizontally
+                  // above (two equal columns vs. a horizontally
                   // scrollable row) is only chosen once every label's
                   // widest word is already known to fit at its true,
                   // unscaled size — a multi-word label simply wraps

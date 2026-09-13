@@ -60,14 +60,14 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('No progress yet'), findsNothing);
-    expect(find.text('READINESS TREND'), findsOneWidget);
-    expect(find.text('DOMAIN BREAKDOWN'), findsOneWidget);
+    expect(find.text('Daily activity'), findsOneWidget);
+    expect(find.text('Progress by subject'), findsOneWidget);
     expect(find.text('MOCK EXAM HISTORY'), findsOneWidget);
     // The earlier, worse-scoring readiness snapshot and the earlier,
     // completed mock attempt distinguish "real repository data reaching
     // the screen" from a single value that could look hardcoded either
     // way.
-    expect(find.text('55% · Starting'), findsOneWidget);
-    expect(find.text('72% · Getting close'), findsOneWidget);
+    expect(find.textContaining('1/2 ·'), findsOneWidget);
+    expect(find.textContaining('2/2 ·'), findsOneWidget);
   });
 }

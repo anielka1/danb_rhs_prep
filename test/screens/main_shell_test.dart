@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:danb_rhs_prep/screens/main_shell.dart';
-import 'package:danb_rhs_prep/screens/mock_exam_screen.dart';
 import 'package:danb_rhs_prep/screens/profile_settings_screen.dart';
 import 'package:danb_rhs_prep/services/fakes/fake_analytics_service.dart';
 import 'package:danb_rhs_prep/services/theme_mode_controller.dart';
@@ -30,8 +29,8 @@ void main() {
   group('tabForIndex', () {
     test('valid indices map to the corresponding tab in display order', () {
       expect(tabForIndex(0), AppTab.home);
-      expect(tabForIndex(1), AppTab.practice);
-      expect(tabForIndex(2), AppTab.mockExam);
+      expect(tabForIndex(1), AppTab.home);
+      expect(tabForIndex(2), AppTab.home);
       expect(tabForIndex(3), AppTab.progress);
     });
 
@@ -43,7 +42,7 @@ void main() {
   });
 
   group('navigation structure', () {
-    testWidgets('shows exactly the four tabs, in order, with no Profile tab',
+    testWidgets('shows exactly the two tabs, in order, with no Profile tab',
         (tester) async {
       await tester.pumpWidget(wrap(const MainShell()));
 
@@ -53,7 +52,7 @@ void main() {
               matching: find.byType(Text)))
           .map((t) => t.data)
           .toList();
-      expect(labels, ['Home', 'Practice', 'Mock Exam', 'Progress']);
+      expect(labels, ['Home', 'Progress']);
       expect(find.text('Profile'), findsNothing);
       expect(find.text('Stats'), findsNothing);
     });
@@ -64,23 +63,13 @@ void main() {
         of: find.byType(AppBottomNavigation),
         matching: find.byType(InkWell),
       );
-      expect(inkWells, findsNWidgets(4));
+      expect(inkWells, findsNWidgets(2));
     });
 
     testWidgets('each tab maps to its screen', (tester) async {
       await tester.pumpWidget(wrap(const MainShell()));
       expect(currentTab(tester), AppTab.home);
       expect(find.text('Let’s study'), findsOneWidget);
-
-      await tester.tap(find.text('Practice'));
-      await tester.pumpAndSettle();
-      expect(currentTab(tester), AppTab.practice);
-      expect(find.text('Let’s practice.'), findsOneWidget);
-
-      await tester.tap(find.text('Mock Exam'));
-      await tester.pumpAndSettle();
-      expect(currentTab(tester), AppTab.mockExam);
-      expect(find.byType(MockExamScreen), findsOneWidget);
 
       await tester.tap(find.text('Progress'));
       await tester.pumpAndSettle();
@@ -121,7 +110,7 @@ void main() {
       await tester.pump();
       expect(tester.state(find.byType(HomeScreen)), same(homeBefore));
 
-      await tester.tap(find.text('Practice'));
+      await tester.tap(find.text('Progress'));
       await tester.pumpAndSettle();
       await tester.tap(find.text('Home'));
       await tester.pumpAndSettle();
@@ -197,13 +186,13 @@ void main() {
         (tester) async {
       await tester.pumpWidget(wrap(const MainShell()));
 
-      await tester.tap(find.text('Mock Exam'));
+      await tester.tap(find.text('Progress'));
       await tester.pumpAndSettle();
-      expect(currentTab(tester), AppTab.mockExam);
+      expect(currentTab(tester), AppTab.progress);
 
       await tester.restartAndRestore();
 
-      expect(currentTab(tester), AppTab.mockExam);
+      expect(currentTab(tester), AppTab.progress);
     });
 
     testWidgets('restoration does not emit a duplicate analytics event',
@@ -235,13 +224,13 @@ void main() {
       await tester.pumpWidget(wrap(MainShell(analytics: analytics)));
       analytics.screenViews.clear();
 
-      await tester.tap(find.text('Practice'));
+      await tester.tap(find.text('Progress'));
       await tester.pumpAndSettle();
-      expect(analytics.screenViews, ['practice']);
+      expect(analytics.screenViews, ['progress']);
 
-      await tester.tap(find.text('Mock Exam'));
+      await tester.tap(find.text('Home'));
       await tester.pumpAndSettle();
-      expect(analytics.screenViews, ['practice', 'mock_exam']);
+      expect(analytics.screenViews, ['progress', 'home']);
     });
 
     testWidgets('re-selecting the current tab emits no additional event',

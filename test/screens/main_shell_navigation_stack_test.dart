@@ -56,9 +56,9 @@ void main() {
 
       await pushViaProgressStartPracticing(tester);
 
-      await tester.tap(find.text('Mock Exam'));
+      await tester.tap(find.text('Home'));
       await tester.pumpAndSettle();
-      expect(currentTab(tester), AppTab.mockExam);
+      expect(currentTab(tester), AppTab.home);
       expect(find.byType(ExamOverviewScreen), findsNothing,
           reason: "Mock Exam's own tab must not show Progress's pushed "
               'screen');
@@ -214,11 +214,11 @@ void main() {
               'had anything pushed');
       expect(currentTab(tester), AppTab.home);
 
-      // Practice's own, entirely separate tab stack was never touched by
+      // Progress's separate tab stack was never touched by
       // this — it still shows its normal root when visited.
-      await tester.tap(find.text('Practice'));
+      await tester.tap(find.text('Progress'));
       await tester.pumpAndSettle();
-      expect(find.byType(ExamOverviewScreen), findsOneWidget);
+      expect(find.text('Your Progress'), findsOneWidget);
       expect(find.byType(PracticeSummaryScreen), findsNothing);
     });
   });

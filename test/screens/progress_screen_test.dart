@@ -336,7 +336,7 @@ void main() {
       repository.complete();
       await tester.pumpAndSettle();
 
-      expect(find.text('READINESS TREND'), findsOneWidget);
+      expect(find.text('Daily activity'), findsOneWidget);
     });
   });
 
@@ -354,14 +354,14 @@ void main() {
       // Before the fix this screen showed a fixed empty state
       // unconditionally, regardless of any real repository content — none
       // of this real, seeded demo data could ever have appeared.
-      expect(find.text('READINESS TREND'), findsOneWidget);
-      expect(find.text('55% · Starting'), findsOneWidget);
-      expect(find.text('72% · Getting close'), findsOneWidget);
-      expect(find.text('DOMAIN BREAKDOWN'), findsOneWidget);
-      expect(find.text('2/2 correct'), findsOneWidget);
+      expect(find.text('Daily activity'), findsOneWidget);
+      expect(find.text('55% · Starting'), findsNothing);
+      expect(find.text('72% · Getting close'), findsNothing);
+      expect(find.text('Progress by subject'), findsOneWidget);
+      expect(find.textContaining('correct ·'), findsWidgets);
       expect(find.text('MOCK EXAM HISTORY'), findsOneWidget);
-      expect(find.text('1/2'), findsOneWidget);
-      expect(find.text('2/2'), findsOneWidget);
+      expect(find.textContaining('1/2 ·'), findsOneWidget);
+      expect(find.textContaining('2/2 ·'), findsOneWidget);
       expect(find.text('No progress yet'), findsNothing);
     });
   });
@@ -376,7 +376,7 @@ void main() {
       )));
 
       await tester.pumpAndSettle();
-      expect(find.text('No progress yet'), findsOneWidget);
+      expect(find.text('No answers recorded yet.'), findsOneWidget);
     });
   });
 
@@ -436,6 +436,7 @@ void main() {
       )));
       await tester.pumpAndSettle();
 
+      await tester.ensureVisible(find.text('Practice More'));
       await tester.tap(find.text('Practice More'));
       await tester.pumpAndSettle();
 
@@ -468,7 +469,7 @@ class EmptyOverrideRepository implements ProgressRepository {
       _inner.recordAnswerAttempt(attempt);
   @override
   Future<List<AnswerAttempt>> answerAttemptsForExam(String examId) =>
-      _inner.answerAttemptsForExam(examId);
+      Future.value(const []);
   @override
   Future<QuestionState> questionState(String examId, String questionId) =>
       _inner.questionState(examId, questionId);

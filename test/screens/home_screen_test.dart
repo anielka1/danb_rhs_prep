@@ -1,3 +1,5 @@
+import 'package:danb_rhs_prep/domain/models/answer_attempt.dart';
+import 'package:danb_rhs_prep/screens/progress_screen.dart';
 import 'package:danb_rhs_prep/domain/models/mock_attempt.dart';
 import 'package:danb_rhs_prep/domain/models/exam_date_selection.dart';
 import 'package:danb_rhs_prep/domain/models/exam_date_precision.dart';
@@ -24,6 +26,13 @@ import '../study_plan/fixtures.dart';
 
 class _Repo extends InMemoryProgressRepository {
   bool fail = false;
+  bool failHistory = false;
+  @override
+  Future<List<AnswerAttempt>> answerAttemptsForExam(String id) {
+    if (failHistory) throw StateError('history unavailable');
+    return super.answerAttemptsForExam(id);
+  }
+
   Completer<void>? gate;
   @override
   Future<PracticeSession?> inProgressPracticeSession(String id) async {
@@ -91,16 +100,92 @@ void main() {
     return s;
   }
 
+  testWidgets('a later correction removes the current review mistake',
+      (tester) async {
+    final q = package.questions.first;
+    await repo.recordAnswerAttempt(answer(q, now, id: 'wrong', correct: false));
+    await repo.recordAnswerAttempt(answer(q, now, id: 'correct'));
+    await tester.pumpWidget(app());
+    await tester.pumpAndSettle();
+    expect(find.text('No mistakes to review'), findsOneWidget);
+    expect(find.text('Your progress'), findsOneWidget);
+  });
+
+  testWidgets(
+      'five ordered activities share current grades with Progress and review',
+      (tester) async {
+    final first = package.questions[0], second = package.questions[1];
+    await repo.recordAnswerAttempt(
+        answer(first, now, id: 'first-wrong', correct: false));
+    await repo.recordAnswerAttempt(answer(first, now, id: 'first-correct'));
+    await repo.recordAnswerAttempt(
+        answer(second, now, id: 'second-wrong', correct: false));
+    await tester.pumpWidget(app());
+    await tester.pumpAndSettle();
+    const names = [
+      'Practise questions',
+      'Practice by topics',
+      'Saved questions',
+      'Review mistakes',
+      'Mock exam'
+    ];
+    final shown = tester
+        .widgetList<Text>(find.byType(Text))
+        .map((t) => t.data)
+        .where(names.contains)
+        .toList();
+    expect(shown, names);
+    expect(find.text('Quick 10'), findsNothing);
+    expect(find.text('Timed quiz'), findsNothing);
+    expect(find.text('1'), findsNWidgets(3));
+    await tester.ensureVisible(find.text('Review mistakes'));
+    await tester.tap(find.text('Review mistakes'));
+    await tester.pumpAndSettle();
+    final controller = PracticeSessionScope.of(
+        tester.element(find.byType(PracticeQuestionScreen)));
+    expect(controller.session.questionIds, [second.id]);
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pumpWidget(MaterialApp(
+        theme: AppTheme.lightTheme,
+        home:
+            ProgressScreen(contentPackage: package, progressRepository: repo)));
+    await tester.pumpAndSettle();
+    expect(find.text('1 Correct'), findsNWidgets(2));
+    expect(find.text('1 Needs review'), findsNWidgets(2));
+    expect(find.text('78 Not attempted'), findsOneWidget);
+    expect(find.textContaining('1 correct · 2 incorrect · 3 answers'),
+        findsOneWidget);
+    for (final domain in package.exam.domains) {
+      expect(find.text(domain.name), findsOneWidget);
+    }
+  });
+
+  testWidgets('history read failure is not presented as zero; retry recovers',
+      (tester) async {
+    repo.failHistory = true;
+    await tester.pumpWidget(app());
+    await tester.pumpAndSettle();
+    expect(find.text('0'), findsNothing);
+    expect(find.text('—'), findsNWidgets(3));
+    expect(find.text('Retry'), findsOneWidget);
+    repo.failHistory = false;
+    await tester.ensureVisible(find.text('Retry'));
+    await tester.tap(find.text('Retry'));
+    await tester.pumpAndSettle();
+    expect(find.text('0'), findsNWidgets(3));
+    expect(find.text('Retry'), findsNothing);
+  });
+
   for (final offset in [-1, 0, 30]) {
     testWidgets('exam date state offset=$offset', (tester) async {
       await tester.pumpWidget(app(examDate: DateTime(2026, 9, 11 + offset)));
       await tester.pumpAndSettle();
       expect(
           find.text(offset < 0
-              ? 'Update date'
+              ? 'Exam date passed · Update date'
               : offset == 0
                   ? 'Exam today'
-                  : '30'),
+                  : '30 days to exam'),
           findsOneWidget);
     });
   }
@@ -108,22 +193,22 @@ void main() {
       (tester) async {
     await tester.pumpWidget(app());
     await tester.pumpAndSettle();
-    expect(find.text('Today’s progress'), findsOneWidget);
-    expect(find.text('Not available'), findsOneWidget);
-    expect(find.text('—'), findsOneWidget);
+    expect(find.text('Your progress'), findsOneWidget);
+    expect(find.text('Study time'), findsNothing);
+    expect(find.text('0'), findsNWidgets(3));
     expect(find.text('No mistakes to review'), findsOneWidget);
   });
   testWidgets('empty history has no invented statistics or calendar',
       (tester) async {
     await tester.pumpWidget(app());
     await tester.pumpAndSettle();
-    expect(find.text('Today’s progress'), findsOneWidget);
+    expect(find.text('Your progress'), findsOneWidget);
     expect(find.text('Answer accuracy'), findsNothing);
     expect(find.text('Study calendar'), findsNothing);
     expect(find.text('No mistakes to review'), findsOneWidget);
     expect(find.text('Continue session'), findsNothing);
-    await tester.ensureVisible(find.text('Quick 10'));
-    await tester.tap(find.text('Quick 10'));
+    await tester.ensureVisible(find.text('Practise questions'));
+    await tester.tap(find.text('Practise questions'));
     await tester.pumpAndSettle();
     expect(find.byType(PracticeQuestionScreen), findsOneWidget);
     expect(await repo.practiceSessionsForExam(package.exam.id), hasLength(1));
@@ -171,7 +256,8 @@ void main() {
     for (var i = 0; i < 2; i++) {
       await tester.pumpWidget(app());
       await tester.pumpAndSettle();
-      expect(find.text('100%'), findsOneWidget);
+      expect(find.text('Correct'), findsOneWidget);
+      expect(find.text('1'), findsNWidgets(2));
       await tester.tap(find.text('Continue session'));
       await tester.pumpAndSettle();
       expect(find.byType(PracticeQuestionScreen), findsOneWidget);
@@ -201,8 +287,8 @@ void main() {
       (tester) async {
     await tester.pumpWidget(app());
     await tester.pumpAndSettle();
-    await tester.ensureVisible(find.text('Random question'));
-    await tester.tap(find.text('Random question'));
+    await tester.ensureVisible(find.text('Practise questions'));
+    await tester.tap(find.text('Practise questions'));
     await tester.pumpAndSettle();
     final c = PracticeSessionScope.of(
         tester.element(find.byType(PracticeQuestionScreen)));
@@ -210,19 +296,20 @@ void main() {
     expect(c.session.answerOrder, isNotNull);
     await tester.pumpWidget(const SizedBox.shrink());
   });
-  testWidgets('timed tile starts a stopwatch session', (tester) async {
+  testWidgets('removed timed launch still resumes its saved session',
+      (tester) async {
+    final saved = await seed(mode: PracticeMode.timedQuiz);
     await tester.pumpWidget(app());
     await tester.pumpAndSettle();
-    await tester.ensureVisible(find.text('Timed quiz'));
-    await tester.tap(find.text('Timed quiz'));
-    await tester.pumpAndSettle();
-    expect(find.textContaining('No automatic submission'), findsOneWidget);
-    await tester.tap(find.text('Start Timed quiz'));
+    expect(find.text('Timed quiz'), findsNothing);
+    expect(find.text('Quick 10'), findsNothing);
+    await tester.tap(find.text('Continue session'));
     await tester.pumpAndSettle();
     final c = PracticeSessionScope.of(
         tester.element(find.byType(PracticeQuestionScreen)));
-    expect(c.session.mode, PracticeMode.timedQuiz);
-    expect(c.totalQuestions, 10);
+    expect(c.session.id, saved.id);
+    expect(c.session.answerOrder, saved.answerOrder);
+    expect(c.answeredCount, 1);
     expect(find.text('Timed quiz · active answering time'), findsOneWidget);
     await tester.pumpWidget(const SizedBox.shrink());
   });
@@ -230,8 +317,8 @@ void main() {
       (tester) async {
     await tester.pumpWidget(app());
     await tester.pumpAndSettle();
-    await tester.ensureVisible(find.text('Practice by topic'));
-    await tester.tap(find.text('Practice by topic'));
+    await tester.ensureVisible(find.text('Practice by topics'));
+    await tester.tap(find.text('Practice by topics'));
     await tester.pumpAndSettle();
     final topic = package.exam.domains.first.topics.first;
     await tester.ensureVisible(find.text(topic.name));

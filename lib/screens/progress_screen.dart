@@ -1,3 +1,4 @@
+import '../progress/learning_progress.dart';
 import 'package:flutter/material.dart';
 import '../bootstrap/bootstrap_session_scope.dart';
 import '../domain/models/mock_attempt.dart';
@@ -11,22 +12,22 @@ import '../mock_exam/mock_exam_blueprint.dart';
 import '../theme/app_theme.dart';
 import '../widgets/app_scaffold.dart';
 import '../widgets/app_card.dart';
-import '../widgets/domain_progress_row.dart';
 import '../widgets/empty_state.dart';
 import '../widgets/error_state.dart';
 import '../widgets/loading_state.dart';
-import '../widgets/primary_button.dart';
 import 'exam_overview_screen.dart';
 import 'main_shell.dart';
 import '../widgets/app_bottom_navigation.dart';
 
 class _ProgressData {
   const _ProgressData({
+    required this.progress,
     required this.readinessHistory,
     required this.questionStates,
     required this.mockAttempts,
   });
 
+  final LearningProgress progress;
   final List<ReadinessSnapshot> readinessHistory;
   final List<QuestionState> questionStates;
   final List<MockAttempt> mockAttempts;
@@ -216,6 +217,10 @@ class _ProgressScreenState extends State<ProgressScreen> {
     final List<MockAttempt> mockAttempts =
         await repository.mockAttemptsForExam(examId);
     return _ProgressData(
+      progress: LearningProgress.fromHistory(
+          package: widget.contentPackage!,
+          attempts: await repository.answerAttemptsForExam(examId),
+          mocks: mockAttempts),
       readinessHistory: readinessHistory,
       questionStates: questionStates,
       mockAttempts: mockAttempts,
@@ -231,18 +236,10 @@ class _ProgressScreenState extends State<ProgressScreen> {
     return domainId;
   }
 
-  String _bandLabel(ReadinessSnapshot snapshot) {
-    final List<ReadinessThreshold> thresholds =
-        widget.contentPackage?.exam.readiness.thresholds ?? const [];
-    for (final threshold in thresholds) {
-      if (threshold.band == snapshot.band) return threshold.label;
-    }
-    return snapshot.band.name;
-  }
-
   @override
   Widget build(BuildContext context) {
     final textStyles = context.textStyles;
+    final large = MediaQuery.textScalerOf(context).scale(1) >= 1.8;
     final Future<_ProgressData>? future = _future;
 
     Widget body;
@@ -263,18 +260,12 @@ class _ProgressScreenState extends State<ProgressScreen> {
             );
           }
           final _ProgressData data = snapshot.data!;
-          if (!data.hasAnyData) return _emptyState();
           return _ProgressContent(
             data: data,
-            domainBreakdown: aggregateDomainBreakdown(
-              data.questionStates,
-              widget.contentPackage!.questions,
-            ),
+            onPractice: () => _openExamOverview(context),
             domainName: _domainName,
-            bandLabel: _bandLabel,
             threshold:
                 widget.contentPackage!.exam.mockExam.practicePassingPercent,
-            onOpenExamOverview: () => _openExamOverview(context),
           );
         },
       );
@@ -286,11 +277,12 @@ class _ProgressScreenState extends State<ProgressScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const SizedBox(height: 12),
-            Text('YOUR LEARNING', style: textStyles.label),
+            if (!large) Text('YOUR LEARNING', style: textStyles.label),
             const SizedBox(height: AppSpacing.sm),
-            Text('Your Progress', style: textStyles.h1),
+            Text('Your Progress', style: large ? textStyles.h3 : textStyles.h1),
             const SizedBox(height: AppSpacing.sm),
-            Text('Progress you can see.', style: textStyles.body),
+            Text('Based on your latest answer to each question',
+                style: textStyles.body),
             const SizedBox(height: AppSpacing.sm),
             Text(
               widget.contentPackage?.questions
@@ -300,9 +292,9 @@ class _ProgressScreenState extends State<ProgressScreen> {
                   : 'Accuracy reflects recorded answers, not your chance of passing. A personalized readiness estimate is not available yet.',
               style: textStyles.bodySmall,
             ),
-            const SizedBox(height: AppSpacing.xxl + 2),
+            const SizedBox(height: AppSpacing.lg),
             AppCard(padding: const EdgeInsets.all(AppSpacing.xl), child: body),
-            const SizedBox(height: 90),
+            const SizedBox(height: 24),
           ],
         ),
       ),
@@ -313,7 +305,7 @@ class _ProgressScreenState extends State<ProgressScreen> {
     return EmptyState(
       icon: Icons.insights_rounded,
       title: 'No progress yet',
-      message: 'Your activity, accuracy, and subject mastery will '
+      message: 'Your recorded activity and question progress will '
           'appear here once you start practicing.',
       primaryActionLabel: 'Start Practicing',
       onPrimaryAction: () => _openExamOverview(context),
@@ -346,130 +338,131 @@ class _ProgressScreenState extends State<ProgressScreen> {
 }
 
 class _ProgressContent extends StatelessWidget {
-  const _ProgressContent({
-    required this.data,
-    required this.domainBreakdown,
-    required this.domainName,
-    required this.bandLabel,
-    required this.threshold,
-    required this.onOpenExamOverview,
-  });
-
+  const _ProgressContent(
+      {required this.data,
+      required this.domainName,
+      required this.threshold,
+      required this.onPractice});
   final _ProgressData data;
-  final List<DomainStats> domainBreakdown;
-  final String Function(String domainId) domainName;
-  final String Function(ReadinessSnapshot snapshot) bandLabel;
+  final String Function(String) domainName;
   final double threshold;
-  final VoidCallback onOpenExamOverview;
-
+  final VoidCallback onPractice;
   @override
   Widget build(BuildContext context) {
-    final textStyles = context.textStyles;
-    final List<ReadinessSnapshot> trend =
-        chronologicalReadinessHistory(data.readinessHistory);
-    final List<MockAttempt> history = completedMockHistory(data.mockAttempts);
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        if (trend.isNotEmpty) ...[
-          Text('READINESS TREND', style: textStyles.label),
-          const SizedBox(height: AppSpacing.sm),
-          for (final snapshot in trend)
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 6),
-              child: Semantics(
-                label: '${_formatDate(snapshot.calculatedAt)}: '
-                    '${snapshot.overallScore.round()} percent, '
-                    '${bandLabel(snapshot)}',
-                child: ExcludeSemantics(
-                  // Flexible, not a bare Text, on both sides: at large
-                  // Dynamic Type sizes (or a long, exam-config-supplied
-                  // band label) the two together can exceed the row's
-                  // width — each wraps within its own fair share instead
-                  // of overflowing off the right edge.
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Flexible(
-                        child: Text(_formatDate(snapshot.calculatedAt),
-                            style: textStyles.body),
-                      ),
-                      const SizedBox(width: AppSpacing.sm),
-                      Flexible(
-                        child: Text(
-                          '${snapshot.overallScore.round()}% · ${bandLabel(snapshot)}',
-                          style: textStyles.body
-                              .copyWith(fontWeight: FontWeight.w700),
-                          textAlign: TextAlign.right,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          const SizedBox(height: AppSpacing.xxl),
-        ],
-        if (domainBreakdown.isNotEmpty) ...[
-          Text('DOMAIN BREAKDOWN', style: textStyles.label),
-          const SizedBox(height: AppSpacing.md),
-          for (final stats in domainBreakdown)
-            Padding(
-              padding: const EdgeInsets.only(bottom: AppSpacing.lg),
-              child: DomainProgressRow(
-                domainName: domainName(stats.domainId),
-                progress: stats.accuracy,
-                supportingText: '${stats.correct}/${stats.seen} correct',
-              ),
-            ),
-          const SizedBox(height: AppSpacing.md),
-        ],
-        if (history.isNotEmpty) ...[
-          Text('MOCK EXAM HISTORY', style: textStyles.label),
-          const SizedBox(height: AppSpacing.sm),
-          for (final attempt in history)
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 6),
-              child: Semantics(
-                label: '${_formatDate(attempt.startedAt)}: '
-                    '${attempt.correctCount} of ${attempt.questionIds.length} '
-                    'correct, ${MockExamResult.outcomeFor(
-                  correctCount: attempt.correctCount!,
-                  totalQuestions: attempt.questionIds.length,
-                  thresholdPercent: threshold,
-                )}',
-                child: ExcludeSemantics(
-                  // See the Readiness Trend row above for why each side
-                  // is Flexible rather than a bare Text.
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Flexible(
-                        child: Text(_formatDate(attempt.startedAt),
-                            style: textStyles.body),
-                      ),
-                      const SizedBox(width: AppSpacing.sm),
-                      Flexible(
-                        child: Text(
-                          '${attempt.correctCount}/${attempt.questionIds.length}',
-                          style: textStyles.body
-                              .copyWith(fontWeight: FontWeight.w700),
-                          textAlign: TextAlign.right,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          const SizedBox(height: AppSpacing.xl),
-        ],
-        PrimaryButton(label: 'Practice More', onPressed: onOpenExamOverview),
+    final styles = context.textStyles;
+    final progress = data.progress;
+    final sectionStyle = MediaQuery.textScalerOf(context).scale(1) >= 1.8
+        ? styles.body.copyWith(fontWeight: FontWeight.w800)
+        : styles.h3;
+    return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+      _Counts(progress.total, key: const ValueKey('bank-progress-counts')),
+      if (progress.total.total == 0)
+        const Padding(
+            padding: EdgeInsets.only(top: 12),
+            child: Text(
+                'No approved questions are available yet. Your history is preserved.')),
+      const SizedBox(height: 28),
+      Text('Progress by subject', style: sectionStyle),
+      for (final entry in progress.domains.entries)
+        Padding(
+            padding: const EdgeInsets.only(top: 20),
+            child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Text(domainName(entry.key),
+                      style: styles.body.copyWith(fontWeight: FontWeight.w700)),
+                  const SizedBox(height: 8),
+                  _Counts(entry.value),
+                ])),
+      const SizedBox(height: 28),
+      Text('Daily activity', style: sectionStyle),
+      if (progress.days.isEmpty) const Text('No answers recorded yet.'),
+      for (final day in progress.days)
+        Padding(
+            padding: const EdgeInsets.symmetric(vertical: 10),
+            child: Text(
+                '${day.date} · ${day.correct} correct · ${day.incorrect} incorrect · ${day.answers} answers',
+                style: styles.body)),
+      if (progress.hasMockDetailLimitation)
+        Text(
+            'Older mock scores contribute to daily totals when reliable. Their question-level grades were not saved. Those questions are marked Grade unavailable unless a later graded answer exists. Partially imported mock history is not expanded.',
+            style: styles.bodySmall),
+      TextButton(onPressed: onPractice, child: const Text('Practice More')),
+      if (completedMockHistory(data.mockAttempts).isNotEmpty) ...[
+        const SizedBox(height: 28),
+        Text('MOCK EXAM HISTORY', style: styles.label),
+        for (final attempt in completedMockHistory(data.mockAttempts))
+          Padding(
+              padding: const EdgeInsets.symmetric(vertical: 10),
+              child: Text(
+                  '${_formatDate(attempt.startedAt)} · ${attempt.correctCount}/${attempt.questionIds.length} · ${MockExamResult.outcomeFor(correctCount: attempt.correctCount!, totalQuestions: attempt.questionIds.length, thresholdPercent: threshold)}',
+                  style: styles.body)),
       ],
-    );
+    ]);
+  }
+}
+
+class _Counts extends StatelessWidget {
+  const _Counts(this.counts, {super.key});
+  final QuestionCounts counts;
+  @override
+  Widget build(BuildContext context) {
+    final large = MediaQuery.textScalerOf(context).scale(1) >= 1.8;
+    final colors = [
+      context.semanticColors.success,
+      context.semanticColors.warning,
+      context.colors.outlineVariant,
+      context.colors.secondary
+    ];
+    final values = [
+      counts.correct,
+      counts.needsReview,
+      counts.notAttempted,
+      if (counts.gradeUnavailable > 0) counts.gradeUnavailable
+    ];
+    return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+      Text('${counts.total} available questions',
+          style: context.textStyles.bodySmall),
+      const SizedBox(height: 8),
+      Wrap(spacing: 16, runSpacing: 8, children: [
+        for (var i = 0; i < values.length; i++)
+          Row(mainAxisSize: MainAxisSize.min, children: [
+            ExcludeSemantics(
+                child: Icon(Icons.circle, size: 9, color: colors[i])),
+            const SizedBox(width: 6),
+            Flexible(
+                child: Text(
+                    '${values[i]} ${[
+                      'Correct',
+                      'Needs review',
+                      'Not attempted',
+                      'Grade unavailable'
+                    ][i]}',
+                    style: large
+                        ? context.textStyles.bodySmall
+                        : context.textStyles.body)),
+          ]),
+      ]),
+      const SizedBox(height: 10),
+      if (counts.total > 0)
+        Semantics(
+            label:
+                '${counts.correct} correct, ${counts.needsReview} need review, ${counts.notAttempted} not attempted, ${counts.gradeUnavailable} grades unavailable',
+            child: ExcludeSemantics(
+                child: ClipRRect(
+                    borderRadius: BorderRadius.circular(8),
+                    child: SizedBox(
+                        height: 10,
+                        child: Row(children: [
+                          for (var i = 0; i < values.length; i++)
+                            if (values[i] > 0)
+                              Expanded(
+                                  flex: values[i],
+                                  child: ColoredBox(
+                                      color: colors[i],
+                                      child: const SizedBox.expand())),
+                        ]))))),
+    ]);
   }
 }
 

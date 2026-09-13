@@ -63,10 +63,10 @@ void main() {
     testWidgets('the rendered label style matches the theme-merged expectation',
         (tester) async {
       await tester.pumpWidget(
-          wrap(const AppBottomNavigation(current: AppTab.practice)));
+          wrap(const AppBottomNavigation(current: AppTab.progress)));
       await tester.pumpAndSettle();
 
-      for (final entry in {'Home': false, 'Practice': true}.entries) {
+      for (final entry in {'Home': false, 'Progress': true}.entries) {
         final Text widget = tester.widget<Text>(find.text(entry.key));
         final TextStyle? actual = widget.style;
         final TextStyle expected = expectedStyle(
@@ -94,7 +94,7 @@ void main() {
       final TextStyle selectedStyle =
           tester.widget<Text>(find.text('Home')).style!;
       final TextStyle unselectedStyle =
-          tester.widget<Text>(find.text('Practice')).style!;
+          tester.widget<Text>(find.text('Progress')).style!;
 
       expect(selectedStyle.fontFamily, unselectedStyle.fontFamily);
       expect(
@@ -134,7 +134,7 @@ void main() {
     // boundary (unlike a comfortably-fits 1.0x or a nowhere-close-4.0x),
     // so if the fit decision were (incorrectly) based on only the
     // currently-selected tab's weight instead of the true worst case
-    // across all four, this scale is where selecting a different tab
+    // across both, this scale is where selecting a different tab
     // would be most likely to flip it.
     const double borderlineScale = 2.0;
 

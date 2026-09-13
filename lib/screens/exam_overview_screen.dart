@@ -1,3 +1,6 @@
+import 'main_shell.dart';
+import '../widgets/app_bottom_navigation.dart';
+import '../progress/learning_progress.dart';
 import 'dart:math';
 import '../domain/models/answer_order.dart';
 import '../study_plan/study_schedule_service.dart';
@@ -282,6 +285,14 @@ class _ExamOverviewScreenState extends State<ExamOverviewScreen> {
               : await repository.questionStatesForExam(examId),
           requestedCount: _requestedCount,
           focus: _focus,
+          currentIncorrectIds: _focus == PracticeFocus.incorrectQuestions &&
+                  repository != null
+              ? LearningProgress.fromHistory(
+                      package: package,
+                      attempts: await repository.answerAttemptsForExam(examId),
+                      mocks: await repository.mockAttemptsForExam(examId))
+                  .incorrectIds
+              : const {},
           domainId: _domainId,
           topicId: _topicId,
           random: widget.launch == PracticeLaunch.random
@@ -440,6 +451,12 @@ class _ExamOverviewScreenState extends State<ExamOverviewScreen> {
         ),
       ),
     );
+    if (mounted) {
+      final shell = MainShellScope.maybeOf(context);
+      if (shell != null) {
+        shell.goToTab(AppTab.home, resetTab: shell.currentTab);
+      }
+    }
   }
 
   Widget _buildLaunch(BuildContext context) {
