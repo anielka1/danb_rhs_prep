@@ -1,3 +1,4 @@
+import 'package:danb_rhs_prep/domain/models/entitlement.dart';
 import 'study_plan/onboarding_helper.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -30,7 +31,11 @@ Future<void> _tapText(WidgetTester tester, String label) async {
 }
 
 Future<void> _completeOnboarding(WidgetTester tester) async {
-  await tester.pumpWidget(demo.createDebugDemoApp());
+  await tester.pumpWidget(demo.createDebugDemoApp(
+      entitlement: Entitlement(
+          tier: EntitlementTier.premium,
+          source: EntitlementSource.promotional,
+          lastVerifiedAt: DateTime.utc(2026))));
   await tester.pumpAndSettle();
   await _tapText(tester, 'Start Preparing');
   await _tapText(tester, "I haven't scheduled it yet");

@@ -1,3 +1,4 @@
+import '../subscription/premium_access.dart';
 import 'dart:async';
 import 'package:flutter/material.dart';
 import '../mock_exam/mock_exam_controller.dart';
@@ -44,7 +45,7 @@ class _MockExamQuestionScreenState extends State<MockExamQuestionScreen> {
   }
 
   Future<void> _perform(Future<void> Function() action) async {
-    if (_busy) return;
+    if (_busy || PremiumAccessScope.maybeOf(context)?.active == false) return;
     setState(() {
       _busy = true;
       _retry = null;
@@ -105,6 +106,8 @@ class _MockExamQuestionScreenState extends State<MockExamQuestionScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final blocked = premiumBlock(context);
+    if (blocked != null) return blocked;
     final controller = widget.controller;
     final question = controller.currentQuestion;
     final attempt = controller.attempt!;

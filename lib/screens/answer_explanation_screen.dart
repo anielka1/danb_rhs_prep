@@ -1,3 +1,4 @@
+import '../subscription/premium_access.dart';
 import '../bootstrap/bootstrap_session_scope.dart';
 import 'package:flutter/material.dart';
 import '../widgets/practice_save_status.dart';
@@ -43,6 +44,7 @@ class _AnswerExplanationScreenState extends State<AnswerExplanationScreen> {
 
   Future<void> _toggleBookmark(
       PracticeSessionController controller, String questionId) async {
+    if (PremiumAccessScope.maybeOf(context)?.active == false) return;
     // Optimistic: the local cache (and this rebuild) update immediately,
     // before persistence — a failing/missing repository never undoes
     // the interactive toggle. See PracticeSessionController.persistBookmark's
@@ -55,6 +57,7 @@ class _AnswerExplanationScreenState extends State<AnswerExplanationScreen> {
 
   Future<void> _next(
       BuildContext context, PracticeSessionController controller) async {
+    if (PremiumAccessScope.maybeOf(context)?.active == false) return;
     if (controller.isLastQuestion) {
       await controller.complete();
       if (!context.mounted) return;
@@ -92,6 +95,8 @@ class _AnswerExplanationScreenState extends State<AnswerExplanationScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final blocked = premiumBlock(context);
+    if (blocked != null) return blocked;
     final PracticeSessionController? controller =
         PracticeSessionScope.maybeOf(context);
     if (controller == null) return const _NoActiveSessionView();

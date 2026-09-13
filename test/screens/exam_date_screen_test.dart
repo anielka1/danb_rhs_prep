@@ -416,8 +416,8 @@ void main() {
 
   group('save behavior', () {
     testWidgets(
-        'Continue saves the selection and pushes MainShell — '
-        'never MainShell, and never writes onboardingComplete', (tester) async {
+        'Continue saves selection and completion before showing the offer above MainShell',
+        (tester) async {
       final localStore = InMemoryBootstrapLocalStore();
       await tester.pumpWidget(wrap(localStore: localStore));
       await tester.tap(find.text("I haven't scheduled it yet"));
@@ -431,7 +431,7 @@ void main() {
           ExamDateSelection(precision: ExamDatePrecision.notScheduled));
       expect(await localStore.readOnboardingComplete(), isTrue);
       expect(await localStore.readExperienceLevel(), isNull);
-      expect(find.byType(MainShell), findsOneWidget);
+      expect(find.byType(MainShell, skipOffstage: false), findsOneWidget);
       expect(find.byType(ExamDateScreen), findsNothing);
     });
 
@@ -449,7 +449,8 @@ void main() {
       await tester.tap(find.text('Continue'));
       await tester.pumpAndSettle();
 
-      final BuildContext nextContext = tester.element(find.byType(MainShell));
+      final BuildContext nextContext =
+          tester.element(find.byType(MainShell, skipOffstage: false));
       final ExamDateSelection? sessionSelection =
           BootstrapSessionScope.snapshotOf(nextContext).examDateSelection;
       expect(
@@ -472,7 +473,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.byType(ExamDateScreen), findsOneWidget);
-      expect(find.byType(MainShell), findsNothing);
+      expect(find.byType(MainShell, skipOffstage: false), findsNothing);
       expect(find.text('Retry'), findsOneWidget);
       expect(find.textContaining("couldn't finish saving your setup"),
           findsOneWidget);
@@ -523,7 +524,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(controlled.writeAttempts, 1);
-      expect(find.byType(MainShell), findsOneWidget);
+      expect(find.byType(MainShell, skipOffstage: false), findsOneWidget);
     });
 
     testWidgets('Back without tapping Continue writes nothing', (tester) async {

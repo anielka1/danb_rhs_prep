@@ -1,3 +1,4 @@
+import 'package:danb_rhs_prep/screens/subscription_screen.dart';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -307,6 +308,9 @@ void main() {
       await tester.tap(find.text("I haven't scheduled it yet"));
       await tester.pump();
       await tester.tap(find.text('Continue'));
+      await tester.pumpAndSettle();
+      expect(find.byType(SubscriptionScreen), findsOneWidget);
+      await tester.tap(find.bySemanticsLabel('Close subscription'));
       await tester.pumpAndSettle();
       expect(find.byType(MainShell), findsOneWidget);
       final UserProfile? saved =

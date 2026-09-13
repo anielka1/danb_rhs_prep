@@ -1,3 +1,4 @@
+import '../subscription/premium_access.dart';
 import 'package:flutter/material.dart';
 import '../domain/repositories/progress_repository.dart';
 import '../features/content/domain/content_package.dart';
@@ -21,13 +22,7 @@ class SavedQuestionsScreen extends StatefulWidget {
 }
 
 class _SavedQuestionsScreenState extends State<SavedQuestionsScreen> {
-  late Future<({List<Question> questions, int missing})> _saved;
-
-  @override
-  void initState() {
-    super.initState();
-    _saved = _load();
-  }
+  Future<({List<Question> questions, int missing})>? _saved;
 
   Future<({List<Question> questions, int missing})> _load() async {
     final package = widget.contentPackage;
@@ -50,7 +45,9 @@ class _SavedQuestionsScreenState extends State<SavedQuestionsScreen> {
   }
 
   @override
-  Widget build(BuildContext context) => AppScaffold(
+  Widget build(BuildContext context) =>
+      premiumBlock(context) ??
+      AppScaffold(
         title: 'Saved questions',
         leading: CircleIconButton(
             icon: Icons.arrow_back_rounded,
@@ -58,7 +55,7 @@ class _SavedQuestionsScreenState extends State<SavedQuestionsScreen> {
             onPressed: () => Navigator.of(context).pop()),
         body: SingleChildScrollView(
           child: FutureBuilder<({List<Question> questions, int missing})>(
-            future: _saved,
+            future: _saved ??= _load(),
             builder: (context, snapshot) {
               if (snapshot.connectionState != ConnectionState.done) {
                 return const LoadingState(message: 'Loading saved questions…');

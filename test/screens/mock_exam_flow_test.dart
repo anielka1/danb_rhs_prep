@@ -1,3 +1,4 @@
+import 'package:danb_rhs_prep/domain/models/entitlement.dart';
 import '../study_plan/onboarding_helper.dart';
 import 'dart:async';
 import 'package:flutter/material.dart';
@@ -214,7 +215,11 @@ void main() {
 
   testWidgets('real demo composition reaches mock after accountless onboarding',
       (tester) async {
-    await tester.pumpWidget(demo.createDebugDemoApp());
+    await tester.pumpWidget(demo.createDebugDemoApp(
+        entitlement: Entitlement(
+            tier: EntitlementTier.premium,
+            source: EntitlementSource.promotional,
+            lastVerifiedAt: DateTime.utc(2026))));
     await tester.pumpAndSettle();
     await tapText(tester, 'Start Preparing');
     await tapText(tester, "I haven't scheduled it yet");

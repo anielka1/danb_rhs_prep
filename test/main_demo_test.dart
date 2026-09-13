@@ -1,3 +1,4 @@
+import 'package:danb_rhs_prep/screens/subscription_screen.dart';
 import 'study_plan/onboarding_helper.dart';
 import 'dart:io';
 
@@ -33,6 +34,9 @@ Future<void> _clickThroughOnboarding(WidgetTester tester) async {
   await tester.tap(find.text('Continue'));
   await tester.pumpAndSettle();
   expect(tester.takeException(), isNull);
+  expect(find.byType(SubscriptionScreen), findsOneWidget);
+  await tester.tap(find.bySemanticsLabel('Close subscription'));
+  await tester.pumpAndSettle();
   expectOnboardingHome(tester);
   expect(tester.takeException(), isNull);
 }
@@ -114,9 +118,10 @@ void main() {
     expect(find.byType(MainShell), findsOneWidget);
     expect(find.text('Let’s study'), findsOneWidget);
 
-    await tester.tap(find.text('Continue session'));
+    await tester.tap(find.text('Continue session · Premium'));
     await tester.pumpAndSettle();
-    expect(find.byType(PracticeQuestionScreen), findsOneWidget);
+    expect(find.byType(PracticeQuestionScreen), findsNothing);
+    expect(find.byType(SubscriptionScreen), findsOneWidget);
     expect(tester.takeException(), isNull);
 
     // A fresh createDebugDemoApp() call is a new in-memory environment —

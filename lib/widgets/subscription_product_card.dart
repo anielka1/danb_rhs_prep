@@ -50,6 +50,7 @@ class SubscriptionProductCard extends StatelessWidget {
 
     return AppCard(
       selected: selected,
+      backgroundColor: selected ? colors.primaryContainer : null,
       onTap: interactive ? onSelect : null,
       semanticLabel: [
         title,
@@ -67,7 +68,9 @@ class SubscriptionProductCard extends StatelessWidget {
               children: [
                 Row(
                   children: [
-                    ExcludeSemantics(child: Text(title, style: textStyles.h3)),
+                    Flexible(
+                        child: ExcludeSemantics(
+                            child: Text(title, style: textStyles.h3))),
                     if (recommended) ...[
                       const SizedBox(width: AppSpacing.sm),
                       ExcludeSemantics(
