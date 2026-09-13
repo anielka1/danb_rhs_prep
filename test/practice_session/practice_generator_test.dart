@@ -392,9 +392,7 @@ void main() {
   });
 
   group('incorrect-questions focus', () {
-    test(
-        'selects only questions with at least one recorded incorrect '
-        'attempt', () {
+    test('selects only the supplied current incorrect question IDs', () {
       final questions = [
         _buildQuestion(id: 'q1', domainId: 'd1', topicId: 't1'),
         _buildQuestion(id: 'q2', domainId: 'd1', topicId: 't1'),
@@ -411,6 +409,7 @@ void main() {
         questionStates: states,
         requestedCount: 10,
         focus: PracticeFocus.incorrectQuestions,
+        currentIncorrectIds: const {'q2'},
       );
 
       expect(generator.questions.map((q) => q.id), ['q2']);
@@ -436,6 +435,7 @@ void main() {
           questionStates: states,
           requestedCount: 10,
           focus: PracticeFocus.incorrectQuestions,
+          currentIncorrectIds: const {'q2'},
         ),
         throwsA(isA<PracticeGenerationUnavailable>()),
         reason: 'q1 has no history at all, so the incorrect-only pool is '

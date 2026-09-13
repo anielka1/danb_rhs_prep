@@ -66,7 +66,7 @@ void main() {
   }
 
   group('bottom navigation labels at 4.0x on a 320x568 viewport', () {
-    const labels = ['Home', 'Practice', 'Mock Exam', 'Progress'];
+    const labels = ['Home', 'Progress'];
 
     testWidgets('every label is present at full text, full scale, never shrunk',
         (tester) async {
@@ -102,7 +102,7 @@ void main() {
       }
     });
 
-    testWidgets('all four tabs remain tappable and switch the shell',
+    testWidgets('all two tabs remain tappable and switch the shell',
         (tester) async {
       await pumpAtScale(
         tester,
@@ -116,8 +116,6 @@ void main() {
           .current;
 
       const order = [
-        ('Practice', AppTab.practice),
-        ('Mock Exam', AppTab.mockExam),
         ('Progress', AppTab.progress),
         ('Home', AppTab.home),
       ];

@@ -7,7 +7,7 @@ import '../domain/repositories/progress_repository.dart';
 import '../practice_session/practice_generator.dart';
 import '../theme/app_theme.dart';
 import '../widgets/app_card.dart';
-import '../practice_session/today_progress.dart';
+import '../progress/learning_progress.dart';
 import 'mock_exam_screen.dart';
 import '../widgets/primary_button.dart';
 import '../widgets/app_bottom_navigation.dart';
@@ -55,9 +55,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   bool _opening = false;
   PracticeSession? _active;
   bool _activeMock = false;
-  List<AnswerAttempt> _attempts = const [];
   int _saved = 0;
-  int _mistakes = 0;
+  LearningProgress? _progress;
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
@@ -95,9 +94,11 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         _active = active;
         _activeMock =
             mocks.any((m) => m.status == MockAttemptStatus.inProgress);
-        _attempts = attempts;
         _saved = states?.where((s) => s.bookmarked).length ?? 0;
-        _mistakes = states?.where((s) => s.timesIncorrect > 0).length ?? 0;
+        _progress = snap == null
+            ? null
+            : LearningProgress.fromHistory(
+                package: snap.contentPackage, attempts: attempts, mocks: mocks);
         _loading = false;
       });
     } catch (_) {
@@ -181,7 +182,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             .length;
       } on PracticeGenerationUnavailable {/* Honest content gate. */}
     }
-    final today = TodayProgress.fromAttempts(_attempts, widget.now());
+    final progress = _progress;
+    final mistakes = progress?.total.needsReview ?? 0;
     final examDate = session?.snapshot.examDateSelection?.date;
     final current = widget.now();
     final days = examDate == null
@@ -194,45 +196,48 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     final large = MediaQuery.textScalerOf(context).scale(1) >= 1.8;
     final available = !_loading && !_failed && !_opening && eligible > 0;
     final blue = dark ? AppHomeColors.progressDark : AppHomeColors.progress;
-    final calendar = InkWell(
-      borderRadius: BorderRadius.circular(18),
-      onTap: () => _settings(date: true),
-      child: Padding(
-          padding: const EdgeInsets.all(8),
-          child: Column(mainAxisSize: MainAxisSize.min, children: [
-            const Icon(Icons.calendar_today_rounded,
-                color: AppHomeColors.onProgress, size: 28),
-            const SizedBox(height: 8),
-            Text(
-                days == null
-                    ? 'Set exam date'
-                    : days < 0
-                        ? 'Update date'
-                        : days == 0
-                            ? 'Exam today'
-                            : '$days',
-                textAlign: TextAlign.center,
-                style: styles.h3.copyWith(color: AppHomeColors.onProgress)),
-            if (days != null && days > 0)
-              Text('days to exam',
-                  textAlign: TextAlign.center,
-                  style: styles.bodySmall
-                      .copyWith(color: AppHomeColors.onProgress)),
-            if (days != null && days < 0)
-              Text('Exam date passed',
-                  textAlign: TextAlign.center,
-                  style: styles.bodySmall
-                      .copyWith(color: AppHomeColors.onProgress)),
-          ])),
-    );
-    final metrics =
-        Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-      _TodayMetric('Questions answered',
-          _failed || _loading ? '—' : '${today.answered}'),
-      _TodayMetric('Study time',
-          _failed || _loading ? 'Not available' : today.timeLabel),
-      _TodayMetric('Accuracy', _failed || _loading ? '—' : today.accuracyLabel),
-    ]);
+    final dateLabel = days == null
+        ? 'Set exam date'
+        : days < 0
+            ? 'Exam date passed · Update date'
+            : days == 0
+                ? 'Exam today'
+                : '$days days to exam';
+    final calendar = ConstrainedBox(
+        constraints: const BoxConstraints(minHeight: 44),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(12),
+          onTap: () => _settings(date: true),
+          child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              child: Row(children: [
+                const Icon(Icons.calendar_today_rounded,
+                    color: AppHomeColors.onProgress, size: 18),
+                const SizedBox(width: 8),
+                Flexible(
+                    child: Text(dateLabel,
+                        style: styles.bodySmall
+                            .copyWith(color: AppHomeColors.onProgress))),
+              ])),
+        ));
+    final values = [
+      _TodayMetric('Correct',
+          _failed || _loading ? '—' : '${progress?.total.correct ?? 0}'),
+      _TodayMetric('Needs review', _failed || _loading ? '—' : '$mistakes'),
+      _TodayMetric(
+          'Correct today',
+          _failed || _loading
+              ? '—'
+              : '${progress?.correctToday(widget.now()) ?? 0}'),
+    ];
+    final metrics = large
+        ? Column(
+            key: const ValueKey('home-progress-metrics'),
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: values)
+        : Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [for (final metric in values) Expanded(child: metric)]);
     return Scaffold(
       backgroundColor: dark ? AppHomeColors.canvasDark : AppHomeColors.canvas,
       body: SafeArea(
@@ -258,26 +263,26 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    Text('Today’s progress',
+                    Text('Your progress',
                         style: styles.h3
                             .copyWith(color: AppHomeColors.onProgress)),
                     const SizedBox(height: 16),
-                    if (large) ...[
-                      calendar,
-                      const SizedBox(height: 16),
-                      metrics
-                    ] else
-                      Row(children: [
-                        Expanded(flex: 4, child: calendar),
-                        const SizedBox(width: 14),
-                        Expanded(flex: 6, child: metrics)
-                      ]),
+                    calendar,
+                    const SizedBox(height: 12),
+                    metrics,
                     const SizedBox(height: 10),
                     Text(
-                        'Practice + starting check only. Time measures answering, excluding explanations and breaks.',
+                        'Correct and Needs review: latest answers. Today includes repeat answers.',
                         style: styles.bodySmall
                             .copyWith(color: AppHomeColors.onProgress)),
                   ])),
+          if (!_failed &&
+              !_loading &&
+              (progress?.total.gradeUnavailable ?? 0) > 0)
+            Padding(
+                padding: const EdgeInsets.only(top: 12),
+                child: Text(
+                    '${progress!.total.gradeUnavailable} questions have older mock answers without saved grades. See Progress for details.')),
           if (_loading)
             const Padding(
                 padding: EdgeInsets.only(top: 12),
@@ -296,7 +301,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           if ((_active != null || _activeMock) && !_loading && !_failed)
             Padding(
                 padding: const EdgeInsets.only(top: 16),
-                child: PrimaryButton(
+                child: SecondaryButton(
                     label: 'Continue session',
                     onPressed: _opening ? null : () => _practice(start: true))),
           const SizedBox(height: 24),
@@ -304,45 +309,14 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           const SizedBox(height: 12),
           _ActivityTile(
               icon: Icons.shuffle_rounded,
-              title: 'Random question',
+              title: 'Practise questions',
               detail: 'One question. A fresh perspective.',
               onTap: available ? () => _launch(PracticeLaunch.random) : null),
           _ActivityTile(
-              icon: Icons.bolt_rounded,
-              title: 'Quick 10',
-              detail: 'A short session of up to 10 questions.',
-              onTap: available ? () => _launch(PracticeLaunch.quick10) : null),
-          _ActivityTile(
-              icon: Icons.timer_outlined,
-              title: 'Timed quiz',
-              detail: 'Practise your pace with an answering stopwatch.',
-              onTap: available ? () => _launch(PracticeLaunch.timed) : null),
-          _ActivityTile(
-              icon: Icons.replay_rounded,
-              title: 'Review mistakes',
-              detail: _loading || _failed
-                  ? 'Waiting for your history'
-                  : _mistakes == 0
-                      ? 'No mistakes to review'
-                      : 'Revisit previously missed questions.',
-              onTap: available && _mistakes > 0
-                  ? () => _launch(PracticeLaunch.mistakes)
-                  : null),
-          _ActivityTile(
               icon: Icons.category_outlined,
-              title: 'Practice by topic',
+              title: 'Practice by topics',
               detail: 'Focus on one part of the exam.',
               onTap: available ? () => _launch(PracticeLaunch.topic) : null),
-          _ActivityTile(
-              icon: Icons.assignment_outlined,
-              title: 'Mock exam',
-              detail: 'A full practice exam, with saved progress.',
-              onTap: _opening
-                  ? null
-                  : () => _open(MockExamScreen(
-                      contentPackage: package,
-                      progressRepository: widget.progressRepository,
-                      now: widget.now))),
           _ActivityTile(
               icon: Icons.bookmark_border_rounded,
               title: 'Saved questions',
@@ -354,6 +328,27 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                   : () => _open(SavedQuestionsScreen(
                       contentPackage: package,
                       progressRepository: widget.progressRepository))),
+          _ActivityTile(
+              icon: Icons.replay_rounded,
+              title: 'Review mistakes',
+              detail: _loading || _failed
+                  ? 'Waiting for your history'
+                  : mistakes == 0
+                      ? 'No mistakes to review'
+                      : 'Questions whose latest answer was incorrect.',
+              onTap: available && mistakes > 0
+                  ? () => _launch(PracticeLaunch.mistakes)
+                  : null),
+          _ActivityTile(
+              icon: Icons.assignment_outlined,
+              title: 'Mock exam',
+              detail: 'A full practice exam, with saved progress.',
+              onTap: _opening
+                  ? null
+                  : () => _open(MockExamScreen(
+                      contentPackage: package,
+                      progressRepository: widget.progressRepository,
+                      now: widget.now))),
           const SizedBox(height: 8),
           TextButton.icon(
               icon: const Icon(Icons.fact_check_outlined),
@@ -382,12 +377,13 @@ class _TodayMetric extends StatelessWidget {
   Widget build(BuildContext context) => Padding(
       padding: const EdgeInsets.only(bottom: 10),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Text(value,
+            style: context.textStyles.h2.copyWith(
+                color: AppHomeColors.onProgress, fontWeight: FontWeight.w800)),
+        const SizedBox(height: 4),
         Text(label,
             style: context.textStyles.bodySmall
                 .copyWith(color: AppHomeColors.onProgress)),
-        Text(value,
-            style: context.textStyles.body.copyWith(
-                color: AppHomeColors.onProgress, fontWeight: FontWeight.w800)),
       ]));
 }
 

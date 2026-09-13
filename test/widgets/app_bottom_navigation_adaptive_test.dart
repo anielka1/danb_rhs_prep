@@ -7,7 +7,7 @@ import 'package:danb_rhs_prep/widgets/app_bottom_navigation.dart';
 
 import '../support/dynamic_type_probe.dart';
 
-/// `AppBottomNavigation` renders as a plain four-equal-column `Row` (its
+/// `AppBottomNavigation` renders as a plain two-equal-column `Row` (its
 /// classic design) whenever every label fits that way at the real,
 /// requested text scale — true at every normal reading size on every
 /// phone width this app targets, once measured against the label's real
@@ -53,10 +53,10 @@ void main() {
       matching: find.byType(SingleChildScrollView));
 
   // ---------------------------------------------------------------------
-  // 1. Normal size: all four required widths, no scrolling.
+  // 1. Normal size: both required widths, no scrolling.
   // ---------------------------------------------------------------------
   group('at 1.0x, no horizontal scrolling is required', () {
-    const labels = ['Home', 'Practice', 'Mock Exam', 'Progress'];
+    const labels = ['Home', 'Progress'];
     const viewports = [
       ProbeViewport.exitCriteriaSmallPhone, // 320
       ProbeViewport.smallPhone, // 375
@@ -65,7 +65,7 @@ void main() {
     ];
 
     for (final viewport in viewports) {
-      testWidgets('$viewport: all four labels visible, no scrolling',
+      testWidgets('$viewport: both labels visible, no scrolling',
           (tester) async {
         await pump(tester, shellWith(current: AppTab.home), viewport: viewport);
         await tester.pumpAndSettle();
@@ -85,7 +85,7 @@ void main() {
         final Finder inkWells = find.descendant(
             of: find.byType(AppBottomNavigation),
             matching: find.byType(InkWell));
-        expect(inkWells, findsNWidgets(4));
+        expect(inkWells, findsNWidgets(2));
         for (final element in inkWells.evaluate()) {
           final Size size = tester.getSize(find.byWidget(element.widget));
           expect(size.width, greaterThanOrEqualTo(AppTapTarget.minInteractive),
@@ -98,7 +98,7 @@ void main() {
 
         // All four tabs are directly tappable — no ensureVisible/scroll
         // needed first, since there's nothing to scroll.
-        for (final label in ['Practice', 'Mock Exam', 'Progress', 'Home']) {
+        for (final label in ['Progress', 'Home']) {
           await tester.tap(find.text(label), warnIfMissed: true);
           await tester.pumpAndSettle();
           expect(tester.takeException(), isNull);
@@ -126,7 +126,7 @@ void main() {
       // showed the opposite result (absent) at every 1.0x width.
       expect(scrollableFallbackFinder(), findsOneWidget);
 
-      for (final label in ['Home', 'Practice', 'Mock Exam', 'Progress']) {
+      for (final label in ['Home', 'Progress']) {
         final Finder finder = find.text(label);
         expect(finder, findsOneWidget,
             reason: '"$label" must render as its exact, complete text — '
@@ -161,7 +161,7 @@ void main() {
       }
     });
 
-    testWidgets('all four tabs can be reached and selected', (tester) async {
+    testWidgets('both tabs can be reached and selected', (tester) async {
       final List<AppTab> taps = [];
       await pump(
         tester,
@@ -171,7 +171,7 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      for (final label in ['Practice', 'Mock Exam', 'Progress', 'Home']) {
+      for (final label in ['Progress', 'Home']) {
         final Finder finder = find.text(label);
         await tester.ensureVisible(finder);
         await tester.pumpAndSettle();
@@ -179,8 +179,7 @@ void main() {
         await tester.pumpAndSettle();
       }
 
-      expect(taps,
-          [AppTab.practice, AppTab.mockExam, AppTab.progress, AppTab.home]);
+      expect(taps, [AppTab.progress, AppTab.home]);
       expect(tester.takeException(), isNull);
     });
   });
@@ -270,7 +269,7 @@ void main() {
       // anything has a chance to settle, exercises the exact race a
       // stray post-frame callback touching a disposed State would hit —
       // this must not throw.
-      setState(() => current = AppTab.mockExam);
+      setState(() => current = AppTab.progress);
       await tester.pumpWidget(const SizedBox());
       expect(tester.takeException(), isNull);
     });

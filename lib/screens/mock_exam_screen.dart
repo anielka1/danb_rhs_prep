@@ -1,3 +1,5 @@
+import 'main_shell.dart';
+import '../widgets/app_bottom_navigation.dart';
 import 'package:flutter/material.dart';
 import '../bootstrap/bootstrap_session_scope.dart';
 import '../domain/models/entitlement.dart';
@@ -97,7 +99,14 @@ class _MockExamScreenState extends State<MockExamScreen> {
       settings: const RouteSettings(name: '/mock-exam/instructions'),
       builder: (_) => _MockExamInstructionsScreen(controller: _controller!),
     ));
-    if (mounted) await _load();
+    if (mounted) {
+      final shell = MainShellScope.maybeOf(context);
+      if (shell != null) {
+        shell.goToTab(AppTab.home, resetTab: shell.currentTab);
+      } else {
+        await _load();
+      }
+    }
   }
 
   void _openExamInfo() {
@@ -138,7 +147,15 @@ class _MockExamScreenState extends State<MockExamScreen> {
               controller.inProgress ? 'Resume Mock Exam' : 'Start Mock Exam',
           onPrimaryAction: _open);
     }
-    return AppScaffold(body: body);
+    return AppScaffold(
+        title: 'Mock exam',
+        leading: Navigator.of(context).canPop()
+            ? CircleIconButton(
+                icon: Icons.arrow_back_rounded,
+                semanticLabel: 'Back to Home',
+                onPressed: () => Navigator.of(context).pop())
+            : null,
+        body: body);
   }
 }
 
@@ -164,11 +181,14 @@ class _MockExamInstructionsScreenState
     try {
       await widget.controller.start();
       if (!mounted) return;
+      setState(() => _busy = false);
       await Navigator.of(context).push(MaterialPageRoute<void>(
         settings: const RouteSettings(name: MockExamQuestionScreen.route),
         builder: (_) => MockExamQuestionScreen(controller: widget.controller),
       ));
-      if (mounted) Navigator.of(context).pop();
+      if (mounted && ModalRoute.of(context)?.isCurrent == true) {
+        Navigator.of(context).pop();
+      }
     } on Object {
       if (!mounted) return;
       setState(() {

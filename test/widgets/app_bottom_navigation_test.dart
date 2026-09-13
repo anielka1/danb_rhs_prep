@@ -11,14 +11,13 @@ void main() {
         home: Scaffold(bottomNavigationBar: child));
   }
 
-  testWidgets('renders all four tabs under light and dark themes',
-      (tester) async {
+  testWidgets('renders both tabs under light and dark themes', (tester) async {
     for (final theme in [AppTheme.lightTheme, AppTheme.darkTheme]) {
       await tester.pumpWidget(
           wrap(const AppBottomNavigation(current: AppTab.home), theme: theme));
       expect(find.text('Home'), findsOneWidget);
-      expect(find.text('Practice'), findsOneWidget);
-      expect(find.text('Mock Exam'), findsOneWidget);
+      expect(find.text('Practice'), findsNothing);
+      expect(find.text('Mock Exam'), findsNothing);
       expect(find.text('Progress'), findsOneWidget);
     }
   });
@@ -26,12 +25,12 @@ void main() {
   testWidgets('selected tab uses onSurface, others use mutedForeground',
       (tester) async {
     await tester
-        .pumpWidget(wrap(const AppBottomNavigation(current: AppTab.practice)));
+        .pumpWidget(wrap(const AppBottomNavigation(current: AppTab.progress)));
     final scheme = AppTheme.lightTheme.colorScheme;
     final semantic = AppTheme.lightTheme.extension<AppSemanticColors>()!;
 
     final Icon practiceIcon =
-        tester.widget(find.byIcon(Icons.menu_book_rounded));
+        tester.widget(find.byIcon(Icons.bar_chart_rounded));
     final Icon homeIcon = tester.widget(find.byIcon(Icons.home_rounded));
     expect(practiceIcon.color, scheme.onSurface);
     expect(homeIcon.color, semantic.mutedForeground);
@@ -58,7 +57,7 @@ void main() {
       of: find.byType(AppBottomNavigation),
       matching: find.byType(InkWell),
     );
-    expect(inkWells, findsNWidgets(4));
+    expect(inkWells, findsNWidgets(2));
     for (final element in inkWells.evaluate()) {
       final Size size = tester.getSize(find.byWidget(element.widget));
       expect(size.width, greaterThanOrEqualTo(AppTapTarget.minInteractive));
@@ -83,9 +82,9 @@ void main() {
           isFocusable: true),
     );
     expect(
-      tester.getSemantics(find.text('Practice')),
+      tester.getSemantics(find.text('Progress')),
       matchesSemantics(
-          label: 'Practice',
+          label: 'Progress',
           isButton: true,
           isSelected: false,
           hasSelectedState: true,

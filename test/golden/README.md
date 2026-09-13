@@ -172,3 +172,16 @@ card: home light/dark × normal/AX5, plus planned_home light/dark normal. All si
 were rendered on pinned local Linux and inspected. No comparison tolerance or
 unchanged screen baseline was modified. Running Flutter Web captures and native
 iOS limitations are documented in docs/verification/2026-09-11-home-chooser.md.
+
+### Current progress and two-tab navigation (September 13, 2026)
+
+The ten Home / planned_home / Progress baselines were regenerated on the local
+Linux Flutter 3.41.2 environment for the intentional navy card, current-grade
+summary, subject counts and activity list. Four additional `*_current_counts`
+AX5 baselines show the scrolled actual counters in both themes, with isolated
+saved attempts (2 correct, 1 needs review, 5 not attempted). The suite now has
+46 golden cases. All changed renders were opened and inspected; this exposed and
+fixed heading/legend word wrapping and indistinguishable progress colors.
+No tolerances, comparison implementation, scale presets or font controls changed.
+These are Flutter test renders, not native iPhone screenshots. See the
+[verification report](../../docs/verification/2026-09-13-current-progress.md).

@@ -25,10 +25,7 @@ enum PracticeFocus {
   /// computed from [QuestionState] history.
   weakAreas,
 
-  /// Questions the user has answered incorrectly at least once
-  /// ([QuestionState.timesIncorrect] greater than zero) — "previously
-  /// missed", regardless of whether it's since been answered correctly
-  /// too.
+  /// Questions whose latest saved grade is incorrect, supplied by LearningProgress.
   incorrectQuestions,
 
   /// Questions explicitly saved with a bookmark, answered or unseen.
@@ -80,8 +77,8 @@ class PracticeGenerator {
   ///   threshold that could drift out of sync with it. [questionStates]
   ///   entries for a question no longer present in [package] are ignored,
   ///   never crashing this lookup.
-  /// * [PracticeFocus.incorrectQuestions] — any question with
-  ///   [QuestionState.timesIncorrect] greater than zero.
+  /// * [PracticeFocus.incorrectQuestions] — [currentIncorrectIds] from the shared
+  ///   history aggregation, never lifetime incorrect counters.
   /// * [PracticeFocus.bookmarkedQuestions] — bookmarked questions in the
   ///   active exam, including ones that have not been answered yet.
   ///
@@ -101,6 +98,7 @@ class PracticeGenerator {
     String? domainId,
     String? topicId,
     PracticeFocus focus = PracticeFocus.any,
+    Set<String> currentIncorrectIds = const {},
     Set<String> excludedQuestionIds = const {},
     Random? random,
   }) {
@@ -159,11 +157,7 @@ class PracticeGenerator {
         };
         pool = pool.where((q) => savedIds.contains(q.id));
       case PracticeFocus.incorrectQuestions:
-        final Set<String> incorrectIds = {
-          for (final state in questionStates)
-            if (state.timesIncorrect > 0) state.questionId,
-        };
-        pool = pool.where((q) => incorrectIds.contains(q.id));
+        pool = pool.where((q) => currentIncorrectIds.contains(q.id));
       case PracticeFocus.weakAreas:
         final double threshold =
             package.exam.mockExam.practicePassingPercent / 100;

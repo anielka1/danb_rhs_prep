@@ -95,7 +95,7 @@ void main() {
         final semantic = theme.extension<AppSemanticColors>()!;
         final Icon homeIcon = tester.widget(find.byIcon(Icons.home_rounded));
         final Icon practiceIcon =
-            tester.widget(find.byIcon(Icons.menu_book_rounded));
+            tester.widget(find.byIcon(Icons.bar_chart_rounded));
 
         expect(homeIcon.color, theme.colorScheme.onSurface);
         expect(practiceIcon.color, semantic.mutedForeground);
@@ -135,7 +135,7 @@ void main() {
 
       final inkWells = find.descendant(
           of: find.byType(AppBottomNavigation), matching: find.byType(InkWell));
-      expect(inkWells, findsNWidgets(4));
+      expect(inkWells, findsNWidgets(2));
       for (final element in inkWells.evaluate()) {
         final Size size = tester.getSize(find.byWidget(element.widget));
         expect(size.width, greaterThanOrEqualTo(AppTapTarget.minInteractive));

@@ -6,7 +6,7 @@ import 'package:danb_rhs_prep/bootstrap/bootstrap_session_scope.dart';
 import 'package:danb_rhs_prep/debug/debug_demo_environment.dart';
 import 'package:danb_rhs_prep/domain/models/entitlement.dart';
 import 'package:danb_rhs_prep/domain/models/user_profile.dart';
-import 'package:danb_rhs_prep/domain/models/question_state.dart';
+import '../study_plan/fixtures.dart';
 import 'package:danb_rhs_prep/domain/models/practice_session.dart';
 import 'package:danb_rhs_prep/domain/repositories/fakes/in_memory_progress_repository.dart';
 import 'package:danb_rhs_prep/screens/main_shell.dart';
@@ -36,23 +36,21 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.text('Progress'));
     await tester.pumpAndSettle();
-    expect(find.text('No progress yet'), findsOneWidget);
-    await tester.tap(find.text('Practice'));
+    expect(find.text('No answers recorded yet.'), findsOneWidget);
+    await tester.tap(find.text('Home'));
     await tester.pumpAndSettle();
-    await repository.saveQuestionState(QuestionState.unseen(
-      examId: package.exam.id,
-      questionId: package.questions.first.id,
-    ).withAttempt(isCorrect: true, answeredAt: DateTime.utc(2026, 9, 8)));
+    await repository.recordAnswerAttempt(
+        answer(package.questions.first, DateTime.utc(2026, 9, 8)));
     await tester.tap(find.text('Progress'));
     await tester.pumpAndSettle();
-    expect(find.text('No progress yet'), findsNothing);
-    expect(find.text('DOMAIN BREAKDOWN'), findsOneWidget);
+    expect(find.text('No answers recorded yet.'), findsNothing);
+    expect(find.text('Progress by subject'), findsOneWidget);
     final practice = DebugDemoEnvironment.demoInProgressPracticeSession;
     await repository.savePracticeSession(practice);
     await tester.tap(find.text('Home'));
     await tester.pumpAndSettle();
     expect(find.text('Continue session'), findsOneWidget);
-    await tester.tap(find.text('Practice'));
+    await tester.tap(find.text('Progress'));
     await tester.pumpAndSettle();
     await repository.savePracticeSession(practice.copyWith(
       status: SessionStatus.completed,

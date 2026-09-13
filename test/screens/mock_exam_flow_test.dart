@@ -101,7 +101,7 @@ void main() {
     expect(find.text(MockExamResult.disclaimer), findsOneWidget);
     expect((await repo.mockAttempt(controller.attempt!.id))!.status,
         MockAttemptStatus.completed);
-    await tapText(tester, 'Back to Mock Exam');
+    await tapText(tester, 'Back to Home');
     expect(find.text('Start Mock Exam'), findsOneWidget);
     await tapText(tester, 'Start Mock Exam');
     await tapText(tester, 'Begin exam');
@@ -221,9 +221,26 @@ void main() {
     await tapText(tester, 'Continue');
     await skipStartingCheck(tester);
     expect(find.byType(MainShell), findsOneWidget);
-    await tapText(tester, 'Mock Exam');
+    await tapText(tester, 'Mock exam');
     await tapText(tester, 'Start Mock Exam');
     await tapText(tester, 'Begin exam');
+    final saved = tester
+        .widget<MockExamQuestionScreen>(find.byType(MockExamQuestionScreen))
+        .controller
+        .attempt!;
+    await tester.tap(find.bySemanticsLabel('Exit exam'));
+    await tester.pumpAndSettle();
+    expect(find.text('Let’s study'), findsOneWidget);
+    await tapText(tester, 'Mock exam');
+    await tapText(tester, 'Resume Mock Exam');
+    await tapText(tester, 'Resume exam');
+    final resumed = tester
+        .widget<MockExamQuestionScreen>(find.byType(MockExamQuestionScreen))
+        .controller
+        .attempt!;
+    expect(resumed.id, saved.id);
+    expect(resumed.answerOrder, saved.answerOrder);
+
     await tapText(tester, 'Finish mock exam');
     await tapText(tester, 'Finish exam');
     expect(find.text('Below practice threshold'), findsOneWidget);

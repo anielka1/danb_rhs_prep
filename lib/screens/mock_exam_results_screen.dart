@@ -1,3 +1,5 @@
+import 'main_shell.dart';
+import '../widgets/app_bottom_navigation.dart';
 import 'package:flutter/material.dart';
 import '../mock_exam/mock_exam_blueprint.dart';
 import '../theme/app_theme.dart';
@@ -111,8 +113,16 @@ class MockExamResultsScreen extends StatelessWidget {
                     ),
                     const SizedBox(height: AppSpacing.md),
                     SecondaryButton(
-                        label: 'Back to Mock Exam',
-                        onPressed: () => Navigator.of(context).pop()),
+                        label: 'Back to Home',
+                        onPressed: () {
+                          final shell = MainShellScope.maybeOf(context);
+                          if (shell != null) {
+                            shell.goToTab(AppTab.home,
+                                resetTab: shell.currentTab);
+                          } else {
+                            Navigator.of(context).pop();
+                          }
+                        }),
                   ],
                   const SizedBox(height: AppSpacing.lg),
                 ])),

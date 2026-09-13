@@ -55,7 +55,7 @@ void main() {
   // uses whichever `Scrollable` ancestor exists to bring a tab on
   // screen before tapping it — a no-op when the bar isn't scrolling
   // (there's nothing to scroll into view), and the real mechanism this
-  // exit criterion relies on for "all four tabs remain reachable and
+  // exit criterion relies on for "all two tabs remain reachable and
   // tappable" when it is.
   Future<void> tapTab(WidgetTester tester, String label) async {
     final Finder finder = find.text(label);
@@ -67,7 +67,7 @@ void main() {
 
   for (final viewport in viewports) {
     group('$viewport', () {
-      testWidgets('all four tabs render and are selectable in order',
+      testWidgets('all two tabs render and are selectable in order',
           (tester) async {
         await tester.pumpWidget(appAt(tester, viewport));
         await tester.pumpAndSettle();
@@ -75,16 +75,6 @@ void main() {
 
         expect(currentTab(tester), AppTab.home);
         expect(find.text('Let’s study'), findsOneWidget);
-
-        await tapTab(tester, 'Practice');
-        expect(tester.takeException(), isNull);
-        expect(currentTab(tester), AppTab.practice);
-        expect(find.text('Let’s practice.'), findsOneWidget);
-
-        await tapTab(tester, 'Mock Exam');
-        expect(tester.takeException(), isNull);
-        expect(currentTab(tester), AppTab.mockExam);
-        expect(find.text('Mock Exam'), findsWidgets);
 
         await tapTab(tester, 'Progress');
         expect(tester.takeException(), isNull);
@@ -221,7 +211,7 @@ void main() {
                     ? Brightness.dark
                     : Brightness.light);
 
-            for (final label in ['Practice', 'Mock Exam', 'Progress', 'Home']) {
+            for (final label in ['Progress', 'Home']) {
               await tapTab(tester, label);
               expect(tester.takeException(), isNull,
                   reason:

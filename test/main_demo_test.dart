@@ -114,12 +114,7 @@ void main() {
     expect(find.byType(MainShell), findsOneWidget);
     expect(find.text('Let’s study'), findsOneWidget);
 
-    await tester.tap(find.text('Practice'));
-    await tester.pumpAndSettle();
-    expect(find.text('Let’s practice.'), findsOneWidget);
-    final startPractice = find.text('Start Practice Exam');
-    await tester.ensureVisible(startPractice);
-    await tester.tap(startPractice);
+    await tester.tap(find.text('Continue session'));
     await tester.pumpAndSettle();
     expect(find.byType(PracticeQuestionScreen), findsOneWidget);
     expect(tester.takeException(), isNull);

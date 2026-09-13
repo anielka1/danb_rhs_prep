@@ -510,8 +510,8 @@ extension AppThemeContext on BuildContext {
 abstract final class AppHomeColors {
   static const canvas = Color(0xfff0f8f5);
   static const canvasDark = Color(0xff101e25);
-  static const progress = Color(0xff2459a9);
-  static const progressDark = Color(0xff20447b);
+  static const progress = Color(0xff17365b);
+  static const progressDark = Color(0xff18324f);
   static const onProgress = Colors.white;
   static const tile = Colors.white;
   static const shadow = Color(0x12234238);

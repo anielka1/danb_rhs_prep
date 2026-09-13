@@ -3,12 +3,10 @@ import '../bootstrap/bootstrap_session_scope.dart';
 import '../domain/repositories/progress_repository.dart';
 import '../services/analytics_service.dart';
 import '../widgets/app_bottom_navigation.dart';
-import 'exam_overview_screen.dart';
 import 'home_screen.dart';
-import 'mock_exam_screen.dart';
 import 'progress_screen.dart';
 
-/// Single main shell for the four primary tabs: owns which tab is
+/// Single main shell for the two primary tabs: owns which tab is
 /// selected, gives each tab its own [Navigator] (so a deep flow pushed
 /// within one tab — Practice's question/explanation/summary chain, Mock
 /// Exam's instructions/question/results chain — keeps its own history
@@ -115,15 +113,9 @@ class MainShellScope extends InheritedWidget {
 class _MainShellState extends State<MainShell>
     with RestorationMixin
     implements MainShellController {
-  // Restoration scope is deliberately limited to "which tab is selected."
-  // Nothing else about this phase's app state is worth restoring yet: no
-  // practice/mock session exists to resume (Phase 6/8), and there is no
-  // user-specific or sensitive data anywhere in the shell. A single
-  // RestorableInt fully captures the shell's only piece of state, so a
-  // heavier restoration strategy would be overengineering for what this
-  // phase actually needs. Each tab's own navigation stack is intentionally
-  // not restored across a full app restart — only its in-memory state
-  // survives (per [IndexedStack]) while the app is running.
+  // Keep the existing restoration key and legacy IDs: Home=0, Progress=3.
+  // Removed Practice=1 / Mock=2 restore to Home. Session persistence is separate
+  // and is never changed when selecting or restoring a tab.
   final RestorableInt _tabIndex = RestorableInt(AppTab.home.index);
 
   /// One key per tab, in [AppTab] enum order — never recreated, so each
@@ -149,7 +141,7 @@ class _MainShellState extends State<MainShell>
     // A restored index that's out of range (e.g. from a future app version
     // with a different tab set) falls back to Home rather than indexing
     // out of bounds into AppTab.values.
-    _tabIndex.value = tabForIndex(_tabIndex.value).index;
+    _tabIndex.value = _storageId(tabForIndex(_tabIndex.value));
 
     // restoreState can in principle run again later in this State's
     // lifetime; only the very first call represents "the app's initial
@@ -180,7 +172,7 @@ class _MainShellState extends State<MainShell>
           ?.popUntil((route) => route.isFirst);
       return;
     }
-    setState(() => _tabIndex.value = tab.index);
+    setState(() => _tabIndex.value = _storageId(tab));
     _reportView(tab);
   }
 
@@ -192,7 +184,7 @@ class _MainShellState extends State<MainShell>
           ?.popUntil((route) => route.isFirst);
     }
     if (tab != _currentTab) {
-      setState(() => _tabIndex.value = tab.index);
+      setState(() => _tabIndex.value = _storageId(tab));
       _reportView(tab);
     }
   }
@@ -227,7 +219,6 @@ class _MainShellState extends State<MainShell>
     final contentPackage = session?.snapshot.contentPackage;
     final progressRepository =
         widget.progressRepository ?? session?.progressRepository;
-    final entitlement = session?.snapshot.entitlement;
 
     return MainShellScope(
       controller: this,
@@ -243,21 +234,6 @@ class _MainShellState extends State<MainShell>
               _tabNavigator(
                 AppTab.home,
                 HomeScreen(progressRepository: progressRepository),
-              ),
-              _tabNavigator(
-                AppTab.practice,
-                ExamOverviewScreen(
-                  contentPackage: contentPackage,
-                  progressRepository: progressRepository,
-                  entitlement: entitlement,
-                ),
-              ),
-              _tabNavigator(
-                AppTab.mockExam,
-                MockExamScreen(
-                  contentPackage: contentPackage,
-                  progressRepository: progressRepository,
-                ),
               ),
               _tabNavigator(
                 AppTab.progress,
@@ -276,15 +252,14 @@ class _MainShellState extends State<MainShell>
   }
 }
 
-/// Maps a raw tab index to the corresponding [AppTab], falling back to
+/// Maps a legacy persisted tab ID (0=Home, 3=Progress), falling back to
 /// [AppTab.home] for any value outside the valid range — e.g. a restored
 /// index left over from a future app version with a different tab set.
 /// Exposed at the top level (rather than kept private) so this fallback
 /// behavior can be unit-tested directly, without having to fake a restored
 /// value through the platform restoration channel.
 AppTab tabForIndex(int index) {
-  const List<AppTab> values = AppTab.values;
-  return index >= 0 && index < values.length ? values[index] : AppTab.home;
+  return index == 3 ? AppTab.progress : AppTab.home;
 }
 
 /// Stable, non-user-facing analytics identifiers for each tab. Deliberately
@@ -293,11 +268,9 @@ String _analyticsIdFor(AppTab tab) {
   switch (tab) {
     case AppTab.home:
       return 'home';
-    case AppTab.practice:
-      return 'practice';
-    case AppTab.mockExam:
-      return 'mock_exam';
     case AppTab.progress:
       return 'progress';
   }
 }
+
+int _storageId(AppTab tab) => tab == AppTab.progress ? 3 : 0;
