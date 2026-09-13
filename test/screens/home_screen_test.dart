@@ -158,9 +158,18 @@ void main() {
         home:
             ProgressScreen(contentPackage: package, progressRepository: repo)));
     await tester.pumpAndSettle();
-    expect(find.text('1 Correct'), findsNWidgets(2));
-    expect(find.text('1 Needs review'), findsNWidgets(2));
-    expect(find.text('78 Not attempted'), findsOneWidget);
+    expect(
+        find.byWidgetPredicate(
+            (w) => w is Semantics && w.properties.label == '1 Correct'),
+        findsNWidgets(2));
+    expect(
+        find.byWidgetPredicate(
+            (w) => w is Semantics && w.properties.label == '1 Needs review'),
+        findsNWidgets(2));
+    expect(
+        find.byWidgetPredicate(
+            (w) => w is Semantics && w.properties.label == '78 Not attempted'),
+        findsOneWidget);
     expect(find.textContaining('1 correct · 2 incorrect · 3 answers'),
         findsOneWidget);
     for (final domain in package.exam.domains) {

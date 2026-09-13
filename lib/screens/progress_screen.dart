@@ -264,6 +264,11 @@ class _ProgressScreenState extends State<ProgressScreen> {
             data: data,
             onPractice: () => _openExamOverview(context),
             domainName: _domainName,
+            accuracyNote: widget.contentPackage?.questions
+                        .any((q) => q.tags.contains('demo')) ==
+                    true
+                ? 'Demo includes sample history. These results do not assess your exam readiness.'
+                : 'Accuracy reflects recorded answers, not your chance of passing. A personalized readiness estimate is not available yet.',
             threshold:
                 widget.contentPackage!.exam.mockExam.practicePassingPercent,
           );
@@ -277,23 +282,14 @@ class _ProgressScreenState extends State<ProgressScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const SizedBox(height: 12),
-            if (!large) Text('YOUR LEARNING', style: textStyles.label),
+            Text('YOUR LEARNING', style: textStyles.label),
             const SizedBox(height: AppSpacing.sm),
             Text('Your Progress', style: large ? textStyles.h3 : textStyles.h1),
             const SizedBox(height: AppSpacing.sm),
             Text('Based on your latest answer to each question',
                 style: textStyles.body),
-            const SizedBox(height: AppSpacing.sm),
-            Text(
-              widget.contentPackage?.questions
-                          .any((q) => q.tags.contains('demo')) ==
-                      true
-                  ? 'Demo includes sample history. These results do not assess your exam readiness.'
-                  : 'Accuracy reflects recorded answers, not your chance of passing. A personalized readiness estimate is not available yet.',
-              style: textStyles.bodySmall,
-            ),
-            const SizedBox(height: AppSpacing.lg),
-            AppCard(padding: const EdgeInsets.all(AppSpacing.xl), child: body),
+            const SizedBox(height: AppSpacing.xxl),
+            body,
             const SizedBox(height: 24),
           ],
         ),
@@ -342,10 +338,12 @@ class _ProgressContent extends StatelessWidget {
       {required this.data,
       required this.domainName,
       required this.threshold,
+      required this.accuracyNote,
       required this.onPractice});
   final _ProgressData data;
   final String Function(String) domainName;
   final double threshold;
+  final String accuracyNote;
   final VoidCallback onPractice;
   @override
   Widget build(BuildContext context) {
@@ -355,26 +353,42 @@ class _ProgressContent extends StatelessWidget {
         ? styles.body.copyWith(fontWeight: FontWeight.w800)
         : styles.h3;
     return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-      _Counts(progress.total, key: const ValueKey('bank-progress-counts')),
-      if (progress.total.total == 0)
-        const Padding(
-            padding: EdgeInsets.only(top: 12),
-            child: Text(
-                'No approved questions are available yet. Your history is preserved.')),
-      const SizedBox(height: 28),
+      AppCard(
+        padding: const EdgeInsets.all(AppSpacing.lg),
+        child:
+            Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+          Text('Question overview', style: sectionStyle),
+          const SizedBox(height: AppSpacing.sm),
+          _Counts(progress.total, key: const ValueKey('bank-progress-counts')),
+          if (progress.total.total == 0) ...[
+            const SizedBox(height: AppSpacing.lg),
+            const Divider(),
+            const SizedBox(height: AppSpacing.lg),
+            const _InformationNote(
+                'No approved questions available yet. Your history is preserved.'),
+          ],
+        ]),
+      ),
+      const SizedBox(height: AppSpacing.xxl),
       Text('Progress by subject', style: sectionStyle),
       for (final entry in progress.domains.entries)
         Padding(
-            padding: const EdgeInsets.only(top: 20),
+          padding: const EdgeInsets.only(top: AppSpacing.md),
+          child: AppCard(
+            key: ValueKey('subject-progress-${entry.key}'),
+            padding: const EdgeInsets.all(AppSpacing.lg),
             child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Text(domainName(entry.key),
-                      style: styles.body.copyWith(fontWeight: FontWeight.w700)),
-                  const SizedBox(height: 8),
+                  Text(domainName(entry.key), style: sectionStyle),
+                  const SizedBox(height: AppSpacing.sm),
                   _Counts(entry.value),
-                ])),
-      const SizedBox(height: 28),
+                ]),
+          ),
+        ),
+      const SizedBox(height: AppSpacing.xl),
+      _InformationNote(accuracyNote),
+      const SizedBox(height: AppSpacing.xxl),
       Text('Daily activity', style: sectionStyle),
       if (progress.days.isEmpty) const Text('No answers recorded yet.'),
       for (final day in progress.days)
@@ -407,7 +421,6 @@ class _Counts extends StatelessWidget {
   final QuestionCounts counts;
   @override
   Widget build(BuildContext context) {
-    final large = MediaQuery.textScalerOf(context).scale(1) >= 1.8;
     final colors = [
       context.semanticColors.success,
       context.semanticColors.warning,
@@ -423,27 +436,59 @@ class _Counts extends StatelessWidget {
     return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
       Text('${counts.total} available questions',
           style: context.textStyles.bodySmall),
-      const SizedBox(height: 8),
-      Wrap(spacing: 16, runSpacing: 8, children: [
-        for (var i = 0; i < values.length; i++)
-          Row(mainAxisSize: MainAxisSize.min, children: [
-            ExcludeSemantics(
-                child: Icon(Icons.circle, size: 9, color: colors[i])),
-            const SizedBox(width: 6),
-            Flexible(
-                child: Text(
-                    '${values[i]} ${[
-                      'Correct',
-                      'Needs review',
-                      'Not attempted',
-                      'Grade unavailable'
-                    ][i]}',
-                    style: large
-                        ? context.textStyles.bodySmall
-                        : context.textStyles.body)),
-          ]),
-      ]),
-      const SizedBox(height: 10),
+      const SizedBox(height: AppSpacing.lg),
+      LayoutBuilder(builder: (context, constraints) {
+        const labels = [
+          'Correct',
+          'Needs review',
+          'Not attempted',
+          'Grade unavailable'
+        ];
+        // Measure words at the real text scale. Prefer equal columns, then
+        // reflow whole statistics onto new rows without shrinking or clipping.
+        var minWidth = 0.0;
+        for (var i = 0; i < values.length; i++) {
+          for (final word in labels[i].split(' ')) {
+            final painter = TextPainter(
+                text: TextSpan(
+                    text: word,
+                    style: DefaultTextStyle.of(context)
+                        .style
+                        .merge(context.textStyles.bodySmall)),
+                textDirection: Directionality.of(context),
+                textScaler: MediaQuery.textScalerOf(context))
+              ..layout();
+            final width =
+                painter.width + AppSpacing.md + AppSpacing.sm + AppSpacing.sm;
+            if (width > minWidth) minWidth = width;
+            painter.dispose();
+          }
+        }
+        final fittingColumns =
+            (constraints.maxWidth / minWidth).floor().clamp(1, values.length);
+        final columns =
+            values.length == 4 && fittingColumns == 3 ? 2 : fittingColumns;
+        return Column(children: [
+          for (var start = 0; start < values.length; start += columns) ...[
+            if (start > 0) const SizedBox(height: AppSpacing.lg),
+            IntrinsicHeight(
+                child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                  for (var column = 0; column < columns; column++) ...[
+                    if (column > 0)
+                      const VerticalDivider(width: AppBorderWidth.thin),
+                    Expanded(
+                        child: start + column < values.length
+                            ? _Statistic(values[start + column],
+                                labels[start + column], colors[start + column])
+                            : const SizedBox.shrink()),
+                  ],
+                ])),
+          ],
+        ]);
+      }),
+      if (counts.total > 0) const SizedBox(height: AppSpacing.lg),
       if (counts.total > 0)
         Semantics(
             label:
@@ -464,6 +509,53 @@ class _Counts extends StatelessWidget {
                         ]))))),
     ]);
   }
+}
+
+class _Statistic extends StatelessWidget {
+  const _Statistic(this.value, this.label, this.color);
+  final int value;
+  final String label;
+  final Color color;
+  @override
+  Widget build(BuildContext context) => Semantics(
+      label: '$value $label',
+      child: ExcludeSemantics(
+          child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xs),
+        child: Column(children: [
+          Text('$value',
+              style: context.textStyles.statNumber,
+              textAlign: TextAlign.center),
+          const SizedBox(height: AppSpacing.xs),
+          Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+            ExcludeSemantics(
+                child: Container(
+                    width: AppSpacing.sm,
+                    height: AppSpacing.sm,
+                    decoration:
+                        BoxDecoration(color: color, shape: BoxShape.circle))),
+            const SizedBox(width: AppSpacing.xs),
+            Flexible(
+                child: Text(label,
+                    style: context.textStyles.bodySmall,
+                    textAlign: TextAlign.center)),
+          ]),
+        ]),
+      )));
+}
+
+class _InformationNote extends StatelessWidget {
+  const _InformationNote(this.message);
+  final String message;
+  @override
+  Widget build(BuildContext context) =>
+      Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        ExcludeSemantics(
+            child: Icon(Icons.info_outline_rounded,
+                color: context.colors.onSurfaceVariant)),
+        const SizedBox(width: AppSpacing.md),
+        Expanded(child: Text(message, style: context.textStyles.bodySmall)),
+      ]);
 }
 
 String _formatDate(DateTime date) {
