@@ -63,14 +63,12 @@ void main() {
       profiles.fail = failure == 'profile';
       local.fail = failure == 'completion';
       await tap('Continue');
-      await tap('Skip for now');
       if (failure != 'none') {
         expect(find.text('Retry'), findsOneWidget);
         expect(await local.readOnboardingComplete(), isNot(true));
         profiles.fail = false;
         local.fail = false;
         await tap('Retry');
-        await tap('Skip for now');
       }
       expect(find.byType(MainShell), findsOneWidget);
       expect(await local.readExperienceLevel(), isNull);

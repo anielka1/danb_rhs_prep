@@ -219,7 +219,7 @@ void main() {
     await tapText(tester, 'Start Preparing');
     await tapText(tester, "I haven't scheduled it yet");
     await tapText(tester, 'Continue');
-    await skipStartingCheck(tester);
+    expectOnboardingHome(tester);
     expect(find.byType(MainShell), findsOneWidget);
     await tapText(tester, 'Mock exam');
     await tapText(tester, 'Start Mock Exam');

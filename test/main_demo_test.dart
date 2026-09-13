@@ -33,7 +33,7 @@ Future<void> _clickThroughOnboarding(WidgetTester tester) async {
   await tester.tap(find.text('Continue'));
   await tester.pumpAndSettle();
   expect(tester.takeException(), isNull);
-  await skipStartingCheck(tester);
+  expectOnboardingHome(tester);
   expect(tester.takeException(), isNull);
 }
 

@@ -280,7 +280,7 @@ and record only the rotation date and owner—not the secret value.
 
 ### Isolated study-journey preview
 
-To exercise onboarding, the starting check and self-directed practice with an eligible
+To exercise onboarding and self-directed practice with an eligible
 synthetic test pool, run `flutter run -t tool/main_study_preview.dart` and choose
 an available native device. This debug-only entrypoint uses 80 test fixtures and
 independent in-memory stores; restarting the process clears **only this preview's**

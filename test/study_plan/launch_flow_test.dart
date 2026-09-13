@@ -1,3 +1,4 @@
+import 'package:danb_rhs_prep/domain/models/user_profile.dart';
 import 'package:danb_rhs_prep/features/questions/domain/question.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -8,19 +9,41 @@ import 'package:danb_rhs_prep/domain/repositories/fakes/in_memory_content_reposi
 import 'package:danb_rhs_prep/domain/repositories/fakes/in_memory_progress_repository.dart';
 import 'package:danb_rhs_prep/domain/repositories/fakes/in_memory_user_settings_repository.dart';
 import 'package:danb_rhs_prep/screens/main_shell.dart';
-import 'package:danb_rhs_prep/screens/diagnostic_screen.dart';
 import 'fixtures.dart';
 
+class _FailCompletion extends InMemoryBootstrapLocalStore {
+  _FailCompletion() : super(onboardingComplete: false);
+  bool fail = false;
+  @override
+  Future<void> writeOnboardingComplete(bool complete) async {
+    if (fail && complete) {
+      fail = false;
+      throw StateError('completion write');
+    }
+    await super.writeOnboardingComplete(complete);
+  }
+}
+
+class _FailProfile extends InMemoryUserSettingsRepository {
+  bool fail = false;
+  @override
+  Future<void> saveProfile(UserProfile profile) async {
+    if (fail) {
+      fail = false;
+      throw StateError('profile write');
+    }
+    await super.saveProfile(profile);
+  }
+}
+
 void main() {
-  for (final mode in ['complete', 'skip', 'unavailable']) {
-    final skip = mode != 'complete';
-    final package = fixture(
-        count: 80,
-        status: mode == 'unavailable'
-            ? QuestionStatus.draft
-            : QuestionStatus.approved);
-    testWidgets('real launch onboarding diagnostic $mode and restart',
+  for (final approved in [true, false]) {
+    testWidgets(
+        'date goes directly Home and survives restart approved=$approved',
         (tester) async {
+      final package = fixture(
+          count: 80,
+          status: approved ? QuestionStatus.approved : QuestionStatus.draft);
       final local = InMemoryBootstrapLocalStore(onboardingComplete: false);
       final settings = InMemoryUserSettingsRepository();
       final progress = InMemoryProgressRepository();
@@ -39,68 +62,69 @@ void main() {
         await tester.pumpAndSettle();
       }
 
-      Future<void> onboarding() async {
-        await tap('Start Preparing');
-        await tap('Within a month');
-        await tap('Continue');
-        expect(find.text('Just starting'), findsNothing);
-        expect(await local.readExperienceLevel(), isNull);
-        expect(find.byType(DiagnosticScreen), findsOneWidget);
-      }
-
       await tester.pumpWidget(app());
       await tester.pumpAndSettle();
-      await onboarding();
-      if (mode == 'unavailable') {
-        expect(find.text('Start diagnostic'), findsNothing);
-        expect(find.textContaining('approved questions'), findsOneWidget);
-      }
-      if (skip) {
-        await tap('Skip for now');
-        expect(
-            await progress.practiceSessionsForExam(package.exam.id), isEmpty);
-      } else {
-        await tap('Start diagnostic');
-        await tap('Correct fixture answer');
-        await tap('Save and continue');
-        final original =
-            (await progress.practiceSessionsForExam(package.exam.id)).single;
-        final order = original.answerOrder;
-        // Destroy the entire app and reconstruct its composition root, retaining stores.
-        await tester.pumpWidget(const SizedBox.shrink());
-        await tester.pumpWidget(app());
-        await tester.pumpAndSettle();
-        // Saved onboarding choices are still presented; availability toggles retain state.
-        await tap('Start Preparing');
-        await tap('Continue');
-        await tap('Resume diagnostic');
-        expect(find.text('Question 2 of 15'), findsOneWidget);
-        expect(
-            (await progress.practiceSessionsForExam(package.exam.id))
-                .single
-                .answerOrder,
-            order);
-        for (var i = 1; i < 15; i++) {
-          await tap('Correct fixture answer');
-          await tap('Save and continue');
-        }
-        expect(find.text('Your starting point'), findsOneWidget);
-        expect(await progress.answerAttemptsForExam(package.exam.id),
-            hasLength(15));
-        expect(await progress.practiceSessionsForExam(package.exam.id),
-            hasLength(1));
-        await tap('Continue to Home');
-      }
+      await tap('Start Preparing');
+      await tap('Within a month');
+      await tap('Continue');
       expect(find.byType(MainShell), findsOneWidget);
-      expect(find.text('Study calendar'), findsNothing);
+      expect(find.text('Optional starting check'), findsNothing);
+      expect(await local.readExperienceLevel(), isNull);
       expect((await settings.loadProfile(package.exam.id))!.experienceLevel,
           isNull);
+      expect(await local.readOnboardingComplete(), isTrue);
+      expect(await progress.practiceSessionsForExam(package.exam.id), isEmpty);
       await tester.pumpWidget(const SizedBox.shrink());
       await tester.pumpWidget(app());
       await tester.pumpAndSettle();
       expect(find.byType(MainShell), findsOneWidget);
-      expect(await progress.answerAttemptsForExam(package.exam.id),
-          hasLength(skip ? 0 : 15));
+      expect(await progress.answerAttemptsForExam(package.exam.id), isEmpty);
+      expect(tester.takeException(), isNull);
+      await tester.pumpWidget(const SizedBox.shrink());
+    });
+  }
+  for (final failure in ['profile', 'completion']) {
+    testWidgets(
+        'onboarding $failure failure retries before Home and survives restart',
+        (tester) async {
+      final package = fixture(count: 0);
+      final local = _FailCompletion();
+      final settings = _FailProfile();
+      final progress = InMemoryProgressRepository();
+      Widget app() => DanbRhsPrepApp(
+          localStore: local,
+          progressRepository: progress,
+          userSettingsRepository: settings,
+          bootstrapService: AppBootstrapService(
+              localStore: local,
+              userSettingsRepository: settings,
+              contentRepository:
+                  InMemoryContentRepository({package.exam.id: package})));
+      Future<void> tap(String text) async {
+        await tester.ensureVisible(find.text(text));
+        await tester.tap(find.text(text));
+        await tester.pumpAndSettle();
+      }
+
+      await tester.pumpWidget(app());
+      await tester.pumpAndSettle();
+      await tap('Start Preparing');
+      await tap('Within a month');
+      settings.fail = failure == 'profile';
+      local.fail = failure == 'completion';
+      await tap('Continue');
+      expect(find.byType(MainShell), findsNothing);
+      expect(await local.readOnboardingComplete(), isFalse);
+      expect(await local.readExamDateSelection(), isNotNull);
+      await tap('Retry');
+      expect(find.byType(MainShell), findsOneWidget);
+      expect(await settings.loadProfile(package.exam.id), isNotNull);
+      expect(await local.readOnboardingComplete(), isTrue);
+      expect(await progress.practiceSessionsForExam(package.exam.id), isEmpty);
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pumpWidget(app());
+      await tester.pumpAndSettle();
+      expect(find.byType(MainShell), findsOneWidget);
       expect(tester.takeException(), isNull);
       await tester.pumpWidget(const SizedBox.shrink());
     });

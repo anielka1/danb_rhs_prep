@@ -12,17 +12,8 @@ import 'package:flutter/material.dart';
 /// controller is never recreated by navigation, only the screens that
 /// read it are.
 ///
-/// Session-only for now: there is no production (non-fake)
-/// `UserSettingsRepository` implementation yet — the only concrete
-/// implementation, `InMemoryUserSettingsRepository`, is explicitly
-/// documented as being for tests/previews. `UserProfile.themePreference`
-/// exists on that model, but reusing it here would mean fabricating a
-/// complete, fake onboarding profile (experience level, exam date,
-/// daily goal, etc. — none of which exist yet) just to store one enum,
-/// which trades one honesty problem for another. Real persistence
-/// belongs with the onboarding/profile work, where a genuine
-/// `UserProfile` is first created; until then, the selection resets to
-/// [ThemeMode.system] on the next app launch.
+/// `DanbRhsPrepApp` persists changes through BootstrapLocalStore and restores
+/// the saved preference during bootstrap. This notifier owns only the live value.
 class ThemeModeController extends ValueNotifier<ThemeMode> {
   ThemeModeController([super.value = ThemeMode.system]);
 }

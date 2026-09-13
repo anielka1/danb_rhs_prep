@@ -1,3 +1,4 @@
+import '../practice_session/resumable_session.dart';
 import 'main_shell.dart';
 import '../widgets/app_bottom_navigation.dart';
 import '../progress/learning_progress.dart';
@@ -181,7 +182,7 @@ class _ExamOverviewScreenState extends State<ExamOverviewScreen> {
     PracticeSession? existing;
     if (repository != null) {
       try {
-        existing = await repository.inProgressPracticeSession(examId);
+        existing = await resumablePracticeSession(repository, examId);
       } catch (_) {
         if (mounted) {
           setState(() {

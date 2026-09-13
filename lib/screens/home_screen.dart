@@ -11,7 +11,7 @@ import '../progress/learning_progress.dart';
 import 'mock_exam_screen.dart';
 import '../widgets/primary_button.dart';
 import '../widgets/app_bottom_navigation.dart';
-import 'diagnostic_screen.dart';
+import '../practice_session/resumable_session.dart';
 import 'exam_overview_screen.dart';
 import 'profile_settings_screen.dart';
 import 'progress_screen.dart';
@@ -78,7 +78,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     final snap = BootstrapSessionScope.maybeControllerOf(context)?.snapshot;
     try {
       final active = repo != null && snap != null
-          ? await repo.inProgressPracticeSession(snap.selectedExamId)
+          ? await resumablePracticeSession(repo, snap.selectedExamId)
           : null;
       final attempts = repo != null && snap != null
           ? await repo.answerAttemptsForExam(snap.selectedExamId)
@@ -135,16 +135,12 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           now: widget.now));
       return;
     }
-    if (start && _active?.mode == PracticeMode.diagnostic && session != null) {
-      await _open(DiagnosticScreen(session: session));
-    } else {
-      await _open(ExamOverviewScreen(
-          contentPackage: session?.snapshot.contentPackage,
-          progressRepository: widget.progressRepository,
-          entitlement: session?.snapshot.entitlement,
-          now: widget.now,
-          autoStart: start));
-    }
+    await _open(ExamOverviewScreen(
+        contentPackage: session?.snapshot.contentPackage,
+        progressRepository: widget.progressRepository,
+        entitlement: session?.snapshot.entitlement,
+        now: widget.now,
+        autoStart: start));
   }
 
   Future<void> _launch(PracticeLaunch mode) async {
@@ -192,10 +188,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             .difference(DateTime.utc(current.year, current.month, current.day))
             .inDays;
     final styles = context.textStyles;
-    final dark = Theme.of(context).brightness == Brightness.dark;
     final large = MediaQuery.textScalerOf(context).scale(1) >= 1.8;
     final available = !_loading && !_failed && !_opening && eligible > 0;
-    final blue = dark ? AppHomeColors.progressDark : AppHomeColors.progress;
+    final colors = context.colors;
     final dateLabel = days == null
         ? 'Set exam date'
         : days < 0
@@ -211,13 +206,13 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           child: Padding(
               padding: const EdgeInsets.symmetric(vertical: 8),
               child: Row(children: [
-                const Icon(Icons.calendar_today_rounded,
-                    color: AppHomeColors.onProgress, size: 18),
+                Icon(Icons.calendar_today_rounded,
+                    color: context.colors.onPrimaryContainer, size: 18),
                 const SizedBox(width: 8),
                 Flexible(
                     child: Text(dateLabel,
-                        style: styles.bodySmall
-                            .copyWith(color: AppHomeColors.onProgress))),
+                        style: styles.bodySmall.copyWith(
+                            color: context.colors.onPrimaryContainer))),
               ])),
         ));
     final values = [
@@ -239,7 +234,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [for (final metric in values) Expanded(child: metric)]);
     return Scaffold(
-      backgroundColor: dark ? AppHomeColors.canvasDark : AppHomeColors.canvas,
+      backgroundColor: colors.surface,
       body: SafeArea(
           child: SingleChildScrollView(
         padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
@@ -258,14 +253,14 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           ]),
           const SizedBox(height: 20),
           AppCard(
-              backgroundColor: blue,
+              backgroundColor: colors.primaryContainer,
               padding: const EdgeInsets.all(20),
               child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     Text('Your progress',
-                        style: styles.h3
-                            .copyWith(color: AppHomeColors.onProgress)),
+                        style: styles.h3.copyWith(
+                            color: context.colors.onPrimaryContainer)),
                     const SizedBox(height: 16),
                     calendar,
                     const SizedBox(height: 12),
@@ -273,8 +268,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                     const SizedBox(height: 10),
                     Text(
                         'Correct and Needs review: latest answers. Today includes repeat answers.',
-                        style: styles.bodySmall
-                            .copyWith(color: AppHomeColors.onProgress)),
+                        style: styles.bodySmall.copyWith(
+                            color: context.colors.onPrimaryContainer)),
                   ])),
           if (!_failed &&
               !_loading &&
@@ -351,12 +346,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                       now: widget.now))),
           const SizedBox(height: 8),
           TextButton.icon(
-              icon: const Icon(Icons.fact_check_outlined),
-              label: const Text('Optional starting check'),
-              onPressed: session == null || _opening
-                  ? null
-                  : () => _open(DiagnosticScreen(session: session))),
-          TextButton.icon(
               icon: const Icon(Icons.insights_outlined),
               label: const Text('Explore progress'),
               onPressed: _opening
@@ -379,11 +368,12 @@ class _TodayMetric extends StatelessWidget {
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Text(value,
             style: context.textStyles.h2.copyWith(
-                color: AppHomeColors.onProgress, fontWeight: FontWeight.w800)),
+                color: context.colors.onPrimaryContainer,
+                fontWeight: FontWeight.w800)),
         const SizedBox(height: 4),
         Text(label,
             style: context.textStyles.bodySmall
-                .copyWith(color: AppHomeColors.onProgress)),
+                .copyWith(color: context.colors.onPrimaryContainer)),
       ]));
 }
 
@@ -398,7 +388,6 @@ class _ActivityTile extends StatelessWidget {
   final VoidCallback? onTap;
   @override
   Widget build(BuildContext context) {
-    final dark = Theme.of(context).brightness == Brightness.dark;
     final large = MediaQuery.textScalerOf(context).scale(1) >= 2;
     final colors = context.colors;
     final texts =
@@ -413,16 +402,19 @@ class _ActivityTile extends StatelessWidget {
         decoration: BoxDecoration(
             color: colors.primaryContainer,
             borderRadius: BorderRadius.circular(16)),
-        child: Icon(icon, color: colors.onPrimaryContainer));
+        child: Icon(icon,
+            color: onTap == null
+                ? colors.onSurfaceVariant
+                : colors.onPrimaryContainer));
     return Padding(
         padding: const EdgeInsets.only(bottom: 12),
         child: Semantics(
             button: true,
             enabled: onTap != null,
             child: Material(
-              color: dark ? colors.surfaceContainer : AppHomeColors.onProgress,
+              color: colors.surfaceContainer,
               elevation: 2,
-              shadowColor: AppHomeColors.shadow,
+              shadowColor: colors.primary.withValues(alpha: 0.10),
               borderRadius: BorderRadius.circular(24),
               child: InkWell(
                   onTap: onTap,
@@ -447,7 +439,9 @@ class _ActivityTile extends StatelessWidget {
                                       ? Icons.remove_rounded
                                       : Icons.chevron_right_rounded,
                                   size: 20,
-                                  color: colors.primary)
+                                  color: onTap == null
+                                      ? colors.onSurfaceVariant
+                                      : colors.primary)
                             ]))),
             )));
   }

@@ -1,7 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:danb_rhs_prep/screens/main_shell.dart';
 
-Future<void> skipStartingCheck(WidgetTester tester) async {
-  await tester.ensureVisible(find.text('Skip for now'));
-  await tester.tap(find.text('Skip for now'));
-  await tester.pumpAndSettle();
+void expectOnboardingHome(WidgetTester tester) {
+  expect(find.byType(MainShell), findsOneWidget);
+  expect(find.text('Optional starting check'), findsNothing);
 }

@@ -36,7 +36,7 @@ void main() {
     ]) {
       await tap(tester, label);
     }
-    await skipStartingCheck(tester);
+    expectOnboardingHome(tester);
     final oldShell = tester.state(find.byType(MainShell));
     final oldContext = tester.element(find.byType(MainShell));
     final session = BootstrapSessionScope.maybeControllerOf(oldContext)!;

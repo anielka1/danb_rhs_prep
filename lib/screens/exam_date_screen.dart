@@ -12,10 +12,9 @@ import '../services/analytics_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/app_scaffold.dart';
 import '../widgets/primary_button.dart';
-import 'diagnostic_screen.dart';
 import 'main_shell.dart';
 
-/// Collects an exam timeframe, then offers the optional question check.
+/// Collects an exam timeframe, then opens Home.
 /// Saves profile and completion before replacing onboarding with the app shell.
 /// No self-assessed experience or availability is collected.
 class ExamDateScreen extends StatefulWidget {
@@ -36,8 +35,7 @@ class ExamDateScreen extends StatefulWidget {
   final bool editing;
   final AnalyticsService analytics;
 
-  /// Used to synchronize the profile when editing; forwarded to the
-  /// experience step during onboarding.
+  /// Synchronizes the profile before completing onboarding or editing.
   final UserSettingsRepository? userSettingsRepository;
 
   /// Test-only injection point for a deterministic "today". Null in
@@ -67,10 +65,7 @@ class _ExamDateScreenState extends State<ExamDateScreen> {
   /// the user picks a new date or a different precision.
   bool _restoredDateExpired = false;
 
-  /// Guards Continue/Retry against a second concurrent activation, and
-  /// stays true while the optional starting check is pushed on top (reset
-  /// once the user comes back via Back), so a second tap can't push a
-  /// duplicate copy of it either.
+  /// Guards Continue/Retry against concurrent saves.
   bool _busy = false;
 
   /// A timeframe, profile or completion write failed; retry keeps saved answers.
@@ -208,12 +203,6 @@ class _ExamDateScreenState extends State<ExamDateScreen> {
     }
     if (!mounted) return;
 
-    // The optional question check is independent of profile self-assessment.
-    if (controller.progressRepository != null) {
-      await Navigator.of(context).push(MaterialPageRoute<void>(
-          builder: (_) => DiagnosticScreen(session: controller)));
-      if (!mounted) return;
-    }
     try {
       await syncStudyProfile(controller,
           widget.userSettingsRepository ?? controller.userSettingsRepository);

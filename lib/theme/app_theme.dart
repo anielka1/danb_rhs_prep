@@ -505,14 +505,3 @@ extension AppThemeContext on BuildContext {
   Duration reducedMotionDuration(Duration duration) =>
       MediaQuery.of(this).disableAnimations ? Duration.zero : duration;
 }
-
-/// Home-only palette: mint canvas and accessible blue progress surface.
-abstract final class AppHomeColors {
-  static const canvas = Color(0xfff0f8f5);
-  static const canvasDark = Color(0xff101e25);
-  static const progress = Color(0xff17365b);
-  static const progressDark = Color(0xff18324f);
-  static const onProgress = Colors.white;
-  static const tile = Colors.white;
-  static const shadow = Color(0x12234238);
-}
