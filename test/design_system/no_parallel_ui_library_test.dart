@@ -44,6 +44,8 @@ void main() {
       'sqlite3_flutter_libs', // bundles the native SQLite library, unrelated to UI
       'path_provider', // locates the app's local database file, unrelated to UI
       'path', // builds the database file path, unrelated to UI
+      'purchases_flutter', // explicitly requested store adapter, behind repository
+      'purchases_ui_flutter', // requested optional Customer Center SDK, not app UI
     };
 
     expect(
@@ -55,5 +57,16 @@ void main() {
           'library: new screens must be built from lib/theme/app_theme.dart '
           "and lib/widgets/, never a parallel toolkit.",
     );
+  });
+  test('app screens and widgets never import RevenueCat or its paywall UI', () {
+    for (final directory in ['lib/screens', 'lib/widgets', 'lib/domain']) {
+      for (final file in Directory(directory)
+          .listSync(recursive: true)
+          .whereType<File>()
+          .where((f) => f.path.endsWith('.dart'))) {
+        expect(file.readAsStringSync(), isNot(contains('package:purchases_')),
+            reason: '${file.path} must use the domain subscription boundary');
+      }
+    }
   });
 }

@@ -1,12 +1,14 @@
-# Subscription preview and access
+# Subscriptions and access
 
-The subscription screen is presentation-only. Its Weekly / Monthly USD prices
-are temporary copy in `subscription_screen.dart`, never product IDs or access
-inputs. Cards, Continue with Monthly, and Restore purchases have null callbacks.
-Monthly's visual selection does not grant Premium. No billing SDK, transaction,
-network verification, restore, or entitlement write is implemented here. Legal
-URLs are not configured in the app; Terms and Privacy are disabled rather than
-linked to invented destinations.
+The custom subscription screen loads domain plans from SubscriptionStoreRepository.
+RevenueCat is confined to its infrastructure adapter. Weekly/Monthly prices,
+currency, billing periods and conditional introductory offers come from the store.
+There are no production preview prices. Selection alone never grants access.
+Purchase cancellation is silent; failures can be retried. Purchase and restore
+share a repository-level single-flight guard in addition to disabled UI controls.
+The paywall closes on a returned active premium entitlement; an empty restore
+shows a neutral message. X remains available and never changes entitlement.
+See [RevenueCat setup and manual tests](REVENUECAT.md).
 
 ## First run and persistence
 
@@ -20,8 +22,12 @@ does not present it again. An active existing Premium entitlement skips the offe
 ## Access boundary
 
 `PremiumAccessController` reads the existing SubscriptionRepository contract and
-observes entitlement events. The production adapter reads the existing locally
-cached Entitlement snapshot; it never writes one. Missing snapshots mean Free.
+observes entitlement events. Production main initializes RevenueCat before runApp
+and injects its repository. RevenueCat CustomerInfo is authoritative; an old local
+snapshot cannot grant production access. CachedSubscriptionRepository remains for
+direct widget composition and the isolated offline demo. No key/unsupported
+platform uses an explicit unavailable store, showing configuration guidance on
+the paywall while leaving Home, Settings and Progress usable.
 The controller is installed above MaterialApp's root Navigator and both nested
 tab Navigators. Pending reads and failed reads fail closed; errors expose Retry.
 Expiry uses Entitlement.isActiveAt, an expiry timer and refresh on app resume.

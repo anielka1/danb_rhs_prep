@@ -1,5 +1,19 @@
 PODS:
   - Flutter (1.0.0)
+  - purchases_flutter (10.12.0):
+    - Flutter
+    - PurchasesHybridCommon (= 18.37.0)
+  - purchases_ui_flutter (10.12.0):
+    - Flutter
+    - PurchasesHybridCommonUI (= 18.37.0)
+  - PurchasesHybridCommon (18.37.0):
+    - RevenueCat (= 5.88.0)
+  - PurchasesHybridCommonUI (18.37.0):
+    - PurchasesHybridCommon (= 18.37.0)
+    - RevenueCatUI (= 5.88.0)
+  - RevenueCat (5.88.0)
+  - RevenueCatUI (5.88.0):
+    - RevenueCat (= 5.88.0)
   - shared_preferences_foundation (0.0.1):
     - Flutter
     - FlutterMacOS
@@ -31,16 +45,26 @@ PODS:
 
 DEPENDENCIES:
   - Flutter (from `Flutter`)
+  - purchases_flutter (from `.symlinks/plugins/purchases_flutter/ios`)
+  - purchases_ui_flutter (from `.symlinks/plugins/purchases_ui_flutter/ios`)
   - shared_preferences_foundation (from `.symlinks/plugins/shared_preferences_foundation/darwin`)
   - sqlite3_flutter_libs (from `.symlinks/plugins/sqlite3_flutter_libs/darwin`)
 
 SPEC REPOS:
   trunk:
+    - PurchasesHybridCommon
+    - PurchasesHybridCommonUI
+    - RevenueCat
+    - RevenueCatUI
     - sqlite3
 
 EXTERNAL SOURCES:
   Flutter:
     :path: Flutter
+  purchases_flutter:
+    :path: ".symlinks/plugins/purchases_flutter/ios"
+  purchases_ui_flutter:
+    :path: ".symlinks/plugins/purchases_ui_flutter/ios"
   shared_preferences_foundation:
     :path: ".symlinks/plugins/shared_preferences_foundation/darwin"
   sqlite3_flutter_libs:
@@ -48,10 +72,16 @@ EXTERNAL SOURCES:
 
 SPEC CHECKSUMS:
   Flutter: cabc95a1d2626b1b06e7179b784ebcf0c0cde467
+  purchases_flutter: e50ed441b5d195dde6c4b582b37045ad3b7efb03
+  purchases_ui_flutter: ceb7862d54f32466747560e82a8eafab7baeb8c9
+  PurchasesHybridCommon: 2e72564d3393d480ca126d4d057737435dd7ccba
+  PurchasesHybridCommonUI: b9e63653fa3abb753b702e0a9b074fbf452b0cbb
+  RevenueCat: 96e12da1f3de201c65f337ff661506ac28ee1514
+  RevenueCatUI: 86e2209d13c41893a4e24da4e26370d4bd9f8b93
   shared_preferences_foundation: 5086985c1d43c5ba4d5e69a4e8083a389e2909e6
   sqlite3: a51c07cf16e023d6c48abd5e5791a61a47354921
   sqlite3_flutter_libs: f9114e4bbe1f2e03dd543373c53d23245982ca13
 
-PODFILE CHECKSUM: 3c63482e143d1b91d2d2560aee9fb04ecc74ac7e
+PODFILE CHECKSUM: 251cb053df7158f337c0712f2ab29f4e0fa474ce
 
 COCOAPODS: 1.16.2

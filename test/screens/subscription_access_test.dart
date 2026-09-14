@@ -54,7 +54,7 @@ Entitlement premium({DateTime? expires}) => Entitlement(
 void main() {
   for (final scheduled in [false, true]) {
     testWidgets(
-        'first run date=$scheduled offer, inert controls, restart and every locked tile',
+        'first run date=$scheduled unconfigured offer, restart and every locked tile',
         (tester) async {
       final package = fixture(count: 80);
       final store = InMemoryBootstrapLocalStore();
@@ -84,24 +84,15 @@ void main() {
       }
       await tap(tester, 'Continue');
       expect(find.byType(SubscriptionScreen), findsOneWidget);
-      final cards = tester
-          .widgetList<SubscriptionProductCard>(
-              find.byType(SubscriptionProductCard))
-          .toList();
-      expect(cards.map((card) => card.priceText),
-          containsAll(<String>[r'$9.99 USD', r'$19.99 USD']));
+      expect(find.byType(SubscriptionProductCard), findsNothing);
+      expect(find.text('Subscriptions are not configured for this build.'),
+          findsOneWidget);
       expect(await store.readOnboardingComplete(), true);
       final savedDate = await store.readExamDateSelection();
       expect(savedDate, isNotNull);
-      for (final card in cards) {
-        expect(card.enabled, false);
-        expect(card.onSelect, isNull);
-      }
-      await tap(tester, 'Weekly');
-      await tap(tester, 'Monthly');
       expect(tester.widget<PrimaryButton>(find.byType(PrimaryButton)).onPressed,
           isNull);
-      await tap(tester, 'Continue with Monthly');
+      await tap(tester, 'Retry');
       await tap(tester, 'Restore purchases');
       expect(await store.readEntitlementSnapshot(), isNull);
       await close(tester);
