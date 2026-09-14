@@ -7,8 +7,8 @@ import '../widgets/subscription_product_card.dart';
 
 /// Temporary presentation copy, deliberately disconnected from access/storage.
 const _previewPlans = [
-  (title: 'Weekly', price: '69,99 zł', period: '/ week'),
-  (title: 'Monthly', price: '149,99 zł', period: '/ month'),
+  (title: 'Weekly', price: r'$9.99 USD', period: '/ week'),
+  (title: 'Monthly', price: r'$19.99 USD', period: '/ month'),
 ];
 
 class SubscriptionScreen extends StatelessWidget {

@@ -84,11 +84,16 @@ void main() {
       }
       await tap(tester, 'Continue');
       expect(find.byType(SubscriptionScreen), findsOneWidget);
+      final cards = tester
+          .widgetList<SubscriptionProductCard>(
+              find.byType(SubscriptionProductCard))
+          .toList();
+      expect(cards.map((card) => card.priceText),
+          containsAll(<String>[r'$9.99 USD', r'$19.99 USD']));
       expect(await store.readOnboardingComplete(), true);
       final savedDate = await store.readExamDateSelection();
       expect(savedDate, isNotNull);
-      for (final card in tester.widgetList<SubscriptionProductCard>(
-          find.byType(SubscriptionProductCard))) {
+      for (final card in cards) {
         expect(card.enabled, false);
         expect(card.onSelect, isNull);
       }
