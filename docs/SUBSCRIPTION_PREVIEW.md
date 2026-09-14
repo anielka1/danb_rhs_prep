@@ -1,6 +1,6 @@
 # Subscription preview and access
 
-The subscription screen is presentation-only. Its Weekly / Monthly PLN prices
+The subscription screen is presentation-only. Its Weekly / Monthly USD prices
 are temporary copy in `subscription_screen.dart`, never product IDs or access
 inputs. Cards, Continue with Monthly, and Restore purchases have null callbacks.
 Monthly's visual selection does not grant Premium. No billing SDK, transaction,
