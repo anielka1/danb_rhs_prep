@@ -1,3 +1,6 @@
+import 'features/content/sync/content_release_database.dart';
+import 'features/content/sync/supabase_remote_content_source.dart';
+import 'features/content/sync/synced_content_repository.dart';
 import 'subscription/premium_access.dart';
 import 'subscription/subscription_startup.dart';
 import 'domain/repositories/subscription_repository.dart';
@@ -37,7 +40,30 @@ import 'screens/profile_settings_screen.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   final repository = await createProductionSubscriptionRepository();
-  runApp(DanbRhsPrepApp(subscriptionRepository: repository));
+  final database = AppDatabase();
+  final progress = DriftProgressRepository(database);
+  final settings = DriftUserSettingsRepository(database);
+  final localStore = SharedPreferencesBootstrapLocalStore();
+  final content = SyncedContentRepository(
+    bundled: BundledContentRepository(),
+    database: ContentReleaseDatabase(),
+    progress: progress,
+    remote: SupabaseRemoteContentSource.fromConfiguration(),
+  );
+  runApp(
+    DanbRhsPrepApp(
+      subscriptionRepository: repository,
+      database: database,
+      progressRepository: progress,
+      userSettingsRepository: settings,
+      localStore: localStore,
+      bootstrapService: AppBootstrapService(
+        contentRepository: content,
+        localStore: localStore,
+        userSettingsRepository: settings,
+      ),
+    ),
+  );
 }
 
 class DanbRhsPrepApp extends StatefulWidget {

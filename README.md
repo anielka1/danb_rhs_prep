@@ -168,12 +168,18 @@ green. Do not mix unrelated cleanup into the same PR.
 
 ## Local setup
 
-Flutter stable with Dart 3.3 or newer is required.
+Use Flutter 3.41.2 / Dart 3.11.0, matching the tested toolchain.
+The pinned Supabase SDK requires at least Flutter 3.35 / Dart 3.9.
 
 ```bash
 flutter pub get
 flutter run
 ```
+
+Optional published-bank synchronization is configured at build time with
+`SUPABASE_URL` and `SUPABASE_PUBLISHABLE_KEY`. Without them, the app keeps
+using local/bundled content. See [Supabase content sync](docs/SUPABASE_CONTENT_SYNC.md)
+for safe configuration examples, the release checksum contract and offline checks.
 
 ## Debug demo environment
 

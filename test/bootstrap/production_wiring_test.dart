@@ -8,6 +8,9 @@ import 'package:danb_rhs_prep/bootstrap/app_bootstrap_service.dart';
 import 'package:danb_rhs_prep/bootstrap/shared_preferences_bootstrap_local_store.dart';
 import 'package:danb_rhs_prep/data/local/app_database.dart';
 import 'package:danb_rhs_prep/data/repositories/drift_user_settings_repository.dart';
+import 'package:danb_rhs_prep/data/repositories/drift_progress_repository.dart';
+import 'package:danb_rhs_prep/features/content/sync/content_release_database.dart';
+import 'package:danb_rhs_prep/features/content/sync/synced_content_repository.dart';
 import 'package:danb_rhs_prep/domain/models/entitlement.dart';
 import 'package:danb_rhs_prep/features/content/data/bundled_content_repository.dart';
 
@@ -19,7 +22,8 @@ import 'package:danb_rhs_prep/features/content/data/bundled_content_repository.d
 ///
 /// This file is that missing piece: it constructs `AppBootstrapService`
 /// with the *exact* production dependency graph —
-/// `BundledContentRepository` (which loads the real
+/// `SyncedContentRepository` (local Drift cache with networking disabled here)
+/// over `BundledContentRepository` (which loads the real
 /// `assets/content/danb_rhs/content.json` declared in `pubspec.yaml`
 /// through `rootBundle`), `SharedPreferencesBootstrapLocalStore` (the
 /// real `SharedPreferencesAsync`-backed store, only swapped to an
@@ -52,8 +56,16 @@ void main() {
     final database = AppDatabase.forTesting(NativeDatabase.memory());
     addTearDown(database.close);
 
+    final contentDatabase =
+        ContentReleaseDatabase.forTesting(NativeDatabase.memory());
+    addTearDown(contentDatabase.close);
+    final content = SyncedContentRepository(
+      bundled: BundledContentRepository(), database: contentDatabase,
+      progress: DriftProgressRepository(database),
+      // No remote by default: unit/widget tests never contact Supabase.
+    );
     final service = AppBootstrapService(
-      contentRepository: BundledContentRepository(),
+      contentRepository: content,
       localStore: SharedPreferencesBootstrapLocalStore(
         preferences: SharedPreferencesAsync(),
       ),
@@ -62,6 +74,8 @@ void main() {
 
     final result = await service.initialize();
 
+    expect(await content.sync(kDefaultExamId), ContentSyncResult.disabled);
+    expect(await contentDatabase.releases(kDefaultExamId), isEmpty);
     expect(result, isA<BootstrapReady>(),
         reason: 'the real production dependency graph must itself '
             'succeed, not just test substitutes for it');

@@ -73,8 +73,9 @@ after approval can't silently carry the old approval forward.
 
 **Algorithm**: `sha256-canonical-json-v1` (the value of
 `kFingerprintAlgorithm` in `tool/candidate_question_validator.dart`) — SHA-256
-over deterministic canonical JSON, using the `crypto` package (a dev
-dependency, confined to `tool/` and its tests). Rendered as a lowercase
+over deterministic canonical JSON, using the `crypto` package. This approval algorithm remains confined to
+`tool/` and its tests; the separate [release transport checksum](SUPABASE_CONTENT_SYNC.md)
+also uses `crypto` at runtime and never grants reviewer approval. Rendered as a lowercase
 64-character hexadecimal digest. An earlier version of this fingerprint
 used a 64-bit FNV-1a hash (16 hex characters); FNV-1a is not
 collision-resistant enough to bind a human approval to exact content, so it

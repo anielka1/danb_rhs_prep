@@ -44,6 +44,8 @@ void main() {
       'sqlite3_flutter_libs', // bundles the native SQLite library, unrelated to UI
       'path_provider', // locates the app's local database file, unrelated to UI
       'path', // builds the database file path, unrelated to UI
+      'supabase_flutter', // requested remote content data adapter
+      'crypto', // verifies downloaded release SHA-256, not a UI library
       'purchases_flutter', // explicitly requested store adapter, behind repository
       'purchases_ui_flutter', // requested optional Customer Center SDK, not app UI
     };
