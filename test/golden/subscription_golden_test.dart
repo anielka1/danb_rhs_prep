@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:danb_rhs_prep/screens/subscription_screen.dart';
 import 'package:danb_rhs_prep/theme/app_theme.dart';
 import '../support/golden_probe.dart';
+import '../support/subscription_fixture.dart';
 
 void main() {
   setUpAll(() async {
@@ -14,7 +15,9 @@ void main() {
   for (final dark in [false, true]) {
     for (final scale in GoldenTextScale.values) {
       testWidgets('subscription dark=$dark scale=$scale', (tester) async {
-        await pumpGolden(tester, const SubscriptionScreen(),
+        final repository = subscriptionFixture();
+        addTearDown(repository.dispose);
+        await pumpGolden(tester, SubscriptionScreen(repository: repository),
             theme: dark ? AppTheme.darkTheme : AppTheme.lightTheme,
             textScale: scale);
         expect(tester.takeException(), isNull);

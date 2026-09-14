@@ -1,4 +1,5 @@
 import 'subscription/premium_access.dart';
+import 'subscription/subscription_startup.dart';
 import 'domain/repositories/subscription_repository.dart';
 import 'screens/subscription_screen.dart';
 import 'dart:async';
@@ -33,8 +34,10 @@ import 'screens/mock_exam_results_screen.dart';
 import 'screens/mock_exam_screen.dart';
 import 'screens/profile_settings_screen.dart';
 
-void main() {
-  runApp(const DanbRhsPrepApp());
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  final repository = await createProductionSubscriptionRepository();
+  runApp(DanbRhsPrepApp(subscriptionRepository: repository));
 }
 
 class DanbRhsPrepApp extends StatefulWidget {

@@ -4,17 +4,104 @@ import '../widgets/app_card.dart';
 import '../widgets/app_scaffold.dart';
 import '../widgets/primary_button.dart';
 import '../widgets/subscription_product_card.dart';
+import '../domain/models/subscription_plan.dart';
+import '../domain/repositories/subscription_store_repository.dart';
+import '../subscription/premium_access.dart';
 
-/// Temporary presentation copy, deliberately disconnected from access/storage.
-const _previewPlans = [
-  (title: 'Weekly', price: r'$9.99 USD', period: '/ week'),
-  (title: 'Monthly', price: r'$19.99 USD', period: '/ month'),
-];
-
-class SubscriptionScreen extends StatelessWidget {
-  const SubscriptionScreen({super.key, this.onClose});
+class SubscriptionScreen extends StatefulWidget {
+  const SubscriptionScreen({super.key, this.onClose, this.repository});
   static const route = '/subscription';
   final VoidCallback? onClose;
+  final SubscriptionStoreRepository? repository;
+  @override
+  State<SubscriptionScreen> createState() => _SubscriptionScreenState();
+}
+
+class _SubscriptionScreenState extends State<SubscriptionScreen> {
+  SubscriptionStoreRepository? _repository;
+  List<SubscriptionPlan> _plans = [];
+  String? _selected;
+  String? _message;
+  bool _loading = true;
+  bool _busy = false;
+  bool _initialized = false;
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_initialized) return;
+    _initialized = true;
+    final repository =
+        widget.repository ?? PremiumAccessScope.maybeOf(context)?.repository;
+    _repository = repository is SubscriptionStoreRepository ? repository : null;
+    _load();
+  }
+
+  Future<void> _load() async {
+    if (_busy) return;
+    setState(() {
+      _loading = true;
+      _message = null;
+    });
+    try {
+      final repository = _repository;
+      if (repository == null) {
+        throw const SubscriptionException(SubscriptionFailure.configuration);
+      }
+      final plans = await repository.plans();
+      if (!mounted) return;
+      if (plans.isEmpty) {
+        throw const SubscriptionException(SubscriptionFailure.unavailable);
+      }
+      setState(() {
+        _plans = plans;
+        _selected = plans.any((p) => p.id == 'monthly' && p.available)
+            ? 'monthly'
+            : plans.where((p) => p.available).firstOrNull?.id;
+      });
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _plans = [];
+          _selected = null;
+          _message = _error(e);
+        });
+      }
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  String _error(Object e) => e is SubscriptionException
+      ? e.message
+      : 'Could not complete the store request. Please try again.';
+  void _close() => widget.onClose != null
+      ? widget.onClose!()
+      : Navigator.of(context).maybePop();
+  Future<void> _request({bool restore = false}) async {
+    if (_busy || _repository == null || (!restore && _selected == null)) return;
+    setState(() {
+      _busy = true;
+      _message = null;
+    });
+    try {
+      final result = restore
+          ? await _repository!.restore()
+          : await _repository!.purchase(_selected!);
+      if (!mounted) return;
+      if (result?.isActiveAt(DateTime.now()) == true) {
+        _close();
+      } else if (result != null) {
+        setState(() => _message = restore
+            ? 'No active subscription was found.'
+            : 'Your purchase has not activated Premium yet. Try Restore purchases or check again shortly.');
+      }
+    } catch (e) {
+      if (mounted) setState(() => _message = _error(e));
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final styles = context.textStyles;
@@ -26,7 +113,7 @@ class SubscriptionScreen extends StatelessWidget {
         CircleIconButton(
             icon: Icons.close_rounded,
             semanticLabel: 'Close subscription',
-            onPressed: onClose ?? () => Navigator.of(context).maybePop()),
+            onPressed: _close),
       ]),
       Expanded(
           child: SingleChildScrollView(
@@ -71,24 +158,52 @@ class SubscriptionScreen extends StatelessWidget {
             const SizedBox(height: AppSpacing.xl),
             Text('Choose your plan', style: styles.h3),
             const SizedBox(height: AppSpacing.md),
-            for (final plan in _previewPlans) ...[
+            if (_loading)
+              const Center(
+                  child: CircularProgressIndicator(
+                      semanticsLabel: 'Loading plans')),
+            for (final plan in _plans) ...[
               SubscriptionProductCard(
-                  title: plan.title,
-                  priceText: plan.price,
-                  billingPeriodText: plan.period,
-                  selected: plan.title == 'Monthly',
-                  enabled: false),
+                  title: plan.name,
+                  priceText: plan.localizedPrice,
+                  billingPeriodText: plan.billingPeriod,
+                  introductoryOfferText: plan.trialDescription,
+                  selected: plan.id == _selected,
+                  enabled: !_busy && plan.available,
+                  onSelect: () => setState(() => _selected = plan.id)),
               const SizedBox(height: AppSpacing.sm),
             ],
             const SizedBox(height: AppSpacing.md),
-            Text(
-                'Preview prices only. Purchases and restores are not available yet. No payment will be taken.',
-                style: styles.bodySmall,
-                textAlign: TextAlign.center),
+            if (_message != null)
+              Semantics(
+                  liveRegion: true,
+                  child: Text(_message!,
+                      style: styles.bodySmall, textAlign: TextAlign.center)),
+            if (!_loading && _plans.isEmpty)
+              TextButton(
+                  onPressed: _busy ? null : _load, child: const Text('Retry')),
+            if (_plans.isNotEmpty)
+              Text(
+                  'Subscriptions renew automatically unless cancelled in your App Store settings.',
+                  style: styles.bodySmall,
+                  textAlign: TextAlign.center),
             const SizedBox(height: AppSpacing.lg),
-            const PrimaryButton(
-                label: 'Continue with Monthly', onPressed: null),
-            const TextButton(onPressed: null, child: Text('Restore purchases')),
+            if (_busy)
+              const Center(
+                  child: CircularProgressIndicator(
+                      semanticsLabel: 'Waiting for the store')),
+            PrimaryButton(
+                label: _selected == null
+                    ? 'Continue'
+                    : 'Continue with ${_plans.firstWhere((p) => p.id == _selected).name}',
+                onPressed: _busy || _loading || _selected == null
+                    ? null
+                    : () => _request()),
+            TextButton(
+                onPressed: _busy || _repository == null
+                    ? null
+                    : () => _request(restore: true),
+                child: const Text('Restore purchases')),
             // No legal URLs are configured in this app. Do not invent destinations.
             const Wrap(alignment: WrapAlignment.center, children: [
               TextButton(onPressed: null, child: Text('Terms of Use')),

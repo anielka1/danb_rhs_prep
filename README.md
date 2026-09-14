@@ -182,7 +182,9 @@ In VS Code, choose **Full app demo (clickable practice)** and Run.
 The equivalent command is `flutter run -t lib/main_demo.dart`.
 Complete onboarding, then close the subscription preview with **X**. The demo
 starts Free: learning tiles open the preview, while Home, Settings and Progress
-remain available. Payments and restore are inactive. Full learning integration
+remain available. This isolated demo has no RevenueCat connection; purchases are
+unavailable. Production RevenueCat setup and sandbox checks are documented in
+[RevenueCat integration](docs/REVENUECAT.md). Full learning integration
 tests inject an explicit Premium entitlement into the isolated demo; this is not
 a purchase or a production access override. See [subscription preview](docs/SUBSCRIPTION_PREVIEW.md). Plain `flutter run` uses
 production content, whose draft questions are not eligible for practice yet.
