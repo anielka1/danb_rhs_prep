@@ -1,3 +1,4 @@
+import '../subscription/premium_access.dart';
 import '../domain/models/mock_attempt.dart';
 import 'package:flutter/material.dart';
 import '../bootstrap/bootstrap_session_scope.dart';
@@ -116,8 +117,11 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     setState(() => _opening = true);
     final bootstrap = BootstrapSessionScope.maybeControllerOf(context);
     try {
-      await Navigator.of(context).push(MaterialPageRoute<void>(
-          builder: (_) => BootstrapSessionScope.carry(bootstrap, screen)));
+      await Navigator.of(context,
+              rootNavigator: screen is! ProgressScreen &&
+                  PremiumAccessScope.maybeOf(context)?.active == false)
+          .push(MaterialPageRoute<void>(
+              builder: (_) => BootstrapSessionScope.carry(bootstrap, screen)));
     } finally {
       if (mounted) {
         setState(() => _opening = false);
@@ -189,6 +193,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             .inDays;
     final styles = context.textStyles;
     final large = MediaQuery.textScalerOf(context).scale(1) >= 1.8;
+    final locked = PremiumAccessScope.maybeOf(context)?.active == false;
     final available = !_loading && !_failed && !_opening && eligible > 0;
     final colors = context.colors;
     final dateLabel = days == null
@@ -297,7 +302,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             Padding(
                 padding: const EdgeInsets.only(top: 16),
                 child: SecondaryButton(
-                    label: 'Continue session',
+                    label: locked
+                        ? 'Continue session · Premium'
+                        : 'Continue session',
                     onPressed: _opening ? null : () => _practice(start: true))),
           const SizedBox(height: 24),
           Text('Choose your practice', style: styles.h3),
@@ -306,15 +313,22 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               icon: Icons.shuffle_rounded,
               title: 'Practise questions',
               detail: 'One question. A fresh perspective.',
-              onTap: available ? () => _launch(PracticeLaunch.random) : null),
+              locked: locked,
+              onTap: locked || available
+                  ? () => _launch(PracticeLaunch.random)
+                  : null),
           _ActivityTile(
               icon: Icons.category_outlined,
               title: 'Practice by topics',
               detail: 'Focus on one part of the exam.',
-              onTap: available ? () => _launch(PracticeLaunch.topic) : null),
+              locked: locked,
+              onTap: locked || available
+                  ? () => _launch(PracticeLaunch.topic)
+                  : null),
           _ActivityTile(
               icon: Icons.bookmark_border_rounded,
               title: 'Saved questions',
+              locked: locked,
               detail: _loading || _failed
                   ? 'Your answer library'
                   : '$_saved saved · answers and explanations',
@@ -331,12 +345,14 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                   : mistakes == 0
                       ? 'No mistakes to review'
                       : 'Questions whose latest answer was incorrect.',
-              onTap: available && mistakes > 0
+              locked: locked,
+              onTap: locked || available && mistakes > 0
                   ? () => _launch(PracticeLaunch.mistakes)
                   : null),
           _ActivityTile(
               icon: Icons.assignment_outlined,
               title: 'Mock exam',
+              locked: locked,
               detail: 'A full practice exam, with saved progress.',
               onTap: _opening
                   ? null
@@ -382,7 +398,9 @@ class _ActivityTile extends StatelessWidget {
       {required this.icon,
       required this.title,
       required this.detail,
-      this.onTap});
+      this.onTap,
+      this.locked = false});
+  final bool locked;
   final IconData icon;
   final String title, detail;
   final VoidCallback? onTap;
@@ -402,7 +420,7 @@ class _ActivityTile extends StatelessWidget {
         decoration: BoxDecoration(
             color: colors.primaryContainer,
             borderRadius: BorderRadius.circular(16)),
-        child: Icon(icon,
+        child: Icon(locked ? Icons.lock_outline_rounded : icon,
             color: onTap == null
                 ? colors.onSurfaceVariant
                 : colors.onPrimaryContainer));
@@ -410,6 +428,7 @@ class _ActivityTile extends StatelessWidget {
         padding: const EdgeInsets.only(bottom: 12),
         child: Semantics(
             button: true,
+            label: locked ? 'Premium required' : null,
             enabled: onTap != null,
             child: Material(
               color: colors.surfaceContainer,

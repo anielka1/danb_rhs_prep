@@ -1,3 +1,4 @@
+import 'domain/models/entitlement.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
@@ -16,18 +17,20 @@ import 'main.dart';
 /// study-session UI beyond that card is implemented in separate tasks.
 ///
 /// Onboarding starts incomplete so the demo exercises the same timeframe and
-/// optional check flow as the real app, with isolated synthetic repositories.
+/// subscription preview flow as the real app, with isolated synthetic repositories.
+/// Defaults to Free. Tests can inject an existing Premium entitlement.
 void main() {
   runApp(createDebugDemoApp());
 }
 
 /// Shared composition root for the entrypoint and widget tests.
-DanbRhsPrepApp createDebugDemoApp() {
+DanbRhsPrepApp createDebugDemoApp({Entitlement? entitlement}) {
   if (!kDebugMode) {
     throw UnsupportedError('The demo entrypoint requires debug mode.');
   }
   final localStore = InMemoryBootstrapLocalStore(
     onboardingComplete: false,
+    entitlement: entitlement,
     readinessSnapshot: DebugDemoEnvironment.demoReadinessSnapshot,
   );
   final userSettingsRepository =

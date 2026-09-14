@@ -1,3 +1,4 @@
+import '../subscription/premium_access.dart';
 import '../bootstrap/bootstrap_session_scope.dart';
 import 'package:flutter/material.dart';
 import '../widgets/practice_save_status.dart';
@@ -111,6 +112,8 @@ class PracticeSummaryScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final blocked = premiumBlock(context);
+    if (blocked != null) return blocked;
     final PracticeSessionController? controller =
         PracticeSessionScope.maybeOf(context);
     if (controller == null) return const _NoActiveSessionView();
@@ -291,6 +294,8 @@ class _MistakesReview extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final blocked = premiumBlock(context);
+    if (blocked != null) return blocked;
     final mistakes = controller.questions.where(
       (question) => controller.isCorrectFor(question.id) == false,
     );

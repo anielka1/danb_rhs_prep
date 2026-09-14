@@ -1,3 +1,4 @@
+import '../subscription/premium_access.dart';
 import '../practice_session/resumable_session.dart';
 import 'main_shell.dart';
 import '../widgets/app_bottom_navigation.dart';
@@ -161,7 +162,13 @@ class _ExamOverviewScreenState extends State<ExamOverviewScreen> {
   bool get _hasContent => widget.contentPackage?.questions.isNotEmpty ?? false;
 
   Future<void> _startOrResumePractice() async {
-    if (_starting || !_hasContent) return;
+    if (_starting ||
+        !_hasContent ||
+        (PremiumAccessScope.maybeOf(context)?.active == false)) {
+      return;
+    }
+    final entitlement =
+        PremiumAccessScope.maybeOf(context)?.entitlement ?? widget.entitlement;
     setState(() {
       _starting = true;
       _unavailableReason = null;
@@ -230,9 +237,9 @@ class _ExamOverviewScreenState extends State<ExamOverviewScreen> {
       // Filtered practice reads persisted question history; the default
       // selection needs only the content package.
       int? maxCount;
-      if (widget.entitlement != null && repository != null) {
+      if (entitlement != null && repository != null) {
         final DateTime nowValue = nowFn();
-        if (widget.entitlement!.isActiveAt(nowValue)) {
+        if (entitlement.isActiveAt(nowValue)) {
           // Premium: no cap, and deliberately no attempt-history read at
           // all — an active entitlement never needs to know "how many
           // today", so it can never be blocked by a history read failure
@@ -245,7 +252,7 @@ class _ExamOverviewScreenState extends State<ExamOverviewScreen> {
               now: nowValue,
             );
             maxCount = maxFreePracticeQuestionsToday(
-              entitlement: widget.entitlement!,
+              entitlement: entitlement,
               now: nowValue,
               answeredToday: answeredToday,
               dailyLimit: package.exam.freeTier.dailyPracticeQuestions,
@@ -274,11 +281,11 @@ class _ExamOverviewScreenState extends State<ExamOverviewScreen> {
       try {
         generator = PracticeGenerator.select(
           package: package,
-          excludedQuestionIds: repository != null && widget.entitlement != null
+          excludedQuestionIds: repository != null && entitlement != null
               ? await effectiveMockReserve(
                   repository: repository,
                   package: package,
-                  entitlement: widget.entitlement!,
+                  entitlement: entitlement,
                   now: nowFn())
               : const {},
           questionStates: _focus == PracticeFocus.any || repository == null
@@ -529,6 +536,8 @@ class _ExamOverviewScreenState extends State<ExamOverviewScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final blocked = premiumBlock(context);
+    if (blocked != null) return blocked;
     if (widget.launch != null) return _buildLaunch(context);
     final colors = context.colors;
     final textStyles = context.textStyles;

@@ -1,3 +1,4 @@
+import 'package:danb_rhs_prep/domain/models/entitlement.dart';
 import '../study_plan/onboarding_helper.dart';
 import 'package:danb_rhs_prep/screens/practice_question_screen.dart';
 import 'package:danb_rhs_prep/practice_session/practice_session_scope.dart';
@@ -27,7 +28,11 @@ void main() {
     tester.view.physicalSize = const Size(375, 667);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.reset);
-    await tester.pumpWidget(demo.createDebugDemoApp());
+    await tester.pumpWidget(demo.createDebugDemoApp(
+        entitlement: Entitlement(
+            tier: EntitlementTier.premium,
+            source: EntitlementSource.promotional,
+            lastVerifiedAt: DateTime.utc(2026))));
     await tester.pumpAndSettle();
     for (final label in [
       'Start Preparing',

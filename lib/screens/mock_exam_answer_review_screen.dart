@@ -1,3 +1,4 @@
+import '../subscription/premium_access.dart';
 import 'package:flutter/material.dart';
 import '../mock_exam/mock_exam_blueprint.dart';
 import '../theme/app_theme.dart';
@@ -33,6 +34,8 @@ class _MockExamAnswerReviewScreenState
 
   @override
   Widget build(BuildContext context) {
+    final blocked = premiumBlock(context);
+    if (blocked != null) return blocked;
     final result = widget.result;
     final question = result.questions[_index];
     final selected = result.attempt.answers[question.id];

@@ -1,3 +1,4 @@
+import 'package:danb_rhs_prep/screens/subscription_screen.dart';
 import 'package:danb_rhs_prep/domain/models/user_profile.dart';
 import 'package:danb_rhs_prep/features/questions/domain/question.dart';
 import 'package:flutter/material.dart';
@@ -39,7 +40,7 @@ class _FailProfile extends InMemoryUserSettingsRepository {
 void main() {
   for (final approved in [true, false]) {
     testWidgets(
-        'date goes directly Home and survives restart approved=$approved',
+        'date opens offer then Home and survives restart approved=$approved',
         (tester) async {
       final package = fixture(
           count: 80,
@@ -67,6 +68,9 @@ void main() {
       await tap('Start Preparing');
       await tap('Within a month');
       await tap('Continue');
+      expect(find.byType(SubscriptionScreen), findsOneWidget);
+      await tester.tap(find.bySemanticsLabel('Close subscription'));
+      await tester.pumpAndSettle();
       expect(find.byType(MainShell), findsOneWidget);
       expect(find.text('Optional starting check'), findsNothing);
       expect(await local.readExperienceLevel(), isNull);
@@ -117,6 +121,9 @@ void main() {
       expect(await local.readOnboardingComplete(), isFalse);
       expect(await local.readExamDateSelection(), isNotNull);
       await tap('Retry');
+      expect(find.byType(SubscriptionScreen), findsOneWidget);
+      await tester.tap(find.bySemanticsLabel('Close subscription'));
+      await tester.pumpAndSettle();
       expect(find.byType(MainShell), findsOneWidget);
       expect(await settings.loadProfile(package.exam.id), isNotNull);
       expect(await local.readOnboardingComplete(), isTrue);

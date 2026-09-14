@@ -177,11 +177,14 @@ flutter run
 
 ## Debug demo environment
 
-Run `./run_demo.command` (or double-click it on macOS) for the full offline demo.
+Run `./run_demo.command` (or double-click it on macOS) for the offline demo.
 In VS Code, choose **Full app demo (clickable practice)** and Run.
 The equivalent command is `flutter run -t lib/main_demo.dart`.
-Complete onboarding, then choose **Practise questions** or **Continue session** on Home.
-All screens and normal navigation remain available. Plain `flutter run` uses
+Complete onboarding, then close the subscription preview with **X**. The demo
+starts Free: learning tiles open the preview, while Home, Settings and Progress
+remain available. Payments and restore are inactive. Full learning integration
+tests inject an explicit Premium entitlement into the isolated demo; this is not
+a purchase or a production access override. See [subscription preview](docs/SUBSCRIPTION_PREVIEW.md). Plain `flutter run` uses
 production content, whose draft questions are not eligible for practice yet.
 The entrypoint injects synthetic content, profile and readiness through the
 existing bootstrap/repository contracts. IDs use a separate `demo_exam`

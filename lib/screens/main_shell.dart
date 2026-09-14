@@ -1,3 +1,5 @@
+import '../subscription/premium_access.dart';
+import 'subscription_screen.dart';
 import 'package:flutter/material.dart';
 import '../bootstrap/bootstrap_session_scope.dart';
 import '../domain/repositories/progress_repository.dart';
@@ -40,8 +42,10 @@ class MainShell extends StatefulWidget {
     super.key,
     this.analytics = const NoOpAnalyticsService(),
     this.progressRepository,
+    this.showSubscription = false,
   });
 
+  final bool showSubscription;
   final AnalyticsService analytics;
 
   /// Forwarded straight to [HomeScreen]. A real `DriftProgressRepository`
@@ -125,6 +129,28 @@ class _MainShellState extends State<MainShell>
       List.generate(AppTab.values.length, (_) => GlobalKey<NavigatorState>());
 
   bool _initialViewReported = false;
+  bool _offered = false;
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final access = PremiumAccessScope.maybeOf(context);
+    if (!widget.showSubscription || _offered || access?.loading == true) return;
+    _offered = true;
+    final active = access?.active ??
+        BootstrapSessionScope.maybeControllerOf(context)
+            ?.snapshot
+            .entitlement
+            .isActiveAt(DateTime.now()) ??
+        false;
+    if (active) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      Navigator.of(context, rootNavigator: true).push(MaterialPageRoute<void>(
+          settings: const RouteSettings(name: SubscriptionScreen.route),
+          builder: (context) =>
+              premiumBlock(context) ?? const SubscriptionScreen()));
+    });
+  }
 
   AppTab get _currentTab => tabForIndex(_tabIndex.value);
 

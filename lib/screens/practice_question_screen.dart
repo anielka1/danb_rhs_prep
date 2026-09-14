@@ -1,3 +1,4 @@
+import '../subscription/premium_access.dart';
 import '../domain/models/practice_session.dart';
 import '../bootstrap/bootstrap_session_scope.dart';
 import '../practice_session/active_answer_timer.dart';
@@ -36,6 +37,7 @@ class _PracticeQuestionScreenState extends State<PracticeQuestionScreen>
   bool _guessed = false;
   bool _confident = false;
   bool _answerVisible = true;
+  bool _accessPaused = false;
   String? _timedQuestionId;
   late final ActiveAnswerTimer _activeTime =
       ActiveAnswerTimer(now: widget.now ?? DateTime.now);
@@ -68,7 +70,9 @@ class _PracticeQuestionScreenState extends State<PracticeQuestionScreen>
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.resumed && _answerVisible) {
+    if (state == AppLifecycleState.resumed &&
+        _answerVisible &&
+        PremiumAccessScope.maybeOf(context)?.active != false) {
       _activeTime.start();
     } else {
       _activeTime.stop();
@@ -95,6 +99,7 @@ class _PracticeQuestionScreenState extends State<PracticeQuestionScreen>
 
   Future<void> _toggleBookmark(
       PracticeSessionController controller, String questionId) async {
+    if (PremiumAccessScope.maybeOf(context)?.active == false) return;
     // Optimistic — see AnswerExplanationScreen's identical handler for
     // why this doesn't await persistence before updating the UI.
     final bool newValue = controller.toggleBookmarkLocally(questionId);
@@ -104,6 +109,7 @@ class _PracticeQuestionScreenState extends State<PracticeQuestionScreen>
   }
 
   Future<void> _submit(PracticeSessionController controller) async {
+    if (PremiumAccessScope.maybeOf(context)?.active == false) return;
     final String? answerId = _pendingSelection;
     if (answerId == null || _submitting) return;
     setState(() => _submitting = true);
@@ -146,6 +152,7 @@ class _PracticeQuestionScreenState extends State<PracticeQuestionScreen>
   }
 
   Future<void> _viewExplanation(PracticeSessionController controller) async {
+    if (PremiumAccessScope.maybeOf(context)?.active == false) return;
     _answerVisible = false;
     _activeTime.stop();
     final bootstrap = BootstrapSessionScope.maybeControllerOf(context);
@@ -188,6 +195,16 @@ class _PracticeQuestionScreenState extends State<PracticeQuestionScreen>
 
   @override
   Widget build(BuildContext context) {
+    final blocked = premiumBlock(context);
+    if (blocked != null) {
+      _activeTime.stop();
+      _accessPaused = true;
+      return blocked;
+    }
+    if (_accessPaused) {
+      _accessPaused = false;
+      if (_answerVisible) _activeTime.start();
+    }
     final PracticeSessionController? controller =
         PracticeSessionScope.maybeOf(context);
     if (controller == null) return const _NoActiveSessionView();

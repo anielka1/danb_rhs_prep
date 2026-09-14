@@ -1,3 +1,6 @@
+import 'subscription/premium_access.dart';
+import 'domain/repositories/subscription_repository.dart';
+import 'screens/subscription_screen.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -38,6 +41,7 @@ class DanbRhsPrepApp extends StatefulWidget {
   const DanbRhsPrepApp({
     super.key,
     this.analytics = const NoOpAnalyticsService(),
+    this.subscriptionRepository,
     ThemeModeController? themeModeController,
     BootstrapLocalStore? localStore,
     AppBootstrapService? bootstrapService,
@@ -49,6 +53,7 @@ class DanbRhsPrepApp extends StatefulWidget {
         _injectedBootstrapService = bootstrapService,
         _injectedDatabase = database;
 
+  final SubscriptionRepository? subscriptionRepository;
   final AnalyticsService analytics;
   final UserSettingsRepository? userSettingsRepository;
 
@@ -123,6 +128,10 @@ class _DanbRhsPrepAppState extends State<DanbRhsPrepApp> {
             userSettingsRepository: _userSettingsRepository,
           );
 
+  late final PremiumAccessController _access = PremiumAccessController(
+      widget.subscriptionRepository ??
+          CachedSubscriptionRepository(_localStore));
+
   @override
   void initState() {
     super.initState();
@@ -153,6 +162,7 @@ class _DanbRhsPrepAppState extends State<DanbRhsPrepApp> {
 
   @override
   void dispose() {
+    _access.dispose();
     _themeModeController.removeListener(_persistThemeMode);
     // Only dispose a controller this State created itself; a
     // caller-injected controller remains the caller's to dispose.
@@ -173,6 +183,8 @@ class _DanbRhsPrepAppState extends State<DanbRhsPrepApp> {
       builder: (context, themeMode, _) {
         return MaterialApp(
           title: 'DANB RHS Prep',
+          builder: (_, child) =>
+              PremiumAccessScope(controller: _access, child: child!),
           debugShowCheckedModeBanner: false,
           theme: AppTheme.lightTheme,
           darkTheme: AppTheme.darkTheme,
@@ -181,6 +193,7 @@ class _DanbRhsPrepAppState extends State<DanbRhsPrepApp> {
           navigatorObservers: [AnalyticsNavigatorObserver(widget.analytics)],
           initialRoute: SplashScreen.route,
           routes: {
+            SubscriptionScreen.route: (_) => const SubscriptionScreen(),
             SplashScreen.route: (_) => SplashScreen(
                   bootstrapService: _bootstrapService,
                   localStore: _localStore,

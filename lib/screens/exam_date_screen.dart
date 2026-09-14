@@ -14,7 +14,7 @@ import '../widgets/app_scaffold.dart';
 import '../widgets/primary_button.dart';
 import 'main_shell.dart';
 
-/// Collects an exam timeframe, then opens Home.
+/// Collects an exam timeframe, then opens Home with the first-run offer.
 /// Saves profile and completion before replacing onboarding with the app shell.
 /// No self-assessed experience or availability is collected.
 class ExamDateScreen extends StatefulWidget {
@@ -224,6 +224,7 @@ class _ExamDateScreenState extends State<ExamDateScreen> {
             builder: (_) => BootstrapSessionScope(
                 controller: controller,
                 child: MainShell(
+                    showSubscription: true,
                     analytics: widget.analytics,
                     progressRepository: controller.progressRepository))),
         (_) => false);

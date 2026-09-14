@@ -1,3 +1,4 @@
+import '../subscription/premium_access.dart';
 import 'main_shell.dart';
 import '../widgets/app_bottom_navigation.dart';
 import 'package:flutter/material.dart';
@@ -18,6 +19,8 @@ class MockExamResultsScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final blocked = premiumBlock(context);
+    if (blocked != null) return blocked;
     final value = result;
     final canPop = Navigator.of(context).canPop();
     final text = context.textStyles;

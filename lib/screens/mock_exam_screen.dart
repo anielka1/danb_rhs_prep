@@ -1,3 +1,4 @@
+import '../subscription/premium_access.dart';
 import 'main_shell.dart';
 import '../widgets/app_bottom_navigation.dart';
 import 'package:flutter/material.dart';
@@ -43,12 +44,15 @@ class _MockExamScreenState extends State<MockExamScreen> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    if (_initialized) return;
+    if (_initialized || PremiumAccessScope.maybeOf(context)?.active == false) {
+      return;
+    }
     _initialized = true;
     final session = BootstrapSessionScope.maybeControllerOf(context);
     _content = widget.contentPackage ?? session?.snapshot.contentPackage;
     _repository = widget.progressRepository ?? session?.progressRepository;
-    _entitlement = session?.snapshot.entitlement;
+    _entitlement = PremiumAccessScope.maybeOf(context)?.entitlement ??
+        session?.snapshot.entitlement;
     _load();
   }
 
@@ -121,6 +125,8 @@ class _MockExamScreenState extends State<MockExamScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final blocked = premiumBlock(context);
+    if (blocked != null) return blocked;
     Widget body;
     if (_loading) {
       body = const LoadingState(message: 'Loading mock exam');
@@ -173,7 +179,7 @@ class _MockExamInstructionsScreenState
   bool _failed = false;
 
   Future<void> _begin() async {
-    if (_busy) return;
+    if (_busy || PremiumAccessScope.maybeOf(context)?.active == false) return;
     setState(() {
       _busy = true;
       _failed = false;
@@ -200,6 +206,8 @@ class _MockExamInstructionsScreenState
 
   @override
   Widget build(BuildContext context) {
+    final blocked = premiumBlock(context);
+    if (blocked != null) return blocked;
     final blueprint = widget.controller.blueprint;
     final config = blueprint.config;
     final text = context.textStyles;

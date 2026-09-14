@@ -1,3 +1,4 @@
+import 'package:danb_rhs_prep/screens/subscription_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:danb_rhs_prep/main.dart';
@@ -70,6 +71,9 @@ void main() {
         local.fail = false;
         await tap('Retry');
       }
+      expect(find.byType(SubscriptionScreen), findsOneWidget);
+      await tester.tap(find.bySemanticsLabel('Close subscription'));
+      await tester.pumpAndSettle();
       expect(find.byType(MainShell), findsOneWidget);
       expect(await local.readExperienceLevel(), isNull);
       expect((await profiles.loadProfile(package.exam.id))!.experienceLevel,
