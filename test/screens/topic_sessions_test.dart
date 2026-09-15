@@ -28,7 +28,7 @@ void main() {
 
   for (final count in [4, 40]) {
     testWidgets(
-        'mixed practice selects up to ten from $count, no clock or summary time',
+        'mixed practice selects up to twenty from $count, no clock or summary time',
         (tester) async {
       final package = fixture(count: count);
       await tester.pumpWidget(MaterialApp(
@@ -42,9 +42,9 @@ void main() {
       await tester.pumpAndSettle();
       final controller = PracticeSessionScope.of(
           tester.element(find.byType(PracticeQuestionScreen)));
-      expect(controller.totalQuestions, min(10, count));
+      expect(controller.totalQuestions, min(20, count));
       expect(
-          controller.questions.map((q) => q.id).toSet().length, min(10, count));
+          controller.questions.map((q) => q.id).toSet().length, min(20, count));
       expect(controller.questions.map((q) => q.domainId).toSet().length, 3);
       expect(controller.session.answerOrder, isNotNull);
       expect(find.byIcon(Icons.access_time_rounded), findsNothing);
@@ -105,7 +105,7 @@ void main() {
     final controller = PracticeSessionScope.of(
         tester.element(find.byType(PracticeQuestionScreen)));
     expect(controller.questions.every((q) => q.topicId != completeId), true);
-    expect(controller.totalQuestions, lessThanOrEqualTo(10));
+    expect(controller.totalQuestions, lessThanOrEqualTo(20));
     expect(controller.questions.any((q) => q.topicId == partialTopic), true);
   });
 

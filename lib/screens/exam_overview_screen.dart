@@ -102,7 +102,10 @@ class _ExamOverviewScreenState extends State<ExamOverviewScreen> {
   @override
   void initState() {
     super.initState();
-    _requestedCount = 10;
+    _requestedCount = widget.launch == PracticeLaunch.random ||
+            widget.launch == PracticeLaunch.topic
+        ? 20
+        : 10;
     if (widget.launch == PracticeLaunch.topic) _loadTopicProgress();
     if (widget.launch == PracticeLaunch.mistakes) {
       _focus = PracticeFocus.incorrectQuestions;
@@ -549,7 +552,7 @@ class _ExamOverviewScreenState extends State<ExamOverviewScreen> {
             widget.launch == PracticeLaunch.timed
                 ? 'Up to 10 questions with an answering stopwatch. It pauses in the background and while you read explanations, and stops counting after two minutes without interaction. No automatic submission. Saved answer times return when you resume; time on an unfinished answer resets.'
                 : widget.launch == PracticeLaunch.topic
-                    ? 'Choose one topic for this session. Each session contains up to 10 questions, and completed topics stay marked when you return.'
+                    ? 'Choose one topic for this session. Each session contains up to 20 questions, and completed topics stay marked when you return.'
                     : widget.launch == PracticeLaunch.mistakes
                         ? 'Practise questions you have previously answered incorrectly. Your earlier results stay unchanged.'
                         : 'Your session uses available questions and your current practice allowance.',

@@ -312,7 +312,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           _ActivityTile(
               icon: Icons.shuffle_rounded,
               title: 'Practise questions',
-              detail: 'Up to 10 mixed questions. No timer.',
+              detail: 'Up to 20 mixed questions. No timer.',
               locked: locked,
               onTap: locked || available
                   ? () => _launch(PracticeLaunch.random)
