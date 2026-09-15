@@ -5,6 +5,9 @@ import '../domain/models/exam_date_precision.dart';
 import '../domain/repositories/bootstrap_local_store.dart';
 import '../domain/repositories/user_settings_repository.dart';
 import '../services/theme_mode_controller.dart';
+import '../links/legal_content.dart';
+import '../links/legal_links.dart';
+import '../links/external_link_launcher.dart';
 import '../theme/app_theme.dart';
 import '../widgets/app_card.dart';
 import '../widgets/app_dialog.dart';
@@ -22,7 +25,9 @@ class ProfileSettingsScreen extends StatefulWidget {
       this.session,
       this.localStore,
       this.userSettingsRepository,
-      this.onResetProgress});
+      this.onResetProgress,
+      this.linkLauncher = const UrlLauncherExternalLinkLauncher()});
+  final ExternalLinkLauncher linkLauncher;
   final ThemeModeController themeModeController;
   final BootstrapSessionController? session;
   final BootstrapLocalStore? localStore;
@@ -37,6 +42,31 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen> {
   bool _resetting = false;
   bool _confirmingReset = false;
   bool _resetFailed = false;
+
+  Future<void> _openPage(Uri uri) async {
+    bool opened;
+    try {
+      opened = await widget.linkLauncher.open(uri);
+    } catch (_) {
+      opened = false;
+    }
+    if (!opened && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Could not open this page. Please try again.'),
+        ),
+      );
+    }
+  }
+
+  void _showLegalNotice() {
+    AppDialog.show<void>(
+      context: context,
+      title: 'Legal Notice',
+      message: LegalContent.danbDisclaimer,
+      actions: const [AppDialogAction(label: 'Close', value: null)],
+    );
+  }
 
   Future<void> _reset() async {
     if (_resetting || _confirmingReset) return;
@@ -227,6 +257,35 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen> {
                     ])),
                 const SizedBox(height: AppSpacing.xxxl),
               ],
+              Text('About & Legal', style: styles.label),
+              const SizedBox(height: AppSpacing.md),
+              _SettingsAction(
+                icon: Icons.privacy_tip_outlined,
+                title: 'Privacy Policy',
+                subtitle: 'How your information is handled',
+                onTap: () => _openPage(LegalLinks.privacyPolicy),
+              ),
+              const SizedBox(height: AppSpacing.md),
+              _SettingsAction(
+                icon: Icons.description_outlined,
+                title: 'Terms of Use',
+                subtitle: 'Terms for using PrepNovo',
+                onTap: () => _openPage(LegalLinks.termsOfUse),
+              ),
+              const SizedBox(height: AppSpacing.md),
+              Semantics(
+                label: 'Legal notice regarding DANB trademarks',
+                button: true,
+                onTap: _showLegalNotice,
+                excludeSemantics: true,
+                child: _SettingsAction(
+                  icon: Icons.info_outline_rounded,
+                  title: 'Legal Notice',
+                  subtitle: 'Independence and trademarks',
+                  onTap: _showLegalNotice,
+                ),
+              ),
+              const SizedBox(height: AppSpacing.xxxl),
               Center(child: Text('RHS PREP', style: styles.label)),
               const SizedBox(height: AppSpacing.huge),
             ]),
