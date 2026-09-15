@@ -1,4 +1,5 @@
 import '../subscription/premium_access.dart';
+import '../domain/models/practice_session.dart';
 import '../bootstrap/bootstrap_session_scope.dart';
 import 'package:flutter/material.dart';
 import '../widgets/practice_save_status.dart';
@@ -56,7 +57,9 @@ class PracticeSummaryScreen extends StatelessWidget {
         !await confirmLeavingUnsavedPractice(context, controller)) {
       return;
     }
-    if (!context.mounted) return;
+    if (!context.mounted) {
+      return;
+    }
     final MainShellController? shell = MainShellScope.maybeOf(context);
     if (shell != null) {
       shell.goToTab(AppTab.home, resetTab: shell.currentTab);
@@ -157,8 +160,9 @@ class PracticeSummaryScreen extends StatelessWidget {
             ),
             Text(
                 '${controller.answeredCount} questions answered · $correct correct'),
-            const Text(
-                'Session results are a small sample, not proof of topic mastery. Elapsed time includes pauses.'),
+            Text(controller.session.mode == PracticeMode.timedQuiz
+                ? 'Elapsed time includes pauses. Session results are a small sample, not proof of topic mastery.'
+                : 'Session results are a small sample, not proof of topic mastery.'),
             const SizedBox(height: 30),
             AppCard(
               backgroundColor: colors.primaryContainer,
@@ -176,17 +180,18 @@ class PracticeSummaryScreen extends StatelessWidget {
                       ],
                     ),
                   ),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(timeSpent, style: textStyles.statNumber),
-                        const SizedBox(height: AppSpacing.xs),
-                        Text('Elapsed since start',
-                            style: textStyles.bodySmall),
-                      ],
+                  if (controller.session.mode == PracticeMode.timedQuiz)
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(timeSpent, style: textStyles.statNumber),
+                          const SizedBox(height: AppSpacing.xs),
+                          Text('Elapsed since start',
+                              style: textStyles.bodySmall),
+                        ],
+                      ),
                     ),
-                  ),
                 ],
               ),
             ),
@@ -277,6 +282,24 @@ class PracticeSummaryScreen extends StatelessWidget {
             else
               const Text('No mistakes in this session'),
             const SizedBox(height: AppSpacing.md),
+            if (context
+                    .dependOnInheritedWidgetOfExactType<PracticeSessionScope>()
+                    ?.returnToTopics !=
+                null)
+              PrimaryButton(
+                  label: 'Back to topics',
+                  onPressed: () async {
+                    if (!await confirmLeavingUnsavedPractice(
+                            context, controller) ||
+                        !context.mounted) {
+                      return;
+                    }
+                    context
+                        .dependOnInheritedWidgetOfExactType<
+                            PracticeSessionScope>()
+                        ?.returnToTopics
+                        ?.call();
+                  }),
             PrimaryButton(
                 label: 'Back to Home', onPressed: () => _backToHome(context)),
             const SizedBox(height: AppSpacing.lg),

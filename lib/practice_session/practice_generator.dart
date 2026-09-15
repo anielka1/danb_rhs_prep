@@ -40,7 +40,7 @@ enum PracticeFocus {
 /// which is separate, later work.
 ///
 /// Selection defaults to a stable question-ID sort. An injected Random shuffles
-/// the eligible pool before capping it (the one-question Home launcher).
+/// the eligible pool before capping it (new session launchers).
 /// Answer ordering is a separate persisted session concern. Mock selection uses
 /// exposure-ranked randomness only when starting a new mock, not in this engine.
 class PracticeGenerator {
@@ -101,6 +101,7 @@ class PracticeGenerator {
     Set<String> currentIncorrectIds = const {},
     Set<String> excludedQuestionIds = const {},
     Random? random,
+    bool diversify = false,
   }) {
     if (requestedCount <= 0) {
       throw ArgumentError.value(
@@ -179,6 +180,34 @@ class PracticeGenerator {
     }
 
     if (random != null) sorted.shuffle(random);
+    if (diversify && random != null) {
+      final groups = <String, Map<String, List<Question>>>{};
+      for (final q in sorted) {
+        groups
+            .putIfAbsent(q.domainId, () => {})
+            .putIfAbsent(q.topicId, () => [])
+            .add(q);
+      }
+      final mixed = <Question>[];
+      final domainIds = groups.keys.toList()..shuffle(random);
+      final topicOrder = {
+        for (final id in domainIds)
+          id: groups[id]!.keys.toList()..shuffle(random),
+      };
+      while (mixed.length < sorted.length) {
+        for (final domain in domainIds) {
+          final topics = topicOrder[domain]!;
+          if (topics.isEmpty) continue;
+          final topic = topics.removeAt(0);
+          final questions = groups[domain]![topic]!;
+          mixed.add(questions.removeLast());
+          if (questions.isNotEmpty) topics.add(topic);
+        }
+      }
+      sorted
+        ..clear()
+        ..addAll(mixed);
+    }
 
     final int cap = [
       requestedCount,
@@ -186,8 +215,10 @@ class PracticeGenerator {
       sorted.length,
     ].reduce((a, b) => a < b ? a : b);
 
+    final selected = sorted.take(cap).toList();
+    if (diversify && random != null) selected.shuffle(random);
     return PracticeGenerator._(
-      List.unmodifiable(sorted.take(cap)),
+      List.unmodifiable(selected),
       requestedCount,
       focus,
     );

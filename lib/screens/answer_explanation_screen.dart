@@ -68,6 +68,9 @@ class _AnswerExplanationScreenState extends State<AnswerExplanationScreen> {
           builder: (_) => BootstrapSessionScope.carry(
               bootstrap,
               PracticeSessionScope(
+                returnToTopics: context
+                    .dependOnInheritedWidgetOfExactType<PracticeSessionScope>()
+                    ?.returnToTopics,
                 controller: controller,
                 child: const PracticeSummaryScreen(),
               )),

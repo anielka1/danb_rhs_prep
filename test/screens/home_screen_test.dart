@@ -330,7 +330,7 @@ void main() {
     expect(await repo.inProgressPracticeSession(package.exam.id), isNull);
     expect(await repo.answerAttemptsForExam(package.exam.id), answers);
   });
-  testWidgets('random tile creates one question, not generic setup',
+  testWidgets('random tile creates up to ten questions, not generic setup',
       (tester) async {
     await tester.pumpWidget(app());
     await tester.pumpAndSettle();
@@ -339,7 +339,7 @@ void main() {
     await tester.pumpAndSettle();
     final c = PracticeSessionScope.of(
         tester.element(find.byType(PracticeQuestionScreen)));
-    expect(c.totalQuestions, 1);
+    expect(c.totalQuestions, package.questions.length.clamp(0, 10));
     expect(c.session.answerOrder, isNotNull);
     await tester.pumpWidget(const SizedBox.shrink());
   });

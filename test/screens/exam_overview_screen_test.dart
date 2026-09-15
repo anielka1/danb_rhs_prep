@@ -144,7 +144,7 @@ void main() {
       expect(controller.session.examId, DebugDemoEnvironment.demoExamId);
       expect(
         controller.questions.map((q) => q.id).toList(),
-        DebugDemoEnvironment.demoQuestions.map((q) => q.id).toList(),
+        unorderedEquals(DebugDemoEnvironment.demoQuestions.map((q) => q.id)),
       );
       expect(
         controller.session.contentVersion,
