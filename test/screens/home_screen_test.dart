@@ -330,7 +330,7 @@ void main() {
     expect(await repo.inProgressPracticeSession(package.exam.id), isNull);
     expect(await repo.answerAttemptsForExam(package.exam.id), answers);
   });
-  testWidgets('random tile creates one question, not generic setup',
+  testWidgets('random tile respects the free allowance below twenty questions',
       (tester) async {
     await tester.pumpWidget(app());
     await tester.pumpAndSettle();
@@ -339,7 +339,8 @@ void main() {
     await tester.pumpAndSettle();
     final c = PracticeSessionScope.of(
         tester.element(find.byType(PracticeQuestionScreen)));
-    expect(c.totalQuestions, 1);
+    expect(c.totalQuestions, 10,
+        reason: 'The existing free allowance still caps this launch.');
     expect(c.session.answerOrder, isNotNull);
     await tester.pumpWidget(const SizedBox.shrink());
   });

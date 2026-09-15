@@ -17,10 +17,12 @@ class PracticeSessionScope extends InheritedWidget {
   const PracticeSessionScope({
     super.key,
     required this.controller,
+    this.returnToTopics,
     required super.child,
   });
 
   final PracticeSessionController controller;
+  final VoidCallback? returnToTopics;
 
   static PracticeSessionController? maybeOf(BuildContext context) {
     return context

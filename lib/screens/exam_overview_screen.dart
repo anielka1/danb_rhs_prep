@@ -1,4 +1,5 @@
 import '../subscription/premium_access.dart';
+import '../progress/topic_completion.dart';
 import '../practice_session/resumable_session.dart';
 import 'main_shell.dart';
 import '../widgets/app_bottom_navigation.dart';
@@ -101,7 +102,11 @@ class _ExamOverviewScreenState extends State<ExamOverviewScreen> {
   @override
   void initState() {
     super.initState();
-    _requestedCount = widget.launch == PracticeLaunch.random ? 1 : 10;
+    _requestedCount = widget.launch == PracticeLaunch.random ||
+            widget.launch == PracticeLaunch.topic
+        ? 20
+        : 10;
+    if (widget.launch == PracticeLaunch.topic) _loadTopicProgress();
     if (widget.launch == PracticeLaunch.mistakes) {
       _focus = PracticeFocus.incorrectQuestions;
     }
@@ -109,6 +114,40 @@ class _ExamOverviewScreenState extends State<ExamOverviewScreen> {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) _startOrResumePractice();
       });
+    }
+  }
+
+  TopicCompletion? _topicProgress;
+  bool _progressLoading = false;
+  bool _progressFailed = false;
+  bool _unfinishedTopics = false;
+
+  Future<void> _loadTopicProgress() async {
+    if (_progressLoading || widget.contentPackage == null) return;
+    setState(() {
+      _progressLoading = true;
+      _progressFailed = false;
+    });
+    try {
+      final repository = widget.progressRepository;
+      if (repository == null) {
+        throw StateError('Progress repository unavailable');
+      }
+      final states = await repository
+          .questionStatesForExam(widget.contentPackage!.exam.id);
+      if (mounted) {
+        setState(() =>
+            _topicProgress = TopicCompletion(widget.contentPackage!, states));
+      }
+    } catch (_) {
+      if (mounted) {
+        setState(() {
+          _topicProgress = null;
+          _progressFailed = true;
+        });
+      }
+    } finally {
+      if (mounted) setState(() => _progressLoading = false);
     }
   }
 
@@ -277,17 +316,31 @@ class _ExamOverviewScreenState extends State<ExamOverviewScreen> {
         }
       }
 
+      if (_unfinishedTopics) {
+        await _loadTopicProgress();
+        if (!mounted) return;
+        if (_topicProgress == null) {
+          setState(() => _starting = false);
+          return;
+        }
+      }
       final PracticeGenerator generator;
       try {
         generator = PracticeGenerator.select(
           package: package,
-          excludedQuestionIds: repository != null && entitlement != null
-              ? await effectiveMockReserve(
-                  repository: repository,
-                  package: package,
-                  entitlement: entitlement,
-                  now: nowFn())
-              : const {},
+          excludedQuestionIds: {
+            if (_unfinishedTopics)
+              ...package.questions
+                  .where((q) => _topicProgress!.isComplete(q.topicId))
+                  .map((q) => q.id),
+            ...(repository != null && entitlement != null
+                ? await effectiveMockReserve(
+                    repository: repository,
+                    package: package,
+                    entitlement: entitlement,
+                    now: nowFn())
+                : <String>{}),
+          },
           questionStates: _focus == PracticeFocus.any || repository == null
               ? const []
               : await repository.questionStatesForExam(examId),
@@ -303,9 +356,11 @@ class _ExamOverviewScreenState extends State<ExamOverviewScreen> {
               : const {},
           domainId: _domainId,
           topicId: _topicId,
-          random: widget.launch == PracticeLaunch.random
-              ? (widget.random ?? Random())
-              : null,
+          random: widget.launch == PracticeLaunch.timed
+              ? null
+              : widget.random ?? Random(),
+          diversify:
+              widget.launch == PracticeLaunch.random || _unfinishedTopics,
           maxCount: maxCount,
         );
       } on PracticeGenerationUnavailable catch (error) {
@@ -455,11 +510,19 @@ class _ExamOverviewScreenState extends State<ExamOverviewScreen> {
         settings: const RouteSettings(name: PracticeQuestionScreen.route),
         builder: (_) => PracticeSessionScope(
           controller: controller,
+          returnToTopics: widget.launch == PracticeLaunch.topic
+              ? () {
+                  Navigator.of(context)
+                      .popUntil((route) => route == ModalRoute.of(context));
+                }
+              : null,
           child: const PracticeQuestionScreen(),
         ),
       ),
     );
-    if (mounted) {
+    if (mounted && widget.launch == PracticeLaunch.topic) {
+      await _loadTopicProgress();
+    } else if (mounted) {
       final shell = MainShellScope.maybeOf(context);
       if (shell != null) {
         shell.goToTab(AppTab.home, resetTab: shell.currentTab);
@@ -469,7 +532,7 @@ class _ExamOverviewScreenState extends State<ExamOverviewScreen> {
 
   Widget _buildLaunch(BuildContext context) {
     final title = switch (widget.launch!) {
-      PracticeLaunch.random => 'Random question',
+      PracticeLaunch.random => 'Practise questions',
       PracticeLaunch.quick10 => 'Quick 10',
       PracticeLaunch.timed => 'Timed quiz',
       PracticeLaunch.mistakes => 'Review mistakes',
@@ -489,28 +552,74 @@ class _ExamOverviewScreenState extends State<ExamOverviewScreen> {
             widget.launch == PracticeLaunch.timed
                 ? 'Up to 10 questions with an answering stopwatch. It pauses in the background and while you read explanations, and stops counting after two minutes without interaction. No automatic submission. Saved answer times return when you resume; time on an unfinished answer resets.'
                 : widget.launch == PracticeLaunch.topic
-                    ? 'Choose a topic for a focused session of up to 10 questions.'
+                    ? 'Choose one topic for this session. Each session contains up to 20 questions, and completed topics stay marked when you return.'
                     : widget.launch == PracticeLaunch.mistakes
                         ? 'Practise questions you have previously answered incorrectly. Your earlier results stay unchanged.'
                         : 'Your session uses available questions and your current practice allowance.',
             style: context.textStyles.body),
         const SizedBox(height: 24),
         if (widget.launch == PracticeLaunch.topic && package != null) ...[
+          if (_progressLoading) const LinearProgressIndicator(),
+          if (_progressFailed) ...[
+            const Text('Progress unavailable'),
+            TextButton(
+                onPressed: _loadTopicProgress,
+                child: const Text('Retry progress')),
+          ],
+          PrimaryButton(
+              label: 'Practice unfinished topics',
+              onPressed: _starting ||
+                      _progressLoading ||
+                      _topicProgress == null ||
+                      !_topicProgress!.totals.keys
+                          .any((id) => !_topicProgress!.isComplete(id))
+                  ? null
+                  : () {
+                      setState(() {
+                        _unfinishedTopics = true;
+                        _topicId = null;
+                        _domainId = null;
+                      });
+                      _startOrResumePractice();
+                    }),
+          const SizedBox(height: 16),
           for (final domain in package.exam.domains) ...[
             Text(domain.name, style: context.textStyles.h3),
             for (final topic in domain.topics)
-              ListTile(
-                  selected: _topicId == topic.id,
-                  leading: Icon(_topicId == topic.id
-                      ? Icons.radio_button_checked
-                      : Icons.radio_button_off),
-                  title: Text(topic.name),
-                  onTap: _starting
-                      ? null
-                      : () => setState(() {
-                            _topicId = topic.id;
-                            _domainId = domain.id;
-                          })),
+              Builder(builder: (context) {
+                final total = (package.exam.id.startsWith('demo_')
+                        ? package.questions
+                        : package.approvedQuestions)
+                    .where(
+                        (q) => q.domainId == domain.id && q.topicId == topic.id)
+                    .length;
+                final completed = _topicProgress?.completed[topic.id] ?? 0;
+                final status = _topicProgress?.status(topic.id);
+                return ListTile(
+                    selected: _topicId == topic.id,
+                    leading: Icon(
+                        total == 0 || status == 'Not started'
+                            ? Icons.radio_button_unchecked
+                            : status == 'Completed'
+                                ? Icons.check_circle_rounded
+                                : status == 'In progress'
+                                    ? Icons.timelapse_rounded
+                                    : Icons.help_outline,
+                        color: status == 'Completed'
+                            ? context.semanticColors.success
+                            : null),
+                    title: Text(topic.name),
+                    subtitle: Text(total == 0
+                        ? 'No approved questions'
+                        : '$total approved questions · ${_progressLoading ? 'Loading progress' : status == null ? 'Progress unavailable' : '$completed of $total completed · $status'}'),
+                    onTap: _starting || total == 0
+                        ? null
+                        : () => setState(() {
+                              _topicId = topic.id;
+                              _domainId = domain.id;
+                              _unfinishedTopics = false;
+                            }));
+              }),
             const SizedBox(height: 16),
           ]
         ],

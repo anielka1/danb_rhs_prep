@@ -55,9 +55,20 @@ class _PracticeQuestionScreenState extends State<PracticeQuestionScreen>
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     _activeTime.start();
-    _elapsedTicker = Timer.periodic(const Duration(seconds: 1), (_) {
-      if (mounted) setState(() {});
-    });
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (PracticeSessionScope.maybeOf(context)?.session.mode ==
+        PracticeMode.timedQuiz) {
+      _elapsedTicker ??= Timer.periodic(const Duration(seconds: 1), (_) {
+        if (mounted) setState(() {});
+      });
+    } else {
+      _elapsedTicker?.cancel();
+      _elapsedTicker = null;
+    }
   }
 
   @override
@@ -130,6 +141,9 @@ class _PracticeQuestionScreenState extends State<PracticeQuestionScreen>
         builder: (_) => BootstrapSessionScope.carry(
             bootstrap,
             PracticeSessionScope(
+              returnToTopics: context
+                  .dependOnInheritedWidgetOfExactType<PracticeSessionScope>()
+                  ?.returnToTopics,
               controller: controller,
               child: const AnswerExplanationScreen(),
             )),
@@ -162,6 +176,9 @@ class _PracticeQuestionScreenState extends State<PracticeQuestionScreen>
         builder: (_) => BootstrapSessionScope.carry(
             bootstrap,
             PracticeSessionScope(
+              returnToTopics: context
+                  .dependOnInheritedWidgetOfExactType<PracticeSessionScope>()
+                  ?.returnToTopics,
               controller: controller,
               child: const AnswerExplanationScreen(),
             )),
@@ -257,24 +274,27 @@ class _PracticeQuestionScreenState extends State<PracticeQuestionScreen>
                         semanticLabel: 'Question progress',
                       ),
                     ),
-                    const SizedBox(width: 14),
-                    Icon(Icons.access_time_rounded,
-                        size: AppIconSize.medium - 2, color: colors.onSurface),
-                    const SizedBox(width: AppSpacing.xs),
-                    Flexible(
-                      child: Text(
-                          _formatElapsed(controller.session.mode ==
-                                  PracticeMode.timedQuiz
-                              ? Duration(
-                                  seconds: controller.recordedAnswerSeconds +
-                                      (alreadyAnswered
-                                          ? 0
-                                          : _activeTime.elapsed.inSeconds))
-                              : controller.elapsed),
-                          style: TextStyle(
-                              fontWeight: FontWeight.w700,
-                              color: colors.onSurface)),
-                    ),
+                    if (controller.session.mode == PracticeMode.timedQuiz) ...[
+                      const SizedBox(width: 14),
+                      Icon(Icons.access_time_rounded,
+                          size: AppIconSize.medium - 2,
+                          color: colors.onSurface),
+                      const SizedBox(width: AppSpacing.xs),
+                      Flexible(
+                        child: Text(
+                            _formatElapsed(controller.session.mode ==
+                                    PracticeMode.timedQuiz
+                                ? Duration(
+                                    seconds: controller.recordedAnswerSeconds +
+                                        (alreadyAnswered
+                                            ? 0
+                                            : _activeTime.elapsed.inSeconds))
+                                : controller.elapsed),
+                            style: TextStyle(
+                                fontWeight: FontWeight.w700,
+                                color: colors.onSurface)),
+                      ),
+                    ],
                   ],
                 ),
                 const SizedBox(height: AppSpacing.xl + 2),

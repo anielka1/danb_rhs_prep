@@ -376,7 +376,7 @@ void main() {
       final session = PracticeSession(
         id: 'elapsed-ticker-test-session',
         examId: DebugDemoEnvironment.demoExamId,
-        mode: PracticeMode.quickPractice,
+        mode: PracticeMode.timedQuiz,
         questionIds:
             DebugDemoEnvironment.demoQuestions.map((q) => q.id).toList(),
         status: SessionStatus.inProgress,
@@ -390,7 +390,7 @@ void main() {
 
       await tester.pumpWidget(wrap(PracticeSessionScope(
         controller: controller,
-        child: const PracticeQuestionScreen(),
+        child: PracticeQuestionScreen(now: () => fakeNow),
       )));
       // Lets the screen's own one-time bookmark-load rebuild (unrelated
       // to this test) settle first, so the only thing that can explain a
@@ -406,7 +406,7 @@ void main() {
 
       expect(find.text('00:05'), findsOneWidget,
           reason: 'the screen must rebuild on its own tick and re-read '
-              "controller.elapsed — no tap or navigation happened here");
+              "active answering time — no tap or navigation happened here");
     });
   });
 }
