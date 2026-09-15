@@ -6,8 +6,8 @@ Production `main()` wires `SyncedContentRepository` around the existing
 The demo entrypoints and default unit/widget compositions have no remote source.
 No login, anonymous sign-in, Auth storage, realtime subscription or account is
 created. The requested `supabase_flutter` SDK is pinned to 2.17.2; `crypto` 3.0.7
-is now a runtime dependency for transport checksums. Reviewer fingerprints and
-approval rules are unchanged.
+is now a runtime dependency for transport checksums. The current Supabase
+Table Editor review is documented in [Simple Supabase question review](SUPABASE_TABLE_EDITOR_REVIEW.md).
 
 ## Local configuration
 
@@ -54,8 +54,9 @@ read under `SET LOCAL ROLE anon` returned **zero visible releases**. This is a
 normal, supported state. No release, table, policy, grant or function was changed.
 The `anon` and `authenticated` roles have no USAGE on `content_workbench`; the
 adapter never queries that schema. Draft questions, answers, references and
-reviewer decisions remain inaccessible to this client. The publisher must apply
-the existing qualified-human review process before creating any release.
+review decisions remain inaccessible to this client. Before creating a release,
+a person must review the question and cited source, then record `approved` and
+optional notes using the simple Table Editor workflow.
 
 The SDK is instantiated only inside the data adapter, without Flutter's global
 `Supabase.initialize` / Auth session persistence. Each request has a 12-second
@@ -110,9 +111,9 @@ dart run tool/content_release_checksum.dart /path/to/reviewed-payload.json
 ```
 
 That read-only helper prints a transport checksum; it does **not** review,
-approve, publish, upload, or edit the input. It is separate from the existing
-`danb-rhs-question-approval:v1` reviewer fingerprint. Approval fingerprints are
-neither generated nor replaced by synchronization.
+approve, publish, upload, or edit the input. It is separate from the legacy
+file-based candidate-question reviewer fingerprint. The simplified Supabase
+Table Editor workflow does not ask the reviewer to manage fingerprints.
 
 Publishers must allocate increasing `release_version` values and unique
 `content_version` labels. The app does not order opaque content-version strings.
