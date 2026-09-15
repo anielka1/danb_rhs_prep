@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
+import '../links/legal_links.dart';
+import '../links/external_link_launcher.dart';
 import '../widgets/app_card.dart';
 import '../widgets/app_scaffold.dart';
 import '../widgets/primary_button.dart';
@@ -9,7 +11,12 @@ import '../domain/repositories/subscription_store_repository.dart';
 import '../subscription/premium_access.dart';
 
 class SubscriptionScreen extends StatefulWidget {
-  const SubscriptionScreen({super.key, this.onClose, this.repository});
+  const SubscriptionScreen(
+      {super.key,
+      this.onClose,
+      this.repository,
+      this.linkLauncher = const UrlLauncherExternalLinkLauncher()});
+  final ExternalLinkLauncher linkLauncher;
   static const route = '/subscription';
   final VoidCallback? onClose;
   final SubscriptionStoreRepository? repository;
@@ -101,6 +108,29 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
       if (mounted) setState(() => _busy = false);
     }
   }
+
+  Future<void> _openLegalPage(Uri uri) async {
+    bool opened;
+    try {
+      opened = await widget.linkLauncher.open(uri);
+    } catch (_) {
+      opened = false;
+    }
+    if (!opened && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('Could not open this page. Please try again.')));
+    }
+  }
+
+  Widget _legalLink(String label, Uri uri) => Semantics(
+      label: label,
+      link: true,
+      onTap: () => _openLegalPage(uri),
+      excludeSemantics: true,
+      child: TextButton(
+          style: TextButton.styleFrom(minimumSize: const Size(48, 48)),
+          onPressed: () => _openLegalPage(uri),
+          child: Text(label)));
 
   @override
   Widget build(BuildContext context) {
@@ -204,10 +234,9 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
                     ? null
                     : () => _request(restore: true),
                 child: const Text('Restore purchases')),
-            // No legal URLs are configured in this app. Do not invent destinations.
-            const Wrap(alignment: WrapAlignment.center, children: [
-              TextButton(onPressed: null, child: Text('Terms of Use')),
-              TextButton(onPressed: null, child: Text('Privacy Policy')),
+            Wrap(alignment: WrapAlignment.center, children: [
+              _legalLink('Terms of Use', LegalLinks.termsOfUse),
+              _legalLink('Privacy Policy', LegalLinks.privacyPolicy),
             ]),
             const SizedBox(height: AppSpacing.xl),
           ]))),
