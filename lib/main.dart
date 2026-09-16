@@ -1,3 +1,5 @@
+import 'data/repositories/drift_free_practice_store.dart';
+import 'subscription/free_practice_store.dart';
 import 'features/content/sync/content_release_database.dart';
 import 'features/content/sync/supabase_remote_content_source.dart';
 import 'features/content/sync/synced_content_repository.dart';
@@ -71,6 +73,7 @@ class DanbRhsPrepApp extends StatefulWidget {
     super.key,
     this.analytics = const NoOpAnalyticsService(),
     this.subscriptionRepository,
+    this.freePracticeStore,
     ThemeModeController? themeModeController,
     BootstrapLocalStore? localStore,
     AppBootstrapService? bootstrapService,
@@ -83,6 +86,7 @@ class DanbRhsPrepApp extends StatefulWidget {
         _injectedDatabase = database;
 
   final SubscriptionRepository? subscriptionRepository;
+  final FreePracticeStore? freePracticeStore;
   final AnalyticsService analytics;
   final UserSettingsRepository? userSettingsRepository;
 
@@ -159,7 +163,9 @@ class _DanbRhsPrepAppState extends State<DanbRhsPrepApp> {
 
   late final PremiumAccessController _access = PremiumAccessController(
       widget.subscriptionRepository ??
-          CachedSubscriptionRepository(_localStore));
+          CachedSubscriptionRepository(_localStore),
+      trialStore:
+          widget.freePracticeStore ?? DriftFreePracticeStore(_database));
 
   @override
   void initState() {

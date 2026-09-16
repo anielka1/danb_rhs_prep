@@ -246,6 +246,7 @@ class AppDatabase extends _$AppDatabase {
   // ignore: use_super_parameters
   AppDatabase.forTesting(QueryExecutor executor) : super(executor);
 
+  /// Schema 6 adds the installation-level free-practice ledger (preserved on reset).
   /// Schema 5 adds nullable answer-order JSON to practice and mock rows.
   /// Frozen schema-4 migration coverage: app_database_migration_v5_test.dart.
   /// Earlier schema version 3 (PREP-668): added
@@ -279,15 +280,21 @@ class AppDatabase extends _$AppDatabase {
   /// branch to a higher version (if the schema itself needs correcting),
   /// per this class's own "never erase progress on error/migration" rule
   /// below.
+  Future<void> _createTrial() => customStatement(
+      'CREATE TABLE free_practice_trial (id INTEGER PRIMARY KEY CHECK (id = 1), payload TEXT NOT NULL)');
+
   @override
-  int get schemaVersion => 5;
+  int get schemaVersion => 6;
 
   @override
   MigrationStrategy get migration {
     return MigrationStrategy(
-      onCreate: (Migrator m) => m.createAll(),
+      onCreate: (Migrator m) async {
+        await m.createAll();
+        await _createTrial();
+      },
       onUpgrade: (Migrator m, int from, int to) async {
-        if (from >= 1 && from < 5 && to == 5) {
+        if (from >= 1 && from < 6 && to == 6) {
           if (from < 2) {
             await m.addColumn(answerAttempts, answerAttempts.contentVersion);
             await m.addColumn(
@@ -311,8 +318,12 @@ class AppDatabase extends _$AppDatabase {
             await m.addColumn(mockAttempts, mockAttempts.seenBeforeStartCount);
             await m.createTable(studySchedules);
           }
-          await m.addColumn(practiceSessions, practiceSessions.answerOrderJson);
-          await m.addColumn(mockAttempts, mockAttempts.answerOrderJson);
+          if (from < 5) {
+            await m.addColumn(
+                practiceSessions, practiceSessions.answerOrderJson);
+            await m.addColumn(mockAttempts, mockAttempts.answerOrderJson);
+          }
+          await _createTrial();
           return;
         }
         // Every schema jump this database has ever needed to handle is

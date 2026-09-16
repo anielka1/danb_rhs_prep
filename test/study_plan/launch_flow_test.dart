@@ -40,7 +40,7 @@ class _FailProfile extends InMemoryUserSettingsRepository {
 void main() {
   for (final approved in [true, false]) {
     testWidgets(
-        'date opens offer then Home and survives restart approved=$approved',
+        'date opens Home without an offer and survives restart approved=$approved',
         (tester) async {
       final package = fixture(
           count: 80,
@@ -68,8 +68,7 @@ void main() {
       await tap('Start Preparing');
       await tap('Within a month');
       await tap('Continue');
-      expect(find.byType(SubscriptionScreen), findsOneWidget);
-      await tester.tap(find.bySemanticsLabel('Close subscription'));
+      expect(find.byType(SubscriptionScreen), findsNothing);
       await tester.pumpAndSettle();
       expect(find.byType(MainShell), findsOneWidget);
       expect(find.text('Optional starting check'), findsNothing);
@@ -121,8 +120,7 @@ void main() {
       expect(await local.readOnboardingComplete(), isFalse);
       expect(await local.readExamDateSelection(), isNotNull);
       await tap('Retry');
-      expect(find.byType(SubscriptionScreen), findsOneWidget);
-      await tester.tap(find.bySemanticsLabel('Close subscription'));
+      expect(find.byType(SubscriptionScreen), findsNothing);
       await tester.pumpAndSettle();
       expect(find.byType(MainShell), findsOneWidget);
       expect(await settings.loadProfile(package.exam.id), isNotNull);

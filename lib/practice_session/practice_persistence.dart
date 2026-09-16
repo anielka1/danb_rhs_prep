@@ -6,7 +6,8 @@ import '../domain/repositories/progress_repository.dart';
 /// repository's idempotent recording also handles a write whose response failed.
 /// Nothing here survives process exit; the UI must disclose outstanding saves.
 class PracticePersistence {
-  PracticePersistence(this.repository);
+  PracticePersistence(this.repository, {this.recordAnswer});
+  final Future<void> Function(AnswerAttempt)? recordAnswer;
   final ProgressRepository? repository;
   final Map<String, AnswerAttempt> _attempts = {};
   final Map<(String, String), bool> _bookmarks = {};
@@ -55,7 +56,7 @@ class PracticePersistence {
       // Stop on the first failure so a later answer is never saved ahead
       // of an older failed answer in this controller.
       for (final attempt in _attempts.values.toList()) {
-        await repo.recordAnswerAttempt(attempt);
+        await (recordAnswer ?? repo.recordAnswerAttempt)(attempt);
         _attempts.remove(attempt.id);
       }
       for (final entry in _bookmarks.entries.toList()) {

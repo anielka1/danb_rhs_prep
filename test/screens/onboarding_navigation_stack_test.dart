@@ -71,8 +71,7 @@ void main() {
         local.fail = false;
         await tap('Retry');
       }
-      expect(find.byType(SubscriptionScreen), findsOneWidget);
-      await tester.tap(find.bySemanticsLabel('Close subscription'));
+      expect(find.byType(SubscriptionScreen), findsNothing);
       await tester.pumpAndSettle();
       expect(find.byType(MainShell), findsOneWidget);
       expect(await local.readExperienceLevel(), isNull);

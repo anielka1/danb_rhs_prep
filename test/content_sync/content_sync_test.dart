@@ -425,7 +425,7 @@ void main() {
     expect((await afterRestart.loadContentPackage(examId)).contentVersion,
         'fixture-1');
     expect(await snapshot(), before);
-    expect(appDb.schemaVersion, 5);
+    expect(appDb.schemaVersion, 6);
     expect(await local.readOnboardingComplete(), isTrue);
   });
 

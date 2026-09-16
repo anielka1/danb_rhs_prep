@@ -23,10 +23,10 @@ void main() {
       expect(await db.select(db.userProfiles).get(), isEmpty);
     });
 
-    test('schema version is 5 (persistent answer order)', () async {
+    test('schema version is 6 (durable free practice trial)', () async {
       final AppDatabase db = AppDatabase.forTesting(NativeDatabase.memory());
       addTearDown(db.close);
-      expect(db.schemaVersion, 5);
+      expect(db.schemaVersion, 6);
     });
   });
 
@@ -284,7 +284,7 @@ void main() {
       addTearDown(db.close);
 
       await expectLater(
-        () => db.migration.onUpgrade(db.createMigrator(), 5, 6),
+        () => db.migration.onUpgrade(db.createMigrator(), 6, 7),
         throwsStateError,
       );
     });
