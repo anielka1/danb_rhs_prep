@@ -127,6 +127,30 @@ void main() {
     expect(find.textContaining('Progress unavailable'), findsNothing);
   });
 
+  testWidgets('selected topic includes all questions beyond twenty',
+      (tester) async {
+    final package = fixture(count: 500);
+    final topic = package.exam.domains.first.topics.first;
+    final expected = package.approvedQuestions
+        .where((q) => q.topicId == topic.id)
+        .map((q) => q.id)
+        .toSet();
+    expect(expected.length, greaterThan(20));
+    await tester.pumpWidget(MaterialApp(
+        theme: AppTheme.lightTheme,
+        home: ExamOverviewScreen(
+            contentPackage: package,
+            progressRepository: InMemoryProgressRepository(),
+            launch: PracticeLaunch.topic)));
+    await tester.pumpAndSettle();
+    await tap(tester, topic.name);
+    await tap(tester, 'Start Practice by topic');
+    final controller = PracticeSessionScope.of(
+        tester.element(find.byType(PracticeQuestionScreen)));
+    expect(controller.questions.map((q) => q.id).toSet(), expected);
+    expect(controller.totalQuestions, expected.length);
+  });
+
   testWidgets('returning from session reloads topic states', (tester) async {
     final package = fixture(count: 4);
     final repo = InMemoryProgressRepository();

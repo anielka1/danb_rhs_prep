@@ -344,7 +344,12 @@ class _ExamOverviewScreenState extends State<ExamOverviewScreen> {
           questionStates: _focus == PracticeFocus.any || repository == null
               ? const []
               : await repository.questionStatesForExam(examId),
-          requestedCount: _requestedCount,
+          requestedCount: widget.launch == PracticeLaunch.topic &&
+                  _topicId != null &&
+                  !_unfinishedTopics
+              ? max(1,
+                  package.questions.where((q) => q.topicId == _topicId).length)
+              : _requestedCount,
           focus: _focus,
           currentIncorrectIds: _focus == PracticeFocus.incorrectQuestions &&
                   repository != null
@@ -552,7 +557,7 @@ class _ExamOverviewScreenState extends State<ExamOverviewScreen> {
             widget.launch == PracticeLaunch.timed
                 ? 'Up to 10 questions with an answering stopwatch. It pauses in the background and while you read explanations, and stops counting after two minutes without interaction. No automatic submission. Saved answer times return when you resume; time on an unfinished answer resets.'
                 : widget.launch == PracticeLaunch.topic
-                    ? 'Choose one topic for this session. Each session contains up to 20 questions, and completed topics stay marked when you return.'
+                    ? 'Choose one topic to practise all its available approved questions, subject to your access limits. Completed topics stay marked when you return. Practice unfinished topics mixes up to 20 questions.'
                     : widget.launch == PracticeLaunch.mistakes
                         ? 'Practise questions you have previously answered incorrectly. Your earlier results stay unchanged.'
                         : 'Your session uses available questions and your current practice allowance.',
