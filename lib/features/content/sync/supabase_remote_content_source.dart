@@ -33,38 +33,58 @@ class SupabaseRemoteContentSource implements RemoteContentSource {
   }
 
   @override
-  Future<Map<String, Object?>?> latestRelease(
+  Future<int?> latestVersion(String examId, DateTime now) async {
+    final row = await _query(examId, now, metadata: true);
+    final version = row?['release_version'];
+    if (version == null) return null;
+    if (version is! int || version <= 0) {
+      throw const FormatException('Invalid catalog revision');
+    }
+    return version;
+  }
+
+  @override
+  Future<Map<String, Object?>?> release(
     String examId,
+    int version,
     DateTime now,
-  ) async {
+  ) =>
+      _query(examId, now, version: version);
+
+  Future<Map<String, Object?>?> _query(
+    String examId,
+    DateTime now, {
+    bool metadata = false,
+    int? version,
+  }) async {
+    final timeout = Duration(seconds: metadata ? 2 : 8);
     final client = SupabaseClient(
       _url,
       _key,
       authOptions: const AuthClientOptions(autoRefreshToken: false),
-      postgrestOptions: const PostgrestClientOptions(
+      postgrestOptions: PostgrestClientOptions(
         schema: 'public',
         retryEnabled: false,
-        requestTimeout: Duration(seconds: 12),
+        requestTimeout: timeout,
       ),
     );
     try {
-      final rows = await client
+      var query = client
           .from('question_bank_releases')
           .select(
-            'exam_id,schema_version,release_version,content_version,'
-            'question_count,payload,content_sha256,published_at,retired_at',
+            metadata
+                ? 'release_version'
+                : 'exam_id,schema_version,release_version,content_version,'
+                    'question_count,payload,content_sha256,published_at,retired_at',
           )
           .eq('exam_id', examId)
           .lte('published_at', now.toUtc().toIso8601String())
-          .isFilter('retired_at', null)
+          .isFilter('retired_at', null);
+      if (version != null) query = query.eq('release_version', version);
+      final rows = await query
           .order('release_version', ascending: false)
           .limit(1)
-          // Set this on the final builder as well: the pinned SDK's query
-          // chain does not retain all client-level retry/timeout options.
-          .retry(
-              enabled: false,
-              count: 0,
-              requestTimeout: const Duration(seconds: 12));
+          .retry(enabled: false, count: 0, requestTimeout: timeout);
       return rows.isEmpty ? null : Map<String, Object?>.from(rows.single);
     } finally {
       await client.dispose();
