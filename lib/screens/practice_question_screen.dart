@@ -34,6 +34,7 @@ class _PracticeQuestionScreenState extends State<PracticeQuestionScreen>
   /// survives navigating away and back via Previous/Next.
   String? _pendingSelection;
   bool _submitting = false;
+  bool _closing = false;
   bool _guessed = false;
   bool _confident = false;
   bool _answerVisible = true;
@@ -117,6 +118,35 @@ class _PracticeQuestionScreenState extends State<PracticeQuestionScreen>
     setState(() {});
     await controller.persistBookmark(questionId, newValue);
     if (mounted) setState(() {});
+  }
+
+  Future<void> _close(PracticeSessionController controller) async {
+    if (_closing || _submitting) return;
+    _closing = true;
+    final returnToTopics = context
+        .dependOnInheritedWidgetOfExactType<PracticeSessionScope>()
+        ?.returnToTopics;
+    try {
+      if (returnToTopics != null) {
+        // End this run, not the unanswered questions or the whole topic.
+        await controller.complete();
+      }
+      if (!mounted) return;
+      final leave = await confirmLeavingUnsavedPractice(context, controller);
+      if (!mounted) return;
+      if (!leave) {
+        setState(() {});
+        return;
+      }
+      _activeTime.stop();
+      if (returnToTopics != null) {
+        returnToTopics();
+      } else {
+        Navigator.of(context).maybePop();
+      }
+    } finally {
+      _closing = false;
+    }
   }
 
   Future<void> _submit(PracticeSessionController controller) async {
@@ -257,13 +287,7 @@ class _PracticeQuestionScreenState extends State<PracticeQuestionScreen>
                   children: [
                     CircleIconButton(
                       icon: Icons.close_rounded,
-                      onPressed: () async {
-                        if (await confirmLeavingUnsavedPractice(
-                                context, controller) &&
-                            context.mounted) {
-                          Navigator.of(context).maybePop();
-                        }
-                      },
+                      onPressed: () => _close(controller),
                       semanticLabel: 'Close',
                     ),
                     const SizedBox(width: 14),
