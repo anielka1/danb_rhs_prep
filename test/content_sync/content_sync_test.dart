@@ -1,3 +1,4 @@
+import 'package:danb_rhs_prep/features/content/sync/content_update_controller.dart';
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
@@ -137,6 +138,69 @@ void main() {
     expect((await next.loadContentPackage(examId)).contentVersion, 'fixture-1');
     expect(remote.calls, 2);
     expect(remote.downloads, 1);
+  });
+
+  test(
+      'background retry recovers without restarting; duplicate taps share download',
+      () async {
+    final remote = FakeRemote(null)..error = const SocketException('offline');
+    final repository = repo(remote);
+    await repository.loadLocalContentPackage(examId);
+    final updates = ContentUpdateController(repository);
+    addTearDown(updates.dispose);
+    await updates.start(examId);
+    expect(updates.status, ContentUpdateStatus.failed);
+    remote.error = null;
+    remote.pending = Completer();
+    final first = updates.retry();
+    final second = updates.retry();
+    expect(identical(first, second), true);
+    remote.pending!.complete(record(1));
+    await first;
+    expect(updates.status, ContentUpdateStatus.pending);
+    expect(remote.downloads, 1);
+    expect((await updates.activate())!.contentVersion, 'fixture-1');
+    updates.applied();
+    expect(updates.status, ContentUpdateStatus.ready);
+    // Next process is offline and still opens the downloaded bank.
+    expect((await repo().loadLocalContentPackage(examId)).contentVersion,
+        'fixture-1');
+  });
+
+  test('background activation preserves an in-progress session bank', () async {
+    await repo(FakeRemote(record(1))).sync(examId);
+    final repository = repo(FakeRemote(record(2)));
+    await repository.loadLocalContentPackage(examId);
+    await progress.savePracticeSession(PracticeSession(
+      id: 'busy-background',
+      examId: examId,
+      questionIds: ['retained'],
+      startedAt: now,
+      mode: PracticeMode.quickPractice,
+      status: SessionStatus.inProgress,
+    ));
+    final updates = ContentUpdateController(repository);
+    addTearDown(updates.dispose);
+    await updates.start(examId);
+    expect((await updates.activate())!.contentVersion, 'fixture-1');
+    expect((await progress.inProgressPracticeSession(examId))!.questionIds,
+        ['retained']);
+    expect((await db.releases(examId)).first.active, false);
+  });
+
+  test('local startup does not wait for a pending remote request', () async {
+    final remote = SlowMetadata();
+    final repository = repo(remote);
+    final sync = repository.sync(examId);
+    final local = await repository
+        .loadLocalContentPackage(examId)
+        .timeout(const Duration(milliseconds: 500));
+    expect(local.contentVersion, '2026.1-dev');
+    expect(remote.downloads, 0);
+    remote.metadata.complete(2);
+    expect(await sync, ContentSyncResult.installed);
+    expect((await repository.activateDownloadedContent(examId)).contentVersion,
+        'fixture-2');
   });
 
   test('first bank survives metadata slower than one second', () async {
@@ -321,6 +385,29 @@ void main() {
     expect((await db.releases(examId)).single.releaseVersion, 1);
     expect(
         (await repo().loadContentPackage(examId)).contentVersion, 'fixture-1');
+  });
+
+  test('background activation failure is retryable and retains active bank',
+      () async {
+    await repo(FakeRemote(record(1))).sync(examId);
+    final repository = repo(FakeRemote(record(2)));
+    await repository.loadLocalContentPackage(examId);
+    final updates = ContentUpdateController(repository);
+    addTearDown(updates.dispose);
+    await updates.start(examId);
+    await db.customStatement(
+        "CREATE TRIGGER fail_background BEFORE UPDATE ON cached_releases "
+        "WHEN NEW.active = 1 AND NEW.release_version = 2 "
+        "BEGIN SELECT RAISE(ABORT, 'fixture activation failure'); END");
+    expect(await updates.activate(), isNull);
+    expect(updates.status, ContentUpdateStatus.failed);
+    expect(updates.activating, false);
+    expect(
+        (await db.releases(examId)).singleWhere((r) => r.active).releaseVersion,
+        1);
+    await db.customStatement('DROP TRIGGER fail_background');
+    await updates.retry();
+    expect((await updates.activate())!.contentVersion, 'fixture-2');
   });
 
   test('activation failure after clearing flag rolls back', () async {

@@ -1,3 +1,4 @@
+import '../features/content/sync/content_update_scope.dart';
 import 'package:flutter/material.dart';
 
 import '../bootstrap/app_bootstrap_service.dart';
@@ -82,6 +83,8 @@ class _SplashScreenState extends State<SplashScreen> {
 
   void _navigateAfterReady(BootstrapReady ready) {
     widget.onReady?.call(ready);
+    // Local bootstrap is finished; network work cannot hold the splash open.
+    ContentUpdateScope.maybeOf(context)?.start(ready.selectedExamId);
 
     // Created exactly once per app session, here — the only place a
     // BootstrapReady is first produced. Every route from here on

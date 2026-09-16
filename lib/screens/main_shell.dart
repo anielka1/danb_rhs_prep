@@ -1,3 +1,5 @@
+import '../features/content/sync/content_update_scope.dart';
+import '../features/content/sync/content_update_controller.dart';
 import 'package:flutter/material.dart';
 import '../bootstrap/bootstrap_session_scope.dart';
 import '../domain/repositories/progress_repository.dart';
@@ -123,8 +125,64 @@ class _MainShellState extends State<MainShell>
   /// One key per tab, in [AppTab] enum order — never recreated, so each
   /// `Navigator`'s identity (and therefore its whole route stack) survives
   /// every rebuild of this widget.
-  final List<GlobalKey<NavigatorState>> _tabNavigatorKeys =
+  List<GlobalKey<NavigatorState>> _tabNavigatorKeys =
       List.generate(AppTab.values.length, (_) => GlobalKey<NavigatorState>());
+
+  bool _applyingContent = false;
+  bool _applyScheduled = false;
+  late List<NavigatorObserver> _contentObservers = List.generate(
+      AppTab.values.length,
+      (_) => ContentNavigationObserver(_scheduleContentUpdate));
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (ContentUpdateScope.maybeOf(context)?.status ==
+        ContentUpdateStatus.pending) {
+      _scheduleContentUpdate();
+    }
+  }
+
+  void _scheduleContentUpdate() {
+    if (_applyScheduled || !mounted) return;
+    _applyScheduled = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _applyScheduled = false;
+      if (mounted) _applyContent();
+    });
+  }
+
+  Future<void> _applyContent() async {
+    final updates = ContentUpdateScope.maybeOf(context);
+    final session = BootstrapSessionScope.maybeControllerOf(context);
+    if (_applyingContent ||
+        updates == null ||
+        session == null ||
+        updates.status != ContentUpdateStatus.pending ||
+        ModalRoute.of(context)?.isCurrent != true ||
+        _tabNavigatorKeys.any((key) => key.currentState?.canPop() ?? false)) {
+      return;
+    }
+    // Set synchronously before any repository awaits. The global input guard
+    // prevents launching a session between the persisted check and activation.
+    _applyingContent = true;
+    final package = await updates.activate();
+    if (!mounted) return;
+    if (package != null &&
+        package.contentVersion !=
+            session.snapshot.contentPackage.contentVersion) {
+      session.update(session.snapshot.copyWith(contentPackage: package));
+      setState(() {
+        // Only root screens exist here; refresh their captured package together.
+        _contentObservers = List.generate(AppTab.values.length,
+            (_) => ContentNavigationObserver(_scheduleContentUpdate));
+        _tabNavigatorKeys = List.generate(
+            AppTab.values.length, (_) => GlobalKey<NavigatorState>());
+      });
+    }
+    if (package != null) updates.applied();
+    _applyingContent = false;
+  }
 
   bool _initialViewReported = false;
   AppTab get _currentTab => tabForIndex(_tabIndex.value);
@@ -193,6 +251,7 @@ class _MainShellState extends State<MainShell>
   Widget _tabNavigator(AppTab tab, Widget root) {
     return Navigator(
       key: _tabNavigatorKeys[tab.index],
+      observers: [_contentObservers[tab.index]],
       onGenerateRoute: (settings) => MaterialPageRoute(
         settings: settings,
         builder: (_) => root,
@@ -221,32 +280,35 @@ class _MainShellState extends State<MainShell>
     final progressRepository =
         widget.progressRepository ?? session?.progressRepository;
 
-    return MainShellScope(
-      controller: this,
-      activeTab: _currentTab,
-      child: NavigatorPopHandler(
-        onPopWithResult: (Object? result) {
-          _tabNavigatorKeys[_currentTab.index].currentState?.pop(result);
-        },
-        child: Scaffold(
-          body: IndexedStack(
-            index: _currentTab.index,
-            children: [
-              _tabNavigator(
-                AppTab.home,
-                HomeScreen(progressRepository: progressRepository),
-              ),
-              _tabNavigator(
-                AppTab.progress,
-                ProgressScreen(
-                  contentPackage: contentPackage,
-                  progressRepository: progressRepository,
+    return PopScope(
+      canPop: !(ContentUpdateScope.maybeOf(context)?.activating ?? false),
+      child: MainShellScope(
+        controller: this,
+        activeTab: _currentTab,
+        child: NavigatorPopHandler(
+          onPopWithResult: (Object? result) {
+            _tabNavigatorKeys[_currentTab.index].currentState?.pop(result);
+          },
+          child: Scaffold(
+            body: IndexedStack(
+              index: _currentTab.index,
+              children: [
+                _tabNavigator(
+                  AppTab.home,
+                  HomeScreen(progressRepository: progressRepository),
                 ),
-              ),
-            ],
+                _tabNavigator(
+                  AppTab.progress,
+                  ProgressScreen(
+                    contentPackage: contentPackage,
+                    progressRepository: progressRepository,
+                  ),
+                ),
+              ],
+            ),
+            bottomNavigationBar: AppBottomNavigation(
+                current: _currentTab, onTap: _onTabSelected),
           ),
-          bottomNavigationBar:
-              AppBottomNavigation(current: _currentTab, onTap: _onTabSelected),
         ),
       ),
     );

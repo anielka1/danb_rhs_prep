@@ -2,7 +2,9 @@
 
 Production `main()` wires `SyncedContentRepository` around the existing
 `BundledContentRepository`. Screens and domain engines still receive the same
-`ContentPackage` through `AppBootstrapService`; none query Supabase or SQLite.
+`ContentPackage` through `AppBootstrapService`; none query Supabase or SQLite. Production bootstrap
+uses `SyncedContentRepository.localRepository` (disk/bundle only). After local
+bootstrap, `ContentUpdateController` downloads updates independently of navigation.
 The demo entrypoints and default unit/widget compositions have no remote source.
 No login, anonymous sign-in, Auth storage, realtime subscription or account is
 created. The requested `supabase_flutter` SDK is pinned to 2.17.2; `crypto` 3.0.7
@@ -122,23 +124,28 @@ mechanism for banks already downloaded.
 
 ## Local storage, activation and failure handling
 
-1. Bootstrap reads bundled content, checks remote revision with a 10-second bound,
-   and compares it to the Drift cache. An equal/older revision skips payload download.
-   A newer revision downloads a compact snapshot (30-second bound); the splash shows
-   “Updating questions…”. Timeout/error falls back to validated local content or bundle.
-2. Previously downloaded records are revalidated. The newest valid one becomes
-   active only if no practice or mock session is in progress. If session state
-   cannot be read, keep the already activated bank and defer activation.
-3. The process retains one immutable content snapshot. One shared sync future per
-   exam/process fetches and validates a candidate during startup. Network/validation/write
-   failures leave the existing snapshot untouched and show no technical error.
-4. An SQLite transaction appends a newer validated release **without deleting
-   or deactivating the old bank**. A separate transaction activates it during this same
-   bootstrap when no session is active. Both roll back fully on a write failure.
-5. Restart with an active session keeps the prior activated bank (or the bundle
-   for a legacy session that predates this cache), preserving its questions and
-   saved answer permutation. Finish/abandon the session normally, then restart
-   to activate a waiting update. No session is automatically completed.
+1. Bootstrap reads validated cached/bundled content without awaiting the network.
+   Home/onboarding can open while the remote request is still pending.
+2. A background metadata check allows up to 10 seconds. Equal/older revisions
+   skip payload download; newer revisions download the snapshot (30-second bound).
+   These waits do not hold the splash open. Home shows “Downloading questions…”.
+3. Network/validation/write errors preserve the local bank. Home offers “Retry
+   download”; completed failed requests are cleared for a new attempt. Concurrent
+   retry taps share one request. No configuration/no published release gets an
+   explicit unavailable state. No automatic infinite retries are performed.
+4. A transaction installs a validated release, retaining all earlier versions.
+   The app applies it only at the main shell with both tab stacks at their roots
+   and no covering root route. Input/back navigation is briefly blocked during
+   local activation. Persisted practice/mock sessions are checked again; an
+   active session or failed session read keeps the previous bank. A bank deferred
+   by an active saved session becomes eligible on a later full startup after the
+   session is finished/abandoned normally. Nothing auto-completes a session.
+5. If safe, the shared bootstrap snapshot is updated and the two root tabs are
+   recreated together with the new package, preserving the selected tab and all
+   persisted history/settings. First downloads become usable without restart.
+   Routes capturing an older package are never replaced mid-flow.
+6. Offline starts use the already validated cache. Corrupt cached rows can fall
+   back to an older valid bank without deleting data.
 
 The separate `question_banks.sqlite` database has schema version 1. The existing
 progress database stays at schema **5**, the actual version on current main;
@@ -192,14 +199,18 @@ Documentation checked: Supabase Dart select documentation
 Recent breaking entries concern management logs, extensions, GraphQL and self-hosting;
 none changes this hosted REST column-select query. No package upgrade was necessary.
 
-## Slower connections (2026-09-16)
+## Background download and retry (2026-09-16)
 
-The metadata check now allows up to 10 seconds and the full bank download up to
-30 seconds, with shared bounds for the SDK and repository. Successful responses
-continue immediately; these are not fixed splash delays. A new installation may
-wait up to approximately 40 seconds for both network stages. Timeout still keeps
-validated cached content (or the empty bundled bank on a new installation).
-A full restart retries; this change does not add automatic retry or an in-app
-retry button. Offline first installs and server/configuration/validation errors
-can still have no available questions. No release, approval, history, active
-session or key is modified by this change.
+The SDK and repository share 10-second metadata / 30-second download bounds.
+These now run in the background: they are maximum network waits, not splash
+or Home delays. The app starts from local content, including an honest empty
+bank on a first install. Successful responses are applied at a safe main-shell
+root without requiring a restart. Offline first installs and invalid server or
+configuration data cannot provide questions; Retry is available without deleting
+data or reinstalling. No release, approval, history, key or schema is modified.
+
+Tests cover pending-network startup, retry deduplication/recovery, cache reuse
+on restart, retained active sessions, deferred activation under nested/root
+routes, and Home/Progress refresh in light/dark/large text. Widget renders are
+reviewed separately from a real TestFlight device test; a new uploaded build is
+still required to verify the user's device and connection.
