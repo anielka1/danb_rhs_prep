@@ -18,7 +18,7 @@ class SyncedContentRepository implements ContentRepository {
     required this.progress,
     this.remote,
     this.onUpdating,
-    this.versionTimeout = const Duration(seconds: 2),
+    this.versionTimeout = const Duration(seconds: 1),
     this.downloadTimeout = const Duration(seconds: 8),
     DateTime Function()? now,
   }) : _now = now ?? DateTime.now;
