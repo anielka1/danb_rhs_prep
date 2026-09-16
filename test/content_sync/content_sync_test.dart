@@ -139,6 +139,41 @@ void main() {
     expect(remote.downloads, 1);
   });
 
+  test('first bank survives metadata slower than one second', () async {
+    final remote = SlowMetadata();
+    final repository = SyncedContentRepository(
+      bundled: bundled,
+      database: db,
+      progress: progress,
+      remote: remote,
+      now: () => now,
+    );
+    final loading = repository.loadContentPackage(examId);
+    await Future<void>.delayed(const Duration(milliseconds: 1200));
+    remote.metadata.complete(2);
+    expect((await loading).contentVersion, 'fixture-2');
+    expect((await db.releases(examId)).single.active, true);
+  });
+
+  test('first bank download survives more than eight seconds', () async {
+    final remote = FakeRemote(null)..pending = Completer();
+    final repository = SyncedContentRepository(
+      bundled: bundled,
+      database: db,
+      progress: progress,
+      remote: remote,
+      now: () => now,
+    );
+    final loading = repository.loadContentPackage(examId);
+    while (remote.downloads == 0) {
+      await Future<void>.delayed(const Duration(milliseconds: 1));
+    }
+    await Future<void>.delayed(const Duration(milliseconds: 8200));
+    remote.pending!.complete(record(1));
+    expect((await loading).contentVersion, 'fixture-1');
+    expect((await db.releases(examId)).single.active, true);
+  });
+
   test('version timeout falls back, never downloads or installs late metadata',
       () async {
     await repo(FakeRemote(record(1))).sync(examId);

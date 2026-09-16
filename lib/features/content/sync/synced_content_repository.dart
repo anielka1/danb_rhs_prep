@@ -5,6 +5,7 @@ import '../../../domain/repositories/content_repository.dart';
 import '../../../domain/repositories/progress_repository.dart';
 import '../domain/content_package.dart';
 import 'content_release.dart';
+import 'content_sync_timeouts.dart';
 import 'content_release_database.dart';
 import 'remote_content_source.dart';
 
@@ -18,8 +19,8 @@ class SyncedContentRepository implements ContentRepository {
     required this.progress,
     this.remote,
     this.onUpdating,
-    this.versionTimeout = const Duration(seconds: 1),
-    this.downloadTimeout = const Duration(seconds: 8),
+    this.versionTimeout = ContentSyncTimeouts.metadata,
+    this.downloadTimeout = ContentSyncTimeouts.download,
     DateTime Function()? now,
   }) : _now = now ?? DateTime.now;
   final ContentRepository bundled;

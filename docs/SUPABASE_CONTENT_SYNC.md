@@ -58,8 +58,8 @@ reviewer decisions remain inaccessible to this client. The publisher must apply
 the existing qualified-human review process before creating any release.
 
 The SDK is instantiated only inside the data adapter, without Flutter's global
-`Supabase.initialize` / Auth session persistence. The metadata request selects only `release_version` and has a 1-second
-transport timeout; an exact-version snapshot request has an 8-second timeout and automatic retries disabled; the client is disposed after
+`Supabase.initialize` / Auth session persistence. The metadata request selects only `release_version` and has a 10-second
+transport timeout; an exact-version snapshot request has a 30-second timeout and automatic retries disabled; the client is disposed after
 the request. No progress, settings, answers, bookmarks or user identifiers are
 sent. Supabase necessarily receives normal request metadata such as IP address.
 
@@ -122,9 +122,9 @@ mechanism for banks already downloaded.
 
 ## Local storage, activation and failure handling
 
-1. Bootstrap reads bundled content, checks remote revision with a 1-second bound,
+1. Bootstrap reads bundled content, checks remote revision with a 10-second bound,
    and compares it to the Drift cache. An equal/older revision skips payload download.
-   A newer revision downloads a compact snapshot (8-second bound); the splash shows
+   A newer revision downloads a compact snapshot (30-second bound); the splash shows
    “Updating questions…”. Timeout/error falls back to validated local content or bundle.
 2. Previously downloaded records are revalidated. The newest valid one becomes
    active only if no practice or mock session is in progress. If session state
@@ -191,3 +191,15 @@ Documentation checked: Supabase Dart select documentation
 (https://supabase.com/changelog.md), and installed supabase_flutter 2.17.2 changelog.
 Recent breaking entries concern management logs, extensions, GraphQL and self-hosting;
 none changes this hosted REST column-select query. No package upgrade was necessary.
+
+## Slower connections (2026-09-16)
+
+The metadata check now allows up to 10 seconds and the full bank download up to
+30 seconds, with shared bounds for the SDK and repository. Successful responses
+continue immediately; these are not fixed splash delays. A new installation may
+wait up to approximately 40 seconds for both network stages. Timeout still keeps
+validated cached content (or the empty bundled bank on a new installation).
+A full restart retries; this change does not add automatic retry or an in-app
+retry button. Offline first installs and server/configuration/validation errors
+can still have no available questions. No release, approval, history, active
+session or key is modified by this change.
