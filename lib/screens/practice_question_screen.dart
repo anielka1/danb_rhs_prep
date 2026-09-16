@@ -109,7 +109,6 @@ class _PracticeQuestionScreenState extends State<PracticeQuestionScreen>
 
   Future<void> _toggleBookmark(
       PracticeSessionController controller, String questionId) async {
-    if (PremiumAccessScope.maybeOf(context)?.active == false) return;
     // Optimistic — see AnswerExplanationScreen's identical handler for
     // why this doesn't await persistence before updating the UI.
     final bool newValue = controller.toggleBookmarkLocally(questionId);

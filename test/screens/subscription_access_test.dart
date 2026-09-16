@@ -124,6 +124,13 @@ void main() {
       expect(savedDate, isNotNull);
       expect(find.text('Try 5 free questions'), findsOneWidget);
       await tap(tester, 'Practise questions');
+      final semantics = tester.ensureSemantics();
+      await tester.tap(find.bySemanticsLabel('Bookmark question'));
+      await tester.pumpAndSettle();
+      expect(find.bySemanticsLabel('Remove bookmark'), findsOneWidget);
+      expect(find.byType(SubscriptionScreen), findsNothing);
+      expect((await trial.read()).answeredCount, 0);
+      semantics.dispose();
       // Leaving an opened question without answering must preserve all slots.
       expect((await trial.read()).answeredCount, 0);
       await tester.pumpWidget(const SizedBox.shrink());
@@ -137,6 +144,15 @@ void main() {
         await tap(tester, 'Submit Answer');
         expect((await trial.read()).answeredCount, i + 1);
         expect(find.byType(AnswerExplanationScreen), findsOneWidget);
+        if (i == 0) {
+          final semantics = tester.ensureSemantics();
+          expect(find.bySemanticsLabel('Remove bookmark'), findsOneWidget);
+          await tester.tap(find.bySemanticsLabel('Remove bookmark'));
+          await tester.pumpAndSettle();
+          expect(find.bySemanticsLabel('Bookmark question'), findsOneWidget);
+          expect(find.byType(SubscriptionScreen), findsNothing);
+          semantics.dispose();
+        }
         await tap(tester, i == 4 ? 'Finish' : 'Next Question');
         if (i == 2) {
           await tester.pumpWidget(const SizedBox.shrink());

@@ -44,7 +44,6 @@ class _AnswerExplanationScreenState extends State<AnswerExplanationScreen> {
 
   Future<void> _toggleBookmark(
       PracticeSessionController controller, String questionId) async {
-    if (PremiumAccessScope.maybeOf(context)?.active == false) return;
     // Optimistic: the local cache (and this rebuild) update immediately,
     // before persistence — a failing/missing repository never undoes
     // the interactive toggle. See PracticeSessionController.persistBookmark's
