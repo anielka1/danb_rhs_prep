@@ -186,9 +186,9 @@ for safe configuration examples, the release checksum contract and offline check
 Run `./run_demo.command` (or double-click it on macOS) for the offline demo.
 In VS Code, choose **Full app demo (clickable practice)** and Run.
 The equivalent command is `flutter run -t lib/main_demo.dart`.
-Complete onboarding, then close the subscription preview with **X**. The demo
-starts Free: learning tiles open the preview, while Home, Settings and Progress
-remain available. This isolated demo has no RevenueCat connection; purchases are
+Complete onboarding to reach Home directly. The demo starts Free with five
+trial Practice Questions; other learning tiles open the subscription preview.
+Home, Settings and Progress remain available. See [free practice trial](docs/FREE_PRACTICE_TRIAL.md). This isolated demo has no RevenueCat connection; purchases are
 unavailable. Production RevenueCat setup and sandbox checks are documented in
 [RevenueCat integration](docs/REVENUECAT.md). Full learning integration
 tests inject an explicit Premium entitlement into the isolated demo; this is not

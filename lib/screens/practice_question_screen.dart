@@ -150,7 +150,7 @@ class _PracticeQuestionScreenState extends State<PracticeQuestionScreen>
   }
 
   Future<void> _submit(PracticeSessionController controller) async {
-    if (PremiumAccessScope.maybeOf(context)?.active == false) return;
+    if (!practiceAllowed(context)) return;
     final String? answerId = _pendingSelection;
     if (answerId == null || _submitting) return;
     setState(() => _submitting = true);
@@ -196,7 +196,7 @@ class _PracticeQuestionScreenState extends State<PracticeQuestionScreen>
   }
 
   Future<void> _viewExplanation(PracticeSessionController controller) async {
-    if (PremiumAccessScope.maybeOf(context)?.active == false) return;
+    if (!practiceAllowed(context, feedback: true)) return;
     _answerVisible = false;
     _activeTime.stop();
     final bootstrap = BootstrapSessionScope.maybeControllerOf(context);
@@ -242,7 +242,11 @@ class _PracticeQuestionScreenState extends State<PracticeQuestionScreen>
 
   @override
   Widget build(BuildContext context) {
-    final blocked = premiumBlock(context);
+    final blocked = premiumBlock(context,
+        trialSession: true,
+        trialFeedback: PracticeSessionScope.maybeOf(context)?.feedbackFor(
+                PracticeSessionScope.maybeOf(context)!.currentQuestion.id) !=
+            null);
     if (blocked != null) {
       _activeTime.stop();
       _accessPaused = true;

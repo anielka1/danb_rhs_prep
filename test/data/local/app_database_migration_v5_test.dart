@@ -79,7 +79,7 @@ void main() {
             .data
             .values
             .single,
-        5);
+        6);
     final repo = DriftProgressRepository(db);
     final session = (await repo.inProgressPracticeSession('demo_exam'))!;
     expect(session.answerOrder, isNull);

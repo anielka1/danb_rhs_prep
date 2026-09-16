@@ -1,3 +1,4 @@
+import 'domain/repositories/fakes/in_memory_free_practice_store.dart';
 import 'domain/models/entitlement.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -44,6 +45,7 @@ DanbRhsPrepApp createDebugDemoApp({Entitlement? entitlement}) {
   );
 
   return DanbRhsPrepApp(
+    freePracticeStore: InMemoryFreePracticeStore(),
     bootstrapService: bootstrapService,
     localStore: localStore,
     userSettingsRepository: userSettingsRepository,

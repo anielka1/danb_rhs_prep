@@ -144,7 +144,13 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         progressRepository: widget.progressRepository,
         entitlement: session?.snapshot.entitlement,
         now: widget.now,
-        autoStart: start));
+        autoStart: start,
+        launch: _active != null &&
+                PremiumAccessScope.maybeOf(context)
+                        ?.allowsTrialSession(_active!.id) ==
+                    true
+            ? PracticeLaunch.random
+            : null));
   }
 
   Future<void> _launch(PracticeLaunch mode) async {
@@ -302,7 +308,11 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             Padding(
                 padding: const EdgeInsets.only(top: 16),
                 child: SecondaryButton(
-                    label: locked
+                    label: locked &&
+                            !(_active != null &&
+                                PremiumAccessScope.maybeOf(context)
+                                        ?.allowsTrialSession(_active!.id) ==
+                                    true)
                         ? 'Continue session · Premium'
                         : 'Continue session',
                     onPressed: _opening ? null : () => _practice(start: true))),
@@ -312,8 +322,14 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           _ActivityTile(
               icon: Icons.shuffle_rounded,
               title: 'Practise questions',
-              detail: 'Up to 20 mixed questions. No timer.',
-              locked: locked,
+              detail: PremiumAccessScope.maybeOf(context)
+                          ?.canStartFreePractice ==
+                      true
+                  ? 'Try ${PremiumAccessScope.maybeOf(context)!.freeQuestionsRemaining} free questions'
+                  : 'Up to 20 mixed questions. No timer.',
+              locked: locked &&
+                  PremiumAccessScope.maybeOf(context)?.canStartFreePractice !=
+                      true,
               onTap: locked || available
                   ? () => _launch(PracticeLaunch.random)
                   : null),
