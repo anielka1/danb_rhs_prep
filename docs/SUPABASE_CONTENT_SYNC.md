@@ -58,7 +58,7 @@ reviewer decisions remain inaccessible to this client. The publisher must apply
 the existing qualified-human review process before creating any release.
 
 The SDK is instantiated only inside the data adapter, without Flutter's global
-`Supabase.initialize` / Auth session persistence. The metadata request selects only `release_version` and has a 2-second
+`Supabase.initialize` / Auth session persistence. The metadata request selects only `release_version` and has a 1-second
 transport timeout; an exact-version snapshot request has an 8-second timeout and automatic retries disabled; the client is disposed after
 the request. No progress, settings, answers, bookmarks or user identifiers are
 sent. Supabase necessarily receives normal request metadata such as IP address.
@@ -122,7 +122,7 @@ mechanism for banks already downloaded.
 
 ## Local storage, activation and failure handling
 
-1. Bootstrap reads bundled content, checks remote revision with a 2-second bound,
+1. Bootstrap reads bundled content, checks remote revision with a 1-second bound,
    and compares it to the Drift cache. An equal/older revision skips payload download.
    A newer revision downloads a compact snapshot (8-second bound); the splash shows
    “Updating questions…”. Timeout/error falls back to validated local content or bundle.

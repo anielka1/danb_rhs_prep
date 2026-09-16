@@ -57,7 +57,7 @@ class SupabaseRemoteContentSource implements RemoteContentSource {
     bool metadata = false,
     int? version,
   }) async {
-    final timeout = Duration(seconds: metadata ? 2 : 8);
+    final timeout = Duration(seconds: metadata ? 1 : 8);
     final client = SupabaseClient(
       _url,
       _key,
