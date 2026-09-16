@@ -10,20 +10,25 @@ import 'remote_content_source.dart';
 
 enum ContentSyncResult { disabled, noRelease, unchanged, installed, rejected }
 
-/// Local reads never await a network request. A process uses one immutable
-/// package; downloaded versions become eligible at the next bootstrap only.
+/// Bounded cold-start refresh, followed by one immutable package per process.
 class SyncedContentRepository implements ContentRepository {
   SyncedContentRepository({
     required this.bundled,
     required this.database,
     required this.progress,
     this.remote,
+    this.onUpdating,
+    this.versionTimeout = const Duration(seconds: 2),
+    this.downloadTimeout = const Duration(seconds: 8),
     DateTime Function()? now,
   }) : _now = now ?? DateTime.now;
   final ContentRepository bundled;
   final ContentReleaseDatabase database;
   final ProgressRepository progress;
   final RemoteContentSource? remote;
+  final void Function(bool)? onUpdating;
+  final Duration versionTimeout;
+  final Duration downloadTimeout;
   final DateTime Function() _now;
   final Map<String, Future<ContentPackage>> _loads = {};
   final Map<String, Future<ContentSyncResult>> _syncs = {};
@@ -34,6 +39,7 @@ class SyncedContentRepository implements ContentRepository {
 
   Future<ContentPackage> _load(String examId) async {
     final fallback = await bundled.loadContentPackage(examId);
+    await sync(examId, bundledContentVersion: fallback.contentVersion);
     ContentPackage selected = fallback;
     try {
       final rows = await database.releases(examId);
@@ -68,7 +74,6 @@ class SyncedContentRepository implements ContentRepository {
     } on Object {
       // Cache unavailable: bundled content still starts offline.
     }
-    unawaited(sync(examId, bundledContentVersion: fallback.contentVersion));
     return selected;
   }
 
@@ -79,7 +84,22 @@ class SyncedContentRepository implements ContentRepository {
       _syncs.putIfAbsent(examId, () async {
         if (remote == null) return ContentSyncResult.disabled;
         try {
-          final record = await remote!.latestRelease(examId, _now().toUtc());
+          final cached = await database.releases(examId);
+          final version = await remote!
+              .latestVersion(examId, _now().toUtc())
+              .timeout(versionTimeout);
+          if (version == null) return ContentSyncResult.noRelease;
+          if (version <= 0) return ContentSyncResult.rejected;
+          if (cached.any((row) => row.releaseVersion >= version)) {
+            return ContentSyncResult.unchanged;
+          }
+          onUpdating?.call(true);
+          final record = await remote!
+              .release(examId, version, _now().toUtc())
+              .timeout(downloadTimeout);
+          if (record != null && record['release_version'] != version) {
+            return ContentSyncResult.rejected;
+          }
           if (record == null) return ContentSyncResult.noRelease;
           final release = ContentRelease.validate(
             record,
@@ -95,6 +115,8 @@ class SyncedContentRepository implements ContentRepository {
         } on Object {
           // No credentials, payloads, user data or raw SDK errors in logs/UI.
           return ContentSyncResult.rejected;
+        } finally {
+          onUpdating?.call(false);
         }
       });
 }

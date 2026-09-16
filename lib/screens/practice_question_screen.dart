@@ -35,8 +35,6 @@ class _PracticeQuestionScreenState extends State<PracticeQuestionScreen>
   String? _pendingSelection;
   bool _submitting = false;
   bool _closing = false;
-  bool _guessed = false;
-  bool _confident = false;
   bool _answerVisible = true;
   bool _accessPaused = false;
   String? _timedQuestionId;
@@ -111,7 +109,6 @@ class _PracticeQuestionScreenState extends State<PracticeQuestionScreen>
 
   Future<void> _toggleBookmark(
       PracticeSessionController controller, String questionId) async {
-    if (PremiumAccessScope.maybeOf(context)?.active == false) return;
     // Optimistic — see AnswerExplanationScreen's identical handler for
     // why this doesn't await persistence before updating the UI.
     final bool newValue = controller.toggleBookmarkLocally(questionId);
@@ -150,15 +147,14 @@ class _PracticeQuestionScreenState extends State<PracticeQuestionScreen>
   }
 
   Future<void> _submit(PracticeSessionController controller) async {
-    if (PremiumAccessScope.maybeOf(context)?.active == false) return;
+    if (!practiceAllowed(context)) return;
     final String? answerId = _pendingSelection;
     if (answerId == null || _submitting) return;
     setState(() => _submitting = true);
     _answerVisible = false;
     _activeTime.stop();
     await controller.submitAnswer(answerId,
-        confident: _guessed ? false : (_confident ? true : null),
-        activeDurationSeconds: _activeTime.elapsed.inSeconds);
+        confident: null, activeDurationSeconds: _activeTime.elapsed.inSeconds);
     if (!mounted) return;
     setState(() {
       _submitting = false;
@@ -190,13 +186,11 @@ class _PracticeQuestionScreenState extends State<PracticeQuestionScreen>
     _answerVisible = true;
     _activeTime.reset();
     _activeTime.start();
-    _guessed = false;
-    _confident = false;
     setState(() {});
   }
 
   Future<void> _viewExplanation(PracticeSessionController controller) async {
-    if (PremiumAccessScope.maybeOf(context)?.active == false) return;
+    if (!practiceAllowed(context, feedback: true)) return;
     _answerVisible = false;
     _activeTime.stop();
     final bootstrap = BootstrapSessionScope.maybeControllerOf(context);
@@ -242,7 +236,11 @@ class _PracticeQuestionScreenState extends State<PracticeQuestionScreen>
 
   @override
   Widget build(BuildContext context) {
-    final blocked = premiumBlock(context);
+    final blocked = premiumBlock(context,
+        trialSession: true,
+        trialFeedback: PracticeSessionScope.maybeOf(context)?.feedbackFor(
+                PracticeSessionScope.maybeOf(context)!.currentQuestion.id) !=
+            null);
     if (blocked != null) {
       _activeTime.stop();
       _accessPaused = true;
@@ -258,8 +256,6 @@ class _PracticeQuestionScreenState extends State<PracticeQuestionScreen>
     if (_timedQuestionId != controller.currentQuestion.id) {
       _timedQuestionId = controller.currentQuestion.id;
       _activeTime.reset();
-      _guessed = false;
-      _confident = false;
     }
 
     final colors = context.colors;
@@ -375,28 +371,6 @@ class _PracticeQuestionScreenState extends State<PracticeQuestionScreen>
                       ),
                   ],
                 ),
-                if (!alreadyAnswered)
-                  CheckboxListTile(
-                      contentPadding: EdgeInsets.zero,
-                      title: const Text('I knew this answer'),
-                      value: _confident,
-                      onChanged: _submitting
-                          ? null
-                          : (v) => setState(() {
-                                _confident = v ?? false;
-                                if (_confident) _guessed = false;
-                              })),
-                if (!alreadyAnswered)
-                  CheckboxListTile(
-                      contentPadding: EdgeInsets.zero,
-                      title: const Text("I guessed"),
-                      value: _guessed,
-                      onChanged: _submitting
-                          ? null
-                          : (v) => setState(() {
-                                _guessed = v ?? false;
-                                if (_guessed) _confident = false;
-                              })),
                 PrimaryButton(
                   label: alreadyAnswered ? 'View Explanation' : 'Submit Answer',
                   isLoading: _submitting,

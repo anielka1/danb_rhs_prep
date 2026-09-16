@@ -44,7 +44,6 @@ class _AnswerExplanationScreenState extends State<AnswerExplanationScreen> {
 
   Future<void> _toggleBookmark(
       PracticeSessionController controller, String questionId) async {
-    if (PremiumAccessScope.maybeOf(context)?.active == false) return;
     // Optimistic: the local cache (and this rebuild) update immediately,
     // before persistence — a failing/missing repository never undoes
     // the interactive toggle. See PracticeSessionController.persistBookmark's
@@ -57,7 +56,12 @@ class _AnswerExplanationScreenState extends State<AnswerExplanationScreen> {
 
   Future<void> _next(
       BuildContext context, PracticeSessionController controller) async {
-    if (PremiumAccessScope.maybeOf(context)?.active == false) return;
+    if (!practiceAllowed(context, feedback: true)) return;
+    final access = PremiumAccessScope.maybeOf(context);
+    if (access != null && await access.completeTrial(context, controller)) {
+      return;
+    }
+    if (!context.mounted) return;
     if (controller.isLastQuestion) {
       await controller.complete();
       if (!context.mounted) return;
@@ -98,7 +102,7 @@ class _AnswerExplanationScreenState extends State<AnswerExplanationScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final blocked = premiumBlock(context);
+    final blocked = premiumBlock(context, trialFeedback: true);
     if (blocked != null) return blocked;
     final PracticeSessionController? controller =
         PracticeSessionScope.maybeOf(context);

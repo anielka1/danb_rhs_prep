@@ -1,3 +1,4 @@
+import 'package:danb_rhs_prep/domain/repositories/fakes/in_memory_free_practice_store.dart';
 import 'package:danb_rhs_prep/theme/app_theme.dart';
 import 'dart:async';
 import 'package:flutter/material.dart';
@@ -20,9 +21,9 @@ import 'package:danb_rhs_prep/screens/mock_exam_screen.dart';
 import 'package:danb_rhs_prep/screens/mock_exam_results_screen.dart';
 import 'package:danb_rhs_prep/screens/saved_questions_screen.dart';
 import 'package:danb_rhs_prep/subscription/premium_access.dart';
+import '../study_plan/fixtures.dart';
 import 'package:danb_rhs_prep/widgets/subscription_product_card.dart';
 import 'package:danb_rhs_prep/widgets/primary_button.dart';
-import '../study_plan/fixtures.dart';
 
 Future<void> tap(WidgetTester tester, String label) async {
   final f = find.text(label);
@@ -52,6 +53,38 @@ Entitlement premium({DateTime? expires}) => Entitlement(
     expiresAt: expires);
 
 void main() {
+  testWidgets('empty approved bank does not consume the free trial',
+      (tester) async {
+    final package = fixture(count: 0);
+    final store = InMemoryBootstrapLocalStore();
+    final settings = InMemoryUserSettingsRepository();
+    final trial = InMemoryFreePracticeStore();
+    await tester.pumpWidget(DanbRhsPrepApp(
+      localStore: store,
+      freePracticeStore: trial,
+      progressRepository: InMemoryProgressRepository(),
+      userSettingsRepository: settings,
+      bootstrapService: AppBootstrapService(
+        localStore: store,
+        userSettingsRepository: settings,
+        contentRepository:
+            InMemoryContentRepository({package.exam.id: package}),
+        defaultExamId: package.exam.id,
+      ),
+    ));
+    await tester.pumpAndSettle();
+    await tap(tester, 'Start Preparing');
+    await tap(tester, "I haven't scheduled it yet");
+    await tap(tester, 'Continue');
+    await tap(tester, 'Practise questions');
+    expect(
+        find.text('No approved questions are available yet.'), findsOneWidget);
+    expect((await trial.read()).remaining, 5);
+    expect((await trial.read()).sessionIds, isEmpty);
+    expect(find.byType(SubscriptionScreen), findsNothing);
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
+
   for (final scheduled in [false, true]) {
     testWidgets(
         'first run date=$scheduled unconfigured offer, restart and every locked tile',
@@ -59,11 +92,13 @@ void main() {
       final package = fixture(count: 80);
       final store = InMemoryBootstrapLocalStore();
       final history = InMemoryProgressRepository();
+      final trial = InMemoryFreePracticeStore();
       final original = answer(package.questions.first, DateTime.utc(2026));
       await history.recordAnswerAttempt(original);
       final settings = InMemoryUserSettingsRepository();
       Widget app() => DanbRhsPrepApp(
           localStore: store,
+          freePracticeStore: trial,
           progressRepository: history,
           userSettingsRepository: settings,
           bootstrapService: AppBootstrapService(
@@ -83,13 +118,57 @@ void main() {
         await tap(tester, "I haven't scheduled it yet");
       }
       await tap(tester, 'Continue');
-      expect(find.byType(SubscriptionScreen), findsOneWidget);
-      expect(find.byType(SubscriptionProductCard), findsNothing);
-      expect(find.text('Subscriptions are not configured for this build.'),
-          findsOneWidget);
+      expect(find.byType(SubscriptionScreen), findsNothing);
       expect(await store.readOnboardingComplete(), true);
       final savedDate = await store.readExamDateSelection();
       expect(savedDate, isNotNull);
+      expect(find.text('Try 5 free questions'), findsOneWidget);
+      await tap(tester, 'Practise questions');
+      final semantics = tester.ensureSemantics();
+      await tester.tap(find.bySemanticsLabel('Bookmark question'));
+      await tester.pumpAndSettle();
+      expect(find.bySemanticsLabel('Remove bookmark'), findsOneWidget);
+      expect(find.byType(SubscriptionScreen), findsNothing);
+      expect((await trial.read()).answeredCount, 0);
+      semantics.dispose();
+      // Leaving an opened question without answering must preserve all slots.
+      expect((await trial.read()).answeredCount, 0);
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pumpWidget(app());
+      await tester.pumpAndSettle();
+      expect(find.text('Try 5 free questions'), findsOneWidget);
+      await tap(tester, 'Practise questions');
+      await tap(tester, 'Resume session');
+      for (var i = 0; i < 5; i++) {
+        await tap(tester, 'Correct fixture answer');
+        await tap(tester, 'Submit Answer');
+        expect((await trial.read()).answeredCount, i + 1);
+        expect(find.byType(AnswerExplanationScreen), findsOneWidget);
+        if (i == 0) {
+          final semantics = tester.ensureSemantics();
+          expect(find.bySemanticsLabel('Remove bookmark'), findsOneWidget);
+          await tester.tap(find.bySemanticsLabel('Remove bookmark'));
+          await tester.pumpAndSettle();
+          expect(find.bySemanticsLabel('Bookmark question'), findsOneWidget);
+          expect(find.byType(SubscriptionScreen), findsNothing);
+          semantics.dispose();
+        }
+        await tap(tester, i == 4 ? 'Finish' : 'Next Question');
+        if (i == 2) {
+          await tester.pumpWidget(const SizedBox.shrink());
+          await tester.pumpWidget(app());
+          await tester.pumpAndSettle();
+          expect(find.byType(SubscriptionScreen), findsNothing);
+          expect(find.text('Try 2 free questions'), findsOneWidget);
+          await tap(tester, 'Practise questions');
+          await tap(tester, 'Resume session');
+        }
+      }
+      expect(find.byType(SubscriptionScreen), findsOneWidget);
+      expect((await trial.read()).completionPaywallShown, true);
+      expect(find.byType(SubscriptionProductCard), findsNothing);
+      expect(find.text('Subscriptions are not configured for this build.'),
+          findsOneWidget);
       expect(tester.widget<PrimaryButton>(find.byType(PrimaryButton)).onPressed,
           isNull);
       await tap(tester, 'Retry');
@@ -130,7 +209,9 @@ void main() {
         await close(tester);
       }
       expect(await store.readExamDateSelection(), savedDate);
-      expect(await history.answerAttemptsForExam(package.exam.id), [original]);
+      expect(await history.answerAttemptsForExam(package.exam.id),
+          contains(original));
+      expect((await trial.read()).answeredCount, 5);
       await tester.pumpWidget(const SizedBox.shrink());
       await tester.pumpWidget(app());
       await tester.pumpAndSettle();
@@ -150,7 +231,9 @@ void main() {
       expect(find.byType(SubscriptionScreen), findsNothing);
       expect(find.text('Settings'), findsWidgets);
       expect(await store.readOnboardingComplete(), true);
-      expect(await history.answerAttemptsForExam(package.exam.id), [original]);
+      expect(await history.answerAttemptsForExam(package.exam.id),
+          contains(original));
+      expect((await trial.read()).answeredCount, 5);
       await tester.tap(find.bySemanticsLabel('Back').first);
       await tester.pumpAndSettle();
       await tap(tester, 'Progress');

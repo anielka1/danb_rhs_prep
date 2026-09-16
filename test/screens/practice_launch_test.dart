@@ -1,3 +1,4 @@
+import 'package:danb_rhs_prep/practice_session/practice_session_scope.dart';
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -22,6 +23,43 @@ class _LastRandom implements Random {
 
 void main() {
   final now = DateTime.utc(2026, 9, 11);
+  for (final resume in [false, true]) {
+    testWidgets(
+        'mixed launch stays capped while explicit resume keeps 91 questions: resume=$resume',
+        (tester) async {
+      final package = fixture(count: 91);
+      final repo = InMemoryProgressRepository();
+      final saved = PracticeSession(
+          id: 'topic-91',
+          examId: package.exam.id,
+          mode: PracticeMode.browseDomain,
+          questionIds: package.questions.map((q) => q.id).toList(),
+          answerOrder: {
+            for (final q in package.questions)
+              q.id: q.answers.map((a) => a.id).toList()
+          },
+          status: SessionStatus.inProgress,
+          startedAt: now);
+      await repo.savePracticeSession(saved);
+      await tester.pumpWidget(MaterialApp(
+          theme: AppTheme.lightTheme,
+          home: ExamOverviewScreen(
+              contentPackage: package,
+              progressRepository: repo,
+              autoStart: true,
+              launch: resume ? null : PracticeLaunch.random,
+              now: () => now)));
+      await tester.pumpAndSettle();
+      expect(find.byType(PracticeQuestionScreen), findsOneWidget);
+      final controller = PracticeSessionScope.of(
+          tester.element(find.byType(PracticeQuestionScreen)));
+      expect(controller.totalQuestions, resume ? 91 : 20);
+      expect(controller.session.id == saved.id, resume);
+      final history = await repo.practiceSessionsForExam(package.exam.id);
+      expect(history.singleWhere((s) => s.id == saved.id), saved);
+      await tester.pumpWidget(const SizedBox.shrink());
+    });
+  }
   test('random selection shuffles eligible pool before taking one', () {
     final package = fixture(count: 4);
     final selection = PracticeGenerator.select(

@@ -1,3 +1,5 @@
+import 'data/repositories/drift_free_practice_store.dart';
+import 'subscription/free_practice_store.dart';
 import 'features/content/sync/content_release_database.dart';
 import 'features/content/sync/supabase_remote_content_source.dart';
 import 'features/content/sync/synced_content_repository.dart';
@@ -44,15 +46,18 @@ Future<void> main() async {
   final progress = DriftProgressRepository(database);
   final settings = DriftUserSettingsRepository(database);
   final localStore = SharedPreferencesBootstrapLocalStore();
+  final updatingQuestions = ValueNotifier(false);
   final content = SyncedContentRepository(
     bundled: BundledContentRepository(),
     database: ContentReleaseDatabase(),
     progress: progress,
     remote: SupabaseRemoteContentSource.fromConfiguration(),
+    onUpdating: (value) => updatingQuestions.value = value,
   );
   runApp(
     DanbRhsPrepApp(
       subscriptionRepository: repository,
+      updatingQuestions: updatingQuestions,
       database: database,
       progressRepository: progress,
       userSettingsRepository: settings,
@@ -71,6 +76,8 @@ class DanbRhsPrepApp extends StatefulWidget {
     super.key,
     this.analytics = const NoOpAnalyticsService(),
     this.subscriptionRepository,
+    this.freePracticeStore,
+    this.updatingQuestions,
     ThemeModeController? themeModeController,
     BootstrapLocalStore? localStore,
     AppBootstrapService? bootstrapService,
@@ -83,6 +90,8 @@ class DanbRhsPrepApp extends StatefulWidget {
         _injectedDatabase = database;
 
   final SubscriptionRepository? subscriptionRepository;
+  final FreePracticeStore? freePracticeStore;
+  final ValueNotifier<bool>? updatingQuestions;
   final AnalyticsService analytics;
   final UserSettingsRepository? userSettingsRepository;
 
@@ -159,7 +168,9 @@ class _DanbRhsPrepAppState extends State<DanbRhsPrepApp> {
 
   late final PremiumAccessController _access = PremiumAccessController(
       widget.subscriptionRepository ??
-          CachedSubscriptionRepository(_localStore));
+          CachedSubscriptionRepository(_localStore),
+      trialStore:
+          widget.freePracticeStore ?? DriftFreePracticeStore(_database));
 
   @override
   void initState() {
@@ -225,6 +236,7 @@ class _DanbRhsPrepAppState extends State<DanbRhsPrepApp> {
             SubscriptionScreen.route: (_) => const SubscriptionScreen(),
             SplashScreen.route: (_) => SplashScreen(
                   bootstrapService: _bootstrapService,
+                  updatingQuestions: widget.updatingQuestions,
                   localStore: _localStore,
                   analytics: widget.analytics,
                   onReady: _applyBootstrapTheme,

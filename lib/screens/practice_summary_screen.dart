@@ -60,6 +60,13 @@ class PracticeSummaryScreen extends StatelessWidget {
     if (!context.mounted) {
       return;
     }
+    final access = PremiumAccessScope.maybeOf(context);
+    if (controller != null &&
+        access != null &&
+        await access.completeTrial(context, controller)) {
+      return;
+    }
+    if (!context.mounted) return;
     final MainShellController? shell = MainShellScope.maybeOf(context);
     if (shell != null) {
       shell.goToTab(AppTab.home, resetTab: shell.currentTab);
@@ -115,7 +122,7 @@ class PracticeSummaryScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final blocked = premiumBlock(context);
+    final blocked = premiumBlock(context, trialFeedback: true);
     if (blocked != null) return blocked;
     final PracticeSessionController? controller =
         PracticeSessionScope.maybeOf(context);

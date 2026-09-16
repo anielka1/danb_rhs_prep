@@ -41,7 +41,7 @@ No real credentials are included in the example or tests.
 
 ## Read-only server boundary
 
-Project `danb-rhs-prep` was inspected on 2026-09-14. The only client query is:
+Project `danb-rhs-prep` schema was rechecked on 2026-09-16. Both read-only queries use:
 
 - `public.question_bank_releases`;
 - selected `exam_id` (the current production bootstrap supports `danb_rhs`);
@@ -49,8 +49,8 @@ Project `danb-rhs-prep` was inspected on 2026-09-14. The only client query is:
 - `release_version DESC`, limit one.
 
 Server RLS additionally enforces publication time using the server clock and
-non-retirement. The existing anon SELECT grant and RLS were verified. An actual
-read under `SET LOCAL ROLE anon` returned **zero visible releases**. This is a
+non-retirement. The existing anon SELECT grant and RLS were verified. A metadata-only
+read under `SET LOCAL ROLE anon` on 2026-09-16 returned **release_version 1**. This is a
 normal, supported state. No release, table, policy, grant or function was changed.
 The `anon` and `authenticated` roles have no USAGE on `content_workbench`; the
 adapter never queries that schema. Draft questions, answers, references and
@@ -58,8 +58,8 @@ reviewer decisions remain inaccessible to this client. The publisher must apply
 the existing qualified-human review process before creating any release.
 
 The SDK is instantiated only inside the data adapter, without Flutter's global
-`Supabase.initialize` / Auth session persistence. Each request has a 12-second
-transport timeout and automatic retries disabled; the client is disposed after
+`Supabase.initialize` / Auth session persistence. The metadata request selects only `release_version` and has a 2-second
+transport timeout; an exact-version snapshot request has an 8-second timeout and automatic retries disabled; the client is disposed after
 the request. No progress, settings, answers, bookmarks or user identifiers are
 sent. Supabase necessarily receives normal request metadata such as IP address.
 
@@ -122,18 +122,19 @@ mechanism for banks already downloaded.
 
 ## Local storage, activation and failure handling
 
-1. Bootstrap reads bundled content and the local Drift release cache. It never
-   awaits a network response. The bundled bank remains the fallback for first
-   launch, disabled configuration, unreadable cache or no valid cached release.
+1. Bootstrap reads bundled content, checks remote revision with a 2-second bound,
+   and compares it to the Drift cache. An equal/older revision skips payload download.
+   A newer revision downloads a compact snapshot (8-second bound); the splash shows
+   “Updating questions…”. Timeout/error falls back to validated local content or bundle.
 2. Previously downloaded records are revalidated. The newest valid one becomes
    active only if no practice or mock session is in progress. If session state
    cannot be read, keep the already activated bank and defer activation.
-3. The process retains one immutable content snapshot. One background sync per
-   exam/process fetches and validates a candidate. Network/validation/write
+3. The process retains one immutable content snapshot. One shared sync future per
+   exam/process fetches and validates a candidate during startup. Network/validation/write
    failures leave the existing snapshot untouched and show no technical error.
 4. An SQLite transaction appends a newer validated release **without deleting
-   or deactivating the old bank**. A separate transaction activates it on a later
-   bootstrap. Both roll back fully on a write failure.
+   or deactivating the old bank**. A separate transaction activates it during this same
+   bootstrap when no session is active. Both roll back fully on a write failure.
 5. Restart with an active session keeps the prior activated bank (or the bundle
    for a legacy session that predates this cache), preserving its questions and
    saved answer permutation. Finish/abandon the session normally, then restart
@@ -152,11 +153,11 @@ an older validated bank without removing the damaged row.
    networking disabled. Complete onboarding; Home/Settings/Progress must open.
    The current production bundle has zero approved questions: its honest empty
    practice state is expected, not a connectivity error.
-2. Run with valid configuration against the current empty releases table. Home
-   must open normally; restarting offline must behave identically. Do not publish
+2. Run with valid configuration. The published bank should become available on
+   the first start without an active session; restarting offline retains it. Do not publish
    drafts just to make practice available.
 3. After a qualified human has published a legitimate release using the checksum
-   contract, launch online, allow the background fetch, then fully restart. New
+   contract, launch online and allow the bounded startup fetch. New
    content should appear without changing history or granting Premium.
 4. Start a session using eligible content and valid existing access. Download a
    later approved version, then restart offline: resume must keep question IDs,
@@ -167,6 +168,26 @@ an older validated bank without removing the damaged row.
    cache behavior.
 
 Positive-release and error paths are tested with isolated fake remote sources
-and temporary Drift databases, without contacting Supabase. The empty real
-project cannot demonstrate a positive published-content download. No real
-release was created as part of this integration.
+and temporary Drift databases. Live metadata was verified read-only via the anon
+role; no live app download is claimed by that SQL check. No release or policy was changed.
+
+
+## Startup refresh and answer input (2026-09-16)
+
+The existing immutable published snapshot schema has no per-question revision/tombstone
+feed, so updates fetch one full new release only. Previous releases remain archived
+locally; progress, bookmarks and session answer orders are never deleted. Late network
+responses after a timeout cannot install a bank. Simultaneous loads share the same future.
+The UI receives only an updating boolean, never a Supabase SDK type.
+
+Confidence controls were removed. New practice attempts save `confident: null`; old
+true/false records and Needs review remain compatible without a schema migration.
+Existing AnswerOrder copies and shuffles stable IDs once per new session with injected
+Random support; resume preserves that permutation. There is no shuffle_answers field
+in the current question schema, so all standard questions use the existing shuffle.
+
+Documentation checked: Supabase Dart select documentation
+(https://supabase.com/docs/reference/dart/select), Supabase changelog
+(https://supabase.com/changelog.md), and installed supabase_flutter 2.17.2 changelog.
+Recent breaking entries concern management logs, extensions, GraphQL and self-hosting;
+none changes this hosted REST column-select query. No package upgrade was necessary.

@@ -25,10 +25,12 @@ class SplashScreen extends StatefulWidget {
     required this.localStore,
     this.analytics = const NoOpAnalyticsService(),
     this.onReady,
+    this.updatingQuestions,
     this.progressRepository,
   });
 
   final AppBootstrapService bootstrapService;
+  final ValueNotifier<bool>? updatingQuestions;
   final BootstrapLocalStore localStore;
   final AnalyticsService analytics;
   final ProgressRepository? progressRepository;
@@ -144,7 +146,7 @@ class _SplashScreenState extends State<SplashScreen> {
         ),
       );
     }
-    return const _SplashVisual();
+    return _SplashVisual(updatingQuestions: widget.updatingQuestions);
   }
 }
 
@@ -152,7 +154,8 @@ class _SplashScreenState extends State<SplashScreen> {
 /// real bootstrap logic, and shown for exactly as long as that logic
 /// takes, whether that's shorter or longer than the old fixed delay.
 class _SplashVisual extends StatelessWidget {
-  const _SplashVisual();
+  const _SplashVisual({this.updatingQuestions});
+  final ValueNotifier<bool>? updatingQuestions;
 
   @override
   Widget build(BuildContext context) {
@@ -216,6 +219,16 @@ class _SplashVisual extends StatelessWidget {
                   const SizedBox(height: 28),
                   // A loading announcement for assistive tech — the
                   // splash artwork above it is otherwise silent/decorative.
+                  if (updatingQuestions != null)
+                    ValueListenableBuilder<bool>(
+                      valueListenable: updatingQuestions!,
+                      builder: (context, updating, _) => updating
+                          ? Semantics(
+                              liveRegion: true,
+                              child: Text('Updating questions…',
+                                  style: context.textStyles.bodySmall))
+                          : const SizedBox.shrink(),
+                    ),
                   Semantics(
                     liveRegion: true,
                     label: 'Loading',

@@ -309,8 +309,7 @@ void main() {
       await tester.pump();
       await tester.tap(find.text('Continue'));
       await tester.pumpAndSettle();
-      expect(find.byType(SubscriptionScreen), findsOneWidget);
-      await tester.tap(find.bySemanticsLabel('Close subscription'));
+      expect(find.byType(SubscriptionScreen), findsNothing);
       await tester.pumpAndSettle();
       expect(find.byType(MainShell), findsOneWidget);
       final UserProfile? saved =

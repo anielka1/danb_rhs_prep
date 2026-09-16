@@ -27,8 +27,11 @@ import 'practice_persistence.dart';
 /// [hasUnsavedChanges] exposes the retained writes for [retrySaving].
 /// The retry queue lives only as long as this controller.
 class PracticeSessionController {
-  late final PracticePersistence _persistence =
-      PracticePersistence(progressRepository);
+  late final PracticePersistence _persistence = PracticePersistence(
+      progressRepository,
+      recordAnswer: (attempt) =>
+          (recordAnswer ?? progressRepository!.recordAnswerAttempt)(attempt));
+  Future<void> Function(AnswerAttempt)? recordAnswer;
   bool get hasUnsavedChanges => _persistence.hasUnsavedChanges;
   Future<void> retrySaving() => _persistence.retry();
   Future<void> saveSession() => _persistence.saveSession(_session);

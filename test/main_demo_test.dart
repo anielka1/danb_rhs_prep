@@ -34,8 +34,7 @@ Future<void> _clickThroughOnboarding(WidgetTester tester) async {
   await tester.tap(find.text('Continue'));
   await tester.pumpAndSettle();
   expect(tester.takeException(), isNull);
-  expect(find.byType(SubscriptionScreen), findsOneWidget);
-  await tester.tap(find.bySemanticsLabel('Close subscription'));
+  expect(find.byType(SubscriptionScreen), findsNothing);
   await tester.pumpAndSettle();
   expectOnboardingHome(tester);
   expect(tester.takeException(), isNull);
