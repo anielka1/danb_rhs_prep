@@ -1,3 +1,5 @@
+import 'features/content/sync/content_update_controller.dart';
+import 'features/content/sync/content_update_scope.dart';
 import 'data/repositories/drift_free_practice_store.dart';
 import 'subscription/free_practice_store.dart';
 import 'features/content/sync/content_release_database.dart';
@@ -56,6 +58,7 @@ Future<void> main() async {
   );
   runApp(
     DanbRhsPrepApp(
+      contentUpdates: ContentUpdateController(content),
       subscriptionRepository: repository,
       updatingQuestions: updatingQuestions,
       database: database,
@@ -63,7 +66,7 @@ Future<void> main() async {
       userSettingsRepository: settings,
       localStore: localStore,
       bootstrapService: AppBootstrapService(
-        contentRepository: content,
+        contentRepository: content.localRepository,
         localStore: localStore,
         userSettingsRepository: settings,
       ),
@@ -78,6 +81,7 @@ class DanbRhsPrepApp extends StatefulWidget {
     this.subscriptionRepository,
     this.freePracticeStore,
     this.updatingQuestions,
+    this.contentUpdates,
     ThemeModeController? themeModeController,
     BootstrapLocalStore? localStore,
     AppBootstrapService? bootstrapService,
@@ -92,6 +96,7 @@ class DanbRhsPrepApp extends StatefulWidget {
   final SubscriptionRepository? subscriptionRepository;
   final FreePracticeStore? freePracticeStore;
   final ValueNotifier<bool>? updatingQuestions;
+  final ContentUpdateController? contentUpdates;
   final AnalyticsService analytics;
   final UserSettingsRepository? userSettingsRepository;
 
@@ -223,14 +228,31 @@ class _DanbRhsPrepAppState extends State<DanbRhsPrepApp> {
       builder: (context, themeMode, _) {
         return MaterialApp(
           title: 'DANB RHS Prep',
-          builder: (_, child) =>
-              PremiumAccessScope(controller: _access, child: child!),
+          builder: (_, child) {
+            final access =
+                PremiumAccessScope(controller: _access, child: child!);
+            final updates = widget.contentUpdates;
+            if (updates == null) return access;
+            return ContentUpdateScope(
+                controller: updates,
+                child: AnimatedBuilder(
+                    animation: updates,
+                    builder: (_, child) => AbsorbPointer(
+                        absorbing: updates.activating, child: child),
+                    child: access));
+          },
           debugShowCheckedModeBanner: false,
           theme: AppTheme.lightTheme,
           darkTheme: AppTheme.darkTheme,
           themeMode: themeMode,
           restorationScopeId: 'danb_rhs_prep_root',
-          navigatorObservers: [AnalyticsNavigatorObserver(widget.analytics)],
+          navigatorObservers: [
+            AnalyticsNavigatorObserver(widget.analytics),
+            if (widget.contentUpdates != null)
+              ContentNavigationObserver(() => WidgetsBinding.instance
+                  .addPostFrameCallback(
+                      (_) => widget.contentUpdates?.navigationChanged())),
+          ],
           initialRoute: SplashScreen.route,
           routes: {
             SubscriptionScreen.route: (_) => const SubscriptionScreen(),

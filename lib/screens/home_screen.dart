@@ -1,3 +1,5 @@
+import '../features/content/sync/content_update_scope.dart';
+import '../features/content/sync/content_update_controller.dart';
 import '../subscription/premium_access.dart';
 import '../domain/models/mock_attempt.dart';
 import 'package:flutter/material.dart';
@@ -289,6 +291,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                 padding: const EdgeInsets.only(top: 12),
                 child: Text(
                     '${progress!.total.gradeUnavailable} questions have older mock answers without saved grades. See Progress for details.')),
+          const _ContentDownloadStatus(),
           if (_loading)
             const Padding(
                 padding: EdgeInsets.only(top: 12),
@@ -299,7 +302,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             const Text(
                 'Your saved progress could not be loaded. Retry to safely continue.'),
             TextButton(onPressed: _load, child: const Text('Retry')),
-          ] else if (!_loading && eligible == 0) ...[
+          ] else if (!_loading &&
+              eligible == 0 &&
+              ContentUpdateScope.maybeOf(context)?.status !=
+                  ContentUpdateStatus.downloading) ...[
             const SizedBox(height: 12),
             const Text(
                 'No approved practice questions are available yet. Your saved progress is preserved.'),
@@ -479,5 +485,47 @@ class _ActivityTile extends StatelessWidget {
                                       : colors.primary)
                             ]))),
             )));
+  }
+}
+
+class _ContentDownloadStatus extends StatelessWidget {
+  const _ContentDownloadStatus();
+  @override
+  Widget build(BuildContext context) {
+    final updates = ContentUpdateScope.maybeOf(context);
+    if (updates == null ||
+        updates.status == ContentUpdateStatus.idle ||
+        updates.status == ContentUpdateStatus.ready ||
+        updates.status == ContentUpdateStatus.pending) {
+      return const SizedBox.shrink();
+    }
+    final loading = updates.status == ContentUpdateStatus.downloading;
+    return Padding(
+      padding: const EdgeInsets.only(top: 12),
+      child: Semantics(
+          liveRegion: true,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              if (loading)
+                const LinearProgressIndicator(
+                    semanticsLabel: 'Downloading questions'),
+              const SizedBox(height: 8),
+              Text(
+                  loading
+                      ? 'Downloading questions… You can keep using the app.'
+                      : updates.status == ContentUpdateStatus.unavailable
+                          ? 'No question download is available. Check your connection and try again.'
+                          : 'Could not download questions. Your saved questions and progress are safe.',
+                  style: context.textStyles.bodySmall),
+              if (!loading)
+                Align(
+                    alignment: Alignment.centerLeft,
+                    child: TextButton(
+                        onPressed: updates.retry,
+                        child: const Text('Retry download'))),
+            ],
+          )),
+    );
   }
 }

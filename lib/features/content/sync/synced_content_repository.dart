@@ -5,6 +5,7 @@ import '../../../domain/repositories/content_repository.dart';
 import '../../../domain/repositories/progress_repository.dart';
 import '../domain/content_package.dart';
 import 'content_release.dart';
+import 'content_sync_timeouts.dart';
 import 'content_release_database.dart';
 import 'remote_content_source.dart';
 
@@ -18,8 +19,8 @@ class SyncedContentRepository implements ContentRepository {
     required this.progress,
     this.remote,
     this.onUpdating,
-    this.versionTimeout = const Duration(seconds: 1),
-    this.downloadTimeout = const Duration(seconds: 8),
+    this.versionTimeout = ContentSyncTimeouts.metadata,
+    this.downloadTimeout = ContentSyncTimeouts.download,
     DateTime Function()? now,
   }) : _now = now ?? DateTime.now;
   final ContentRepository bundled;
@@ -40,6 +41,38 @@ class SyncedContentRepository implements ContentRepository {
   Future<ContentPackage> _load(String examId) async {
     final fallback = await bundled.loadContentPackage(examId);
     await sync(examId, bundledContentVersion: fallback.contentVersion);
+    return _selectLocal(examId, fallback);
+  }
+
+  /// Production bootstrap uses only disk/bundle; no network wait.
+  ContentRepository get localRepository => _LocalContentRepository(this);
+
+  Future<ContentPackage> loadLocalContentPackage(String examId) =>
+      _loads.putIfAbsent(
+          examId,
+          () async =>
+              _selectLocal(examId, await bundled.loadContentPackage(examId)));
+
+  /// Called under the app's navigation/input lock at a safe root screen.
+  /// The repository independently checks persisted practice and mock sessions.
+  Future<ContentPackage> activateDownloadedContent(String examId) async {
+    final selected = await _selectLocal(
+        examId, await bundled.loadContentPackage(examId),
+        reportStorageFailure: true);
+    _loads[examId] = Future.value(selected);
+    return selected;
+  }
+
+  /// The coordinator serializes retries; a completed failure is not permanent.
+  Future<ContentSyncResult> retrySync(String examId) async {
+    final previous = _syncs[examId];
+    if (previous != null) await previous;
+    _syncs.remove(examId);
+    return sync(examId);
+  }
+
+  Future<ContentPackage> _selectLocal(String examId, ContentPackage fallback,
+      {bool reportStorageFailure = false}) async {
     ContentPackage selected = fallback;
     try {
       final rows = await database.releases(examId);
@@ -58,20 +91,26 @@ class SyncedContentRepository implements ContentRepository {
         // A pending session stays on the previously activated bank. No active
         // row means it started with the bundled bank, including legacy sessions.
         if (busy && !row.active) continue;
+        var activating = false;
         try {
           final release = ContentRelease.validate(
             Map<String, Object?>.from(jsonDecode(row.recordJson) as Map),
             examId: examId,
             now: _now(),
           );
-          if (!busy && !row.active) await database.activate(row);
+          if (!busy && !row.active) {
+            activating = true;
+            await database.activate(row);
+          }
           selected = release.package;
           break;
         } on Object {
+          if (reportStorageFailure && activating) rethrow;
           // Keep earlier verified releases available; never delete on a read error.
         }
       }
     } on Object {
+      if (reportStorageFailure) rethrow;
       // Cache unavailable: bundled content still starts offline.
     }
     return selected;
@@ -119,4 +158,12 @@ class SyncedContentRepository implements ContentRepository {
           onUpdating?.call(false);
         }
       });
+}
+
+class _LocalContentRepository implements ContentRepository {
+  _LocalContentRepository(this.repository);
+  final SyncedContentRepository repository;
+  @override
+  Future<ContentPackage> loadContentPackage(String examId) =>
+      repository.loadLocalContentPackage(examId);
 }

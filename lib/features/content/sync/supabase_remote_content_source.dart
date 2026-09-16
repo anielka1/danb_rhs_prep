@@ -1,5 +1,6 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'remote_content_source.dart';
+import 'content_sync_timeouts.dart';
 
 /// Short-lived, accountless client. No sign-in, persisted token,
 /// realtime channel, deep-link listener or global Supabase singleton.
@@ -57,7 +58,8 @@ class SupabaseRemoteContentSource implements RemoteContentSource {
     bool metadata = false,
     int? version,
   }) async {
-    final timeout = Duration(seconds: metadata ? 1 : 8);
+    final timeout =
+        metadata ? ContentSyncTimeouts.metadata : ContentSyncTimeouts.download;
     final client = SupabaseClient(
       _url,
       _key,
