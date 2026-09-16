@@ -203,7 +203,9 @@ class _ExamOverviewScreenState extends State<ExamOverviewScreen> {
   Future<void> _startOrResumePractice() async {
     if (_starting ||
         !_hasContent ||
-        (PremiumAccessScope.maybeOf(context)?.active == false)) {
+        (PremiumAccessScope.maybeOf(context)?.active == false &&
+            !(widget.launch == PracticeLaunch.random &&
+                PremiumAccessScope.maybeOf(context)!.canStartFreePractice))) {
       return;
     }
     final entitlement =
@@ -269,6 +271,13 @@ class _ExamOverviewScreenState extends State<ExamOverviewScreen> {
       if (startNew) existing = null;
     }
 
+    final access = PremiumAccessScope.maybeOf(context);
+    if (existing != null &&
+        access != null &&
+        !access.active &&
+        !access.allowsTrialSession(existing.id)) {
+      existing = null;
+    }
     final PracticeSession session;
     if (existing != null) {
       session = existing;
@@ -276,7 +285,9 @@ class _ExamOverviewScreenState extends State<ExamOverviewScreen> {
       // Filtered practice reads persisted question history; the default
       // selection needs only the content package.
       int? maxCount;
-      if (entitlement != null && repository != null) {
+      if (access != null && !access.active) {
+        maxCount = access.freeQuestionsRemaining;
+      } else if (entitlement != null && repository != null) {
         final DateTime nowValue = nowFn();
         if (entitlement.isActiveAt(nowValue)) {
           // Premium: no cap, and deliberately no attempt-history read at
@@ -498,6 +509,9 @@ class _ExamOverviewScreenState extends State<ExamOverviewScreen> {
     if (existing == null && repository != null) {
       try {
         await repository.savePracticeSession(session);
+        if (access != null && !access.active) {
+          await access.registerTrial(session.id);
+        }
       } catch (_) {
         if (!mounted) return;
         setState(() {
@@ -510,6 +524,10 @@ class _ExamOverviewScreenState extends State<ExamOverviewScreen> {
     if (!mounted) return;
     setState(() => _starting = false);
 
+    if (access != null && repository != null) {
+      controller.recordAnswer = (attempt) => access.recordAnswer(
+          attempt, () => repository.recordAnswerAttempt(attempt));
+    }
     await Navigator.of(context).push(
       MaterialPageRoute(
         settings: const RouteSettings(name: PracticeQuestionScreen.route),
@@ -650,7 +668,8 @@ class _ExamOverviewScreenState extends State<ExamOverviewScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final blocked = premiumBlock(context);
+    final blocked = premiumBlock(context,
+        freePractice: widget.launch == PracticeLaunch.random);
     if (blocked != null) return blocked;
     if (widget.launch != null) return _buildLaunch(context);
     final colors = context.colors;

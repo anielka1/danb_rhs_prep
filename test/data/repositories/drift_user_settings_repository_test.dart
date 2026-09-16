@@ -35,7 +35,7 @@ void main() {
     final restored = await repository.loadProfile('new-user');
     expect(restored, profile);
     expect(restored!.experienceLevel, isNull);
-    expect(db.schemaVersion, 5);
+    expect(db.schemaVersion, 6);
   });
 
   test('loadProfile is null before onboarding has been saved', () async {
