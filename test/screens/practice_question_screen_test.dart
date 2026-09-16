@@ -38,6 +38,9 @@ void main() {
         controller: controller,
         child: PracticeQuestionScreen(now: () => now))));
     await tester.pumpAndSettle();
+    expect(find.byType(CheckboxListTile), findsNothing);
+    expect(find.text('I guessed'), findsNothing);
+    expect(find.text('I knew this answer'), findsNothing);
     now = now.add(const Duration(seconds: 10));
     tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.paused);
     now = now.add(const Duration(hours: 1));
@@ -70,6 +73,7 @@ void main() {
     final attempts =
         await repo.answerAttemptsForExam(DebugDemoEnvironment.demoExamId);
     expect(attempts.map((a) => a.activeDurationSeconds), [30, 20]);
+    expect(attempts.map((a) => a.confident), [null, null]);
     await tester.pumpWidget(const SizedBox.shrink());
   });
 

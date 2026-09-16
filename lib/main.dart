@@ -44,15 +44,18 @@ Future<void> main() async {
   final progress = DriftProgressRepository(database);
   final settings = DriftUserSettingsRepository(database);
   final localStore = SharedPreferencesBootstrapLocalStore();
+  final updatingQuestions = ValueNotifier(false);
   final content = SyncedContentRepository(
     bundled: BundledContentRepository(),
     database: ContentReleaseDatabase(),
     progress: progress,
     remote: SupabaseRemoteContentSource.fromConfiguration(),
+    onUpdating: (value) => updatingQuestions.value = value,
   );
   runApp(
     DanbRhsPrepApp(
       subscriptionRepository: repository,
+      updatingQuestions: updatingQuestions,
       database: database,
       progressRepository: progress,
       userSettingsRepository: settings,
@@ -71,6 +74,7 @@ class DanbRhsPrepApp extends StatefulWidget {
     super.key,
     this.analytics = const NoOpAnalyticsService(),
     this.subscriptionRepository,
+    this.updatingQuestions,
     ThemeModeController? themeModeController,
     BootstrapLocalStore? localStore,
     AppBootstrapService? bootstrapService,
@@ -83,6 +87,7 @@ class DanbRhsPrepApp extends StatefulWidget {
         _injectedDatabase = database;
 
   final SubscriptionRepository? subscriptionRepository;
+  final ValueNotifier<bool>? updatingQuestions;
   final AnalyticsService analytics;
   final UserSettingsRepository? userSettingsRepository;
 
@@ -225,6 +230,7 @@ class _DanbRhsPrepAppState extends State<DanbRhsPrepApp> {
             SubscriptionScreen.route: (_) => const SubscriptionScreen(),
             SplashScreen.route: (_) => SplashScreen(
                   bootstrapService: _bootstrapService,
+                  updatingQuestions: widget.updatingQuestions,
                   localStore: _localStore,
                   analytics: widget.analytics,
                   onReady: _applyBootstrapTheme,
