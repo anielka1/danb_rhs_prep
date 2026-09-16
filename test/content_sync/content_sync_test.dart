@@ -60,14 +60,29 @@ class FakeRemote implements RemoteContentSource {
   Object? error;
   Completer<Map<String, Object?>?>? pending;
   int calls = 0;
+  int downloads = 0;
   @override
-  Future<Map<String, Object?>?> latestRelease(
-      String examId, DateTime now) async {
+  Future<int?> latestVersion(String examId, DateTime now) async {
     calls++;
+    if (error != null) throw error!;
+    return (value?['release_version'] ?? (pending != null ? 1 : null)) as int?;
+  }
+
+  @override
+  Future<Map<String, Object?>?> release(
+      String examId, int version, DateTime now) async {
+    downloads++;
     if (error != null) throw error!;
     if (pending != null) return await pending!.future;
     return value;
   }
+}
+
+class SlowMetadata extends FakeRemote {
+  SlowMetadata() : super(record(2));
+  final metadata = Completer<int?>();
+  @override
+  Future<int?> latestVersion(String examId, DateTime now) => metadata.future;
 }
 
 class UnreadableProgress extends InMemoryProgressRepository {
@@ -90,12 +105,58 @@ void main() {
           database: db,
           progress: progress,
           remote: remote,
-          now: () => now);
+          now: () => now,
+          downloadTimeout: const Duration(milliseconds: 30));
   setUp(() {
     db = ContentReleaseDatabase.forTesting(NativeDatabase.memory());
     progress = InMemoryProgressRepository();
   });
   tearDown(() => db.close());
+
+  test(
+      'cold start installs and activates new bank immediately; same revision skips payload',
+      () async {
+    final remote = FakeRemote(record(1));
+    final events = <bool>[];
+    final first = SyncedContentRepository(
+        bundled: bundled,
+        database: db,
+        progress: progress,
+        remote: remote,
+        now: () => now,
+        onUpdating: events.add);
+    final results = await Future.wait(
+        [first.loadContentPackage(examId), first.loadContentPackage(examId)]);
+    expect(results.first.contentVersion, 'fixture-1');
+    expect(identical(results.first, results.last), true);
+    expect(remote.calls, 1);
+    expect(remote.downloads, 1);
+    expect(events, [true, false]);
+    expect((await db.releases(examId)).single.active, true);
+    final next = repo(remote);
+    expect((await next.loadContentPackage(examId)).contentVersion, 'fixture-1');
+    expect(remote.calls, 2);
+    expect(remote.downloads, 1);
+  });
+
+  test('version timeout falls back, never downloads or installs late metadata',
+      () async {
+    await repo(FakeRemote(record(1))).sync(examId);
+    final remote = SlowMetadata();
+    final repository = SyncedContentRepository(
+        bundled: bundled,
+        database: db,
+        progress: progress,
+        remote: remote,
+        now: () => now,
+        versionTimeout: const Duration(milliseconds: 10));
+    expect((await repository.loadContentPackage(examId)).contentVersion,
+        'fixture-1');
+    remote.metadata.complete(2);
+    await Future<void>.delayed(Duration.zero);
+    expect(remote.downloads, 0);
+    expect((await db.releases(examId)).single.releaseVersion, 1);
+  });
 
   test('no configuration disables remote; rejects secret, JWT and unsafe URL',
       () async {
@@ -149,7 +210,7 @@ void main() {
     }
   });
 
-  test('network never blocks bootstrap or changes a running snapshot',
+  test('download timeout retains snapshot and discards late response',
       () async {
     final remote = FakeRemote(null)..pending = Completer();
     final repository = repo(remote);
@@ -157,10 +218,9 @@ void main() {
         .loadContentPackage(examId)
         .timeout(const Duration(seconds: 2));
     remote.pending!.complete(record(1));
-    expect(await repository.sync(examId), ContentSyncResult.installed);
+    expect(await repository.sync(examId), ContentSyncResult.rejected);
     expect(await repository.loadContentPackage(examId), same(first));
-    expect(
-        (await repo().loadContentPackage(examId)).contentVersion, 'fixture-1');
+    expect(await db.releases(examId), isEmpty);
   });
 
   test('newer installs; identical and older do not overwrite', () async {
@@ -406,6 +466,7 @@ void main() {
         database: db,
         progress: savedProgress,
         remote: remote,
+        downloadTimeout: const Duration(milliseconds: 30),
         now: () => now);
     final ready = await AppBootstrapService(
             contentRepository: content,
@@ -416,7 +477,8 @@ void main() {
     expect(ready, isA<BootstrapReady>());
     expect((ready as BootstrapReady).onboardingComplete, isTrue);
     remote.pending!.complete(record(1));
-    expect(await content.sync(examId), ContentSyncResult.installed);
+    expect(await content.sync(examId), ContentSyncResult.rejected);
+    await repo(FakeRemote(record(1))).sync(examId);
     final afterRestart = SyncedContentRepository(
         bundled: bundled,
         database: db,

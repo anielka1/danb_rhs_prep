@@ -18,6 +18,22 @@ class RecordingHttpClient implements HttpClient {
 }
 
 void main() {
+  test('metadata request selects only revision without payload or retry',
+      () async {
+    final http = RecordingHttpClient();
+    await HttpOverrides.runZoned(() async {
+      final source = SupabaseRemoteContentSource.fromConfiguration(
+          url: 'https://example.invalid',
+          publishableKey: 'sb_publishable_fixture')!;
+      await expectLater(source.latestVersion('danb_rhs', DateTime.utc(2026)),
+          throwsA(isA<Exception>()));
+    }, createHttpClient: (_) => http);
+    expect(http.requests, hasLength(1));
+    expect(
+        http.requests.single.url.queryParameters['select'], 'release_version');
+    expect(http.requests.single.url.queryParameters['retired_at'], 'is.null');
+  });
+
   for (final suffix in ['', '/']) {
     test(
         'SDK queries only latest published public release, URL suffix "$suffix"',
@@ -29,7 +45,7 @@ void main() {
           publishableKey: 'sb_publishable_fixture',
         )!;
         await expectLater(
-            source.latestRelease('danb_rhs', DateTime.utc(2026, 9, 14)),
+            source.release('danb_rhs', 1, DateTime.utc(2026, 9, 14)),
             throwsA(isA<Exception>()));
       }, createHttpClient: (_) => http);
       expect(http.requests, hasLength(1),
@@ -41,6 +57,7 @@ void main() {
         'select':
             'exam_id,schema_version,release_version,content_version,question_count,payload,content_sha256,published_at,retired_at',
         'exam_id': 'eq.danb_rhs',
+        'release_version': 'eq.1',
         'published_at': 'lte.2026-09-14T00:00:00.000Z',
         'retired_at': 'is.null',
         'order': 'release_version.desc.nullslast',
