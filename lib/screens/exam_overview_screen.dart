@@ -244,6 +244,14 @@ class _ExamOverviewScreenState extends State<ExamOverviewScreen> {
     }
 
     if (!mounted) return;
+    final access = PremiumAccessScope.maybeOf(context);
+    // The mixed-practice tile starts its advertised capped set. Only the
+    // explicit Continue entry resumes arbitrary sessions (including full topics).
+    // A free trial must keep its existing identity and lifetime allowance.
+    if (widget.launch == PracticeLaunch.random &&
+        (access == null || access.active)) {
+      existing = null;
+    }
     if (existing != null &&
         (widget.launch != null ||
             _focus != PracticeFocus.any ||
@@ -271,7 +279,6 @@ class _ExamOverviewScreenState extends State<ExamOverviewScreen> {
       if (startNew) existing = null;
     }
 
-    final access = PremiumAccessScope.maybeOf(context);
     if (existing != null &&
         access != null &&
         !access.active &&
