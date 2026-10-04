@@ -1,3 +1,4 @@
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:danb_rhs_prep/bootstrap/shared_preferences_bootstrap_local_store.dart';
@@ -47,6 +48,10 @@ void main() {
       'test\'s own directly-constructed instance', (tester) async {
     await SharedPreferencesBootstrapLocalStore().writeOnboardingComplete(true);
 
+    // Decode the real asset outside fake time before starting the app. Flutter
+    // caches this same asset; no repository or content is substituted.
+    await tester.runAsync(() => rootBundle
+        .loadString('assets/content/danb_rhs/reviewed_content.json'));
     await tester.pumpWidget(const DanbRhsPrepApp());
     await tester.pumpAndSettle();
 
