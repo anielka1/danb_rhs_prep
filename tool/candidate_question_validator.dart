@@ -919,7 +919,8 @@ ProductionReadinessReport evaluateProductionReadiness(
 /// the real repository files or spawning a subprocess.
 class ValidatorCliPaths {
   const ValidatorCliPaths({
-    this.productionContentPath = 'assets/content/danb_rhs/content.json',
+    this.productionContentPath =
+        'assets/content/danb_rhs/reviewed_content.json',
     this.candidateQuestionsPath =
         'content_workbench/danb_rhs/candidate_questions.json',
     this.reviewerDecisionsPath =
