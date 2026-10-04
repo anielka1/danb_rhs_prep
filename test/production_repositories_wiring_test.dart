@@ -51,7 +51,9 @@ void main() {
     // Decode the real asset outside fake time before starting the app. Flutter
     // caches this same asset; no repository or content is substituted.
     await tester.runAsync(() async {
-      await rootBundle.loadString('assets/content/danb_rhs/reviewed_content.json');
+      await rootBundle.loadString(
+        'assets/content/danb_rhs/reviewed_content.json',
+      );
     });
     await tester.pumpWidget(const DanbRhsPrepApp());
     await tester.pumpAndSettle();
