@@ -1,4 +1,4 @@
-import 'package:flutter/services.dart';
+import 'package:flutter/material.dart' show CircularProgressIndicator;
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:danb_rhs_prep/bootstrap/shared_preferences_bootstrap_local_store.dart';
@@ -48,14 +48,21 @@ void main() {
       'test\'s own directly-constructed instance', (tester) async {
     await SharedPreferencesBootstrapLocalStore().writeOnboardingComplete(true);
 
-    // Decode the real asset outside fake time before starting the app. Flutter
-    // caches this same asset; no repository or content is substituted.
-    await tester.runAsync(() async {
-      await rootBundle.loadString(
-        'assets/content/danb_rhs/reviewed_content.json',
-      );
-    });
     await tester.pumpWidget(const DanbRhsPrepApp());
+    // Real asset decoding and SQLite I/O need real time, while widget pumps
+    // advance fake time. Wait for production startup and visible loading to
+    // complete without replacing either repository or its content.
+    await tester.runAsync(() async {
+      final deadline = DateTime.now().add(const Duration(seconds: 10));
+      while (find.byType(MainShell).evaluate().isEmpty ||
+          find.byType(CircularProgressIndicator).evaluate().isNotEmpty) {
+        if (!DateTime.now().isBefore(deadline)) {
+          fail('Production startup did not finish within 10 seconds.');
+        }
+        await Future<void>.delayed(const Duration(milliseconds: 10));
+        await tester.pump(const Duration(milliseconds: 20));
+      }
+    });
     await tester.pumpAndSettle();
 
     expect(tester.takeException(), isNull,
