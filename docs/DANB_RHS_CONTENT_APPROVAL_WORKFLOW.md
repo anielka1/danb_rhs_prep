@@ -41,13 +41,13 @@ candidate into the production bundle.
    them.
 
 6. **Approved, fingerprint-matched questions may be promoted** to
-   `assets/content/danb_rhs/content.json` — a deliberate, human-performed
+   `assets/content/danb_rhs/reviewed_content.json` — a deliberate, human-performed
    edit (or a future promotion script explicitly run by a human), never an
    automatic step of running the validator or the test suite.
 
 7. **Production content validation runs** — the existing
    `ContentValidator` (`lib/features/content/domain/content_validation.dart`)
-   against the updated `content.json`, exactly as it already does today.
+   against the updated `reviewed_content.json`, exactly as it already does today.
 
 8. **The diagnostic preflight is rerun** —
    `dart run tool/validate_candidate_questions.dart --require-ready`
@@ -59,7 +59,7 @@ candidate into the production bundle.
    `0`** — i.e. enough approved questions exist in the *bundled* production
    content, not merely in the workbench. A fingerprint-matched approval
    sitting only in `reviewer_decisions.json` does not itself unblock
-   Section 3.5; the question must actually be promoted into `content.json`
+   Section 3.5; the question must actually be promoted into `reviewed_content.json`
    first — see "Validator CLI modes and exit codes" below.
 
 No step in this repository currently automates 6–8; they are documented
@@ -237,16 +237,16 @@ dart run tool/validate_candidate_questions.dart --require-ready
 | --- | --- | --- | --- | --- |
 | (default) | Workbench structural validation only (schema, IDs, domains, approval-decision integrity) | Structurally valid | Unknown option, missing input file, JSON/schema parse failure, or any structural/approval-integrity error | — (not used in this mode) |
 | `--report` | Same as default, plus the full human-readable domain-inventory report and workbench diagnostic-preflight PASS/FAIL | Structurally valid — **even if** workbench approved inventory is not yet sufficient; readiness is printed, not gated | Same as default | — (not used in this mode) |
-| `--require-ready` | Everything `--report` does, **plus** evaluates the actual *bundled* production `content.json` — counts only questions with `status: approved` there, per domain, against the configured largest-remainder allocation (currently 7/4/4 for a 15-question diagnostic, derived from `freeTier.diagnosticQuestions` and domain weights — never hardcoded) | Structurally valid **and** bundled production content has enough approved questions in every domain | Any validation error (as above) | Validation succeeded, but bundled production approved inventory is insufficient in at least one domain |
+| `--require-ready` | Everything `--report` does, **plus** evaluates the actual *bundled* production `reviewed_content.json` — counts only questions with `status: approved` there, per domain, against the configured largest-remainder allocation (currently 7/4/4 for a 15-question diagnostic, derived from `freeTier.diagnosticQuestions` and domain weights — never hardcoded) | Structurally valid **and** bundled production content has enough approved questions in every domain | Any validation error (as above) | Validation succeeded, but bundled production approved inventory is insufficient in at least one domain |
 
 `--require-ready` deliberately never counts draft/reviewed/retired bundled
 questions, workbench-only reviewer decisions, stale approvals, or
 fingerprint-matched-but-unpromoted candidates — only a question's own
-`status: approved` inside `assets/content/danb_rhs/content.json` counts,
+`status: approved` inside `assets/content/danb_rhs/reviewed_content.json` counts,
 because that is exactly what the shipped diagnostic engine will read.
-Exit `2` on the current repository state is expected, not a failure: it
-accurately reports that 0 of the required 7/4/4 approved questions exist
-in bundled content yet.
+The bundled `2026.1-reviewed.1` release contains 500 approved questions
+and meets the diagnostic allocation. Exit `2` remains the expected result
+for a structurally valid bank with insufficient approved inventory.
 
 The CLI's behavior and exit codes are implemented as a plain function,
 `runValidatorCli(arguments, {out, err, paths})`, in

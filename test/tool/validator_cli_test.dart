@@ -297,9 +297,8 @@ void main() {
   group('runValidatorCli — --require-ready (bundled production readiness)', () {
     test(
         'the current real bundled production inventory (assets/content/'
-        'danb_rhs/content.json, checked from the repository root) returns '
-        'exactly 2 under --require-ready — insufficient approved inventory, '
-        'not a validation error', () {
+        'danb_rhs/reviewed_content.json, checked from the repository root) returns '
+        '0 under --require-ready — sufficient approved inventory', () {
       final out = StringBuffer();
       final err = StringBuffer();
       final int exitCode = runValidatorCli(
@@ -307,8 +306,8 @@ void main() {
         out: out,
         err: err,
       );
-      expect(exitCode, 2);
-      expect(out.toString(), contains('Production diagnostic readiness: FAIL'));
+      expect(exitCode, 0);
+      expect(out.toString(), contains('Production diagnostic readiness: PASS'));
     });
 
     test(

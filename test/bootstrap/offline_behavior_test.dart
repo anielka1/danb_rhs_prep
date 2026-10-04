@@ -26,12 +26,25 @@ class _FileContentRepository implements ContentRepository {
   @override
   Future<ContentPackage> loadContentPackage(String examId) async {
     final String source =
-        File('assets/content/$examId/content.json').readAsStringSync();
+        File('assets/content/$examId/reviewed_content.json').readAsStringSync();
     return const ExamContentCodec().decode(source);
   }
 }
 
 void main() {
+  test('production startup loads the bundled bank without remote sync', () {
+    final entrypoint = File('lib/main.dart')
+        .readAsStringSync()
+        .split('class DanbRhsPrepApp')
+        .first;
+    expect(entrypoint, contains('final content = BundledContentRepository();'));
+    expect(entrypoint, contains('contentRepository: content,'));
+    expect(entrypoint, isNot(contains('SyncedContentRepository')));
+    expect(entrypoint, isNot(contains('SupabaseRemoteContentSource')));
+    expect(entrypoint, isNot(contains('ContentReleaseDatabase')));
+    expect(entrypoint, isNot(contains('ContentUpdateController(content)')));
+  });
+
   test(
       'bootstrap succeeds with every dependency offline-capable — no '
       'HTTP client, no Supabase, no auth, no StoreKit, no remote config, '
@@ -82,7 +95,7 @@ void main() {
 
     final result = await service.initialize() as BootstrapReady;
 
-    expect(result.contentPackage.questions, isNotEmpty,
+    expect(result.contentPackage.approvedQuestions, hasLength(500),
         reason: 'bundled content and valid local data must be sufficient '
             'to begin studying without any network access');
     expect(result.contentPackage.exam.domains, isNotEmpty);

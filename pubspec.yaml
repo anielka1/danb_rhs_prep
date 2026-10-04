@@ -46,4 +46,4 @@ dev_dependencies:
 flutter:
   uses-material-design: true
   assets:
-    - assets/content/danb_rhs/content.json
+    - assets/content/danb_rhs/reviewed_content.json

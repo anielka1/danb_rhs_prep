@@ -2,9 +2,6 @@ import 'features/content/sync/content_update_controller.dart';
 import 'features/content/sync/content_update_scope.dart';
 import 'data/repositories/drift_free_practice_store.dart';
 import 'subscription/free_practice_store.dart';
-import 'features/content/sync/content_release_database.dart';
-import 'features/content/sync/supabase_remote_content_source.dart';
-import 'features/content/sync/synced_content_repository.dart';
 import 'subscription/premium_access.dart';
 import 'subscription/subscription_startup.dart';
 import 'domain/repositories/subscription_repository.dart';
@@ -48,25 +45,16 @@ Future<void> main() async {
   final progress = DriftProgressRepository(database);
   final settings = DriftUserSettingsRepository(database);
   final localStore = SharedPreferencesBootstrapLocalStore();
-  final updatingQuestions = ValueNotifier(false);
-  final content = SyncedContentRepository(
-    bundled: BundledContentRepository(),
-    database: ContentReleaseDatabase(),
-    progress: progress,
-    remote: SupabaseRemoteContentSource.fromConfiguration(),
-    onUpdating: (value) => updatingQuestions.value = value,
-  );
+  final content = BundledContentRepository();
   runApp(
     DanbRhsPrepApp(
-      contentUpdates: ContentUpdateController(content),
       subscriptionRepository: repository,
-      updatingQuestions: updatingQuestions,
       database: database,
       progressRepository: progress,
       userSettingsRepository: settings,
       localStore: localStore,
       bootstrapService: AppBootstrapService(
-        contentRepository: content.localRepository,
+        contentRepository: content,
         localStore: localStore,
         userSettingsRepository: settings,
       ),

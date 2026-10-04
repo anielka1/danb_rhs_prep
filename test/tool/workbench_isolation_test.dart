@@ -7,7 +7,7 @@ import 'package:flutter_test/flutter_test.dart';
 /// imported or referenced by anything under `lib/` (the production app).
 /// A candidate question sitting in the workbench must have zero way to
 /// reach a real user until it is explicitly promoted into
-/// `assets/content/danb_rhs/content.json` by a human — see
+/// `assets/content/danb_rhs/reviewed_content.json` by a human — see
 /// docs/DANB_RHS_CONTENT_APPROVAL_WORKFLOW.md.
 void main() {
   test(
@@ -38,20 +38,21 @@ void main() {
       expect(source.contains('content_workbench'), isFalse,
           reason: '${file.path} must not reference content_workbench/ — '
               'production code may only load bundled content from '
-              'assets/content/danb_rhs/content.json.');
+              'assets/content/danb_rhs/reviewed_content.json.');
     }
   });
 
   test(
       'the only bundled content asset registered in pubspec.yaml is the '
-      'production content.json — no candidate/workbench JSON is listed', () {
+      'production reviewed_content.json — no candidate/workbench JSON is listed',
+      () {
     final String pubspec = File('pubspec.yaml').readAsStringSync();
     final RegExp assetLine =
         RegExp(r'^\s*-\s*(assets/\S+)\s*$', multiLine: true);
     final List<String> assets =
         assetLine.allMatches(pubspec).map((m) => m.group(1)!).toList();
 
-    expect(assets, contains('assets/content/danb_rhs/content.json'));
+    expect(assets, equals(['assets/content/danb_rhs/reviewed_content.json']));
     for (final asset in assets) {
       expect(asset.contains('content_workbench'), isFalse);
       expect(asset.contains('candidate'), isFalse);

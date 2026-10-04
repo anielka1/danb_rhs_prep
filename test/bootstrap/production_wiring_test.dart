@@ -8,11 +8,10 @@ import 'package:danb_rhs_prep/bootstrap/app_bootstrap_service.dart';
 import 'package:danb_rhs_prep/bootstrap/shared_preferences_bootstrap_local_store.dart';
 import 'package:danb_rhs_prep/data/local/app_database.dart';
 import 'package:danb_rhs_prep/data/repositories/drift_user_settings_repository.dart';
-import 'package:danb_rhs_prep/data/repositories/drift_progress_repository.dart';
-import 'package:danb_rhs_prep/features/content/sync/content_release_database.dart';
-import 'package:danb_rhs_prep/features/content/sync/synced_content_repository.dart';
 import 'package:danb_rhs_prep/domain/models/entitlement.dart';
 import 'package:danb_rhs_prep/features/content/data/bundled_content_repository.dart';
+import 'package:danb_rhs_prep/mock_exam/mock_exam_blueprint.dart';
+import 'package:danb_rhs_prep/practice_session/practice_generator.dart';
 
 /// Everything else under `test/bootstrap/` proves the bootstrap
 /// *algorithm* against test doubles (`_StaticContentRepository`,
@@ -22,9 +21,8 @@ import 'package:danb_rhs_prep/features/content/data/bundled_content_repository.d
 ///
 /// This file is that missing piece: it constructs `AppBootstrapService`
 /// with the *exact* production dependency graph —
-/// `SyncedContentRepository` (local Drift cache with networking disabled here)
-/// over `BundledContentRepository` (which loads the real
-/// `assets/content/danb_rhs/content.json` declared in `pubspec.yaml`
+/// `BundledContentRepository` (which loads the real
+/// `assets/content/danb_rhs/reviewed_content.json` declared in `pubspec.yaml`
 /// through `rootBundle`), `SharedPreferencesBootstrapLocalStore` (the
 /// real `SharedPreferencesAsync`-backed store, only swapped to an
 /// in-memory *platform backend* — the standard, supported way
@@ -56,14 +54,7 @@ void main() {
     final database = AppDatabase.forTesting(NativeDatabase.memory());
     addTearDown(database.close);
 
-    final contentDatabase =
-        ContentReleaseDatabase.forTesting(NativeDatabase.memory());
-    addTearDown(contentDatabase.close);
-    final content = SyncedContentRepository(
-      bundled: BundledContentRepository(), database: contentDatabase,
-      progress: DriftProgressRepository(database),
-      // No remote by default: unit/widget tests never contact Supabase.
-    );
+    final content = BundledContentRepository();
     final service = AppBootstrapService(
       contentRepository: content,
       localStore: SharedPreferencesBootstrapLocalStore(
@@ -74,8 +65,6 @@ void main() {
 
     final result = await service.initialize();
 
-    expect(await content.sync(kDefaultExamId), ContentSyncResult.disabled);
-    expect(await contentDatabase.releases(kDefaultExamId), isEmpty);
     expect(result, isA<BootstrapReady>(),
         reason: 'the real production dependency graph must itself '
             'succeed, not just test substitutes for it');
@@ -85,9 +74,24 @@ void main() {
         reason: 'a fresh SharedPreferences store has no stored '
             'selection, so this must resolve to the default exam');
     expect(ready.contentPackage.exam.id, kDefaultExamId);
-    expect(ready.contentPackage.questions, isNotEmpty,
+    expect(ready.contentPackage.approvedQuestions, hasLength(500),
         reason: 'the actual bundled asset, loaded and validated through '
             'the real production adapter, must be genuinely usable');
+    expect(ready.contentPackage.contentVersion, '2026.1-reviewed.1');
+    expect(ready.contentPackage.questions, hasLength(500));
+    for (final count in [5, 20]) {
+      final practice = PracticeGenerator.select(
+        package: ready.contentPackage,
+        questionStates: const [],
+        requestedCount: count,
+      );
+      expect(practice.questions, hasLength(count));
+      expect(practice.questions.map((question) => question.id).toSet(),
+          hasLength(count));
+    }
+    final mock = MockExamBlueprint.fromPackage(ready.contentPackage);
+    expect(mock.questions,
+        hasLength(ready.contentPackage.exam.mockExam.questionCount));
     expect(ready.contentPackage.exam.domains, isNotEmpty);
     expect(ready.onboardingComplete, isFalse,
         reason: 'a fresh install has no persisted onboarding flag');
