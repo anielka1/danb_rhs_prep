@@ -23,3 +23,12 @@ and verify saved-session compatibility before shipping an updated bank.
 The older `content.json` contains development drafts used by negative tests;
 it is deliberately excluded from the app's asset manifest. Existing sync
 components remain available for tests but are not constructed by `main()`.
+
+## Workbench history
+
+The 26 original workbench drafts have matching IDs and unchanged material
+content in published release 1. Their original draft records are preserved
+verbatim in `content_workbench/danb_rhs/published_release_1_draft_history.json`
+and removed from the active candidate queue to avoid production ID collisions.
+This archival step creates no approval record and changes no question status.
+The archive is excluded from Flutter assets. Future candidates must use new IDs.
