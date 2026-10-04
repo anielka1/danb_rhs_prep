@@ -156,7 +156,8 @@ void main() {
         localStore: localStore,
       );
 
-      final result = await service.initialize();
+      // Flutter decodes large assets in an isolate; fake time cannot drive it.
+      final result = await tester.runAsync(service.initialize);
 
       expect(result, isA<BootstrapReady>());
       final ready = result as BootstrapReady;

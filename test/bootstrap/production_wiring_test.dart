@@ -63,7 +63,8 @@ void main() {
       userSettingsRepository: DriftUserSettingsRepository(database),
     );
 
-    final result = await service.initialize();
+    // Flutter decodes large assets in an isolate; let it run outside fake time.
+    final result = await tester.runAsync(service.initialize);
 
     expect(result, isA<BootstrapReady>(),
         reason: 'the real production dependency graph must itself '
