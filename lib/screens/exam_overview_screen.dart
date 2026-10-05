@@ -149,11 +149,13 @@ class _ExamOverviewScreenState extends State<ExamOverviewScreen> {
 
   bool _starting = false;
   bool _choosingSession = false;
-  int get _requestedCount =>
-      widget.launch == PracticeLaunch.quick10 ||
-              widget.launch == PracticeLaunch.timed
-          ? 10
-          : 20;
+  int get _requestedCount {
+    if (widget.launch == PracticeLaunch.quick10 ||
+        widget.launch == PracticeLaunch.timed) {
+      return 10;
+    }
+    return 20;
+  }
   PracticeFocus _focus = PracticeFocus.any;
   String? _domainId;
   String? _topicId;
