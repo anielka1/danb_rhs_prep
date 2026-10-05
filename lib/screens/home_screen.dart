@@ -307,7 +307,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             const SizedBox(height: 12),
             const Text('Could not check your access. Please retry.'),
             TextButton(
-              onPressed: access!.refresh,
+              onPressed: access.refresh,
               child: const Text('Retry access'),
             ),
           ],
