@@ -7,6 +7,8 @@ import 'package:danb_rhs_prep/main.dart';
 import 'package:danb_rhs_prep/practice_session/practice_session_scope.dart';
 import 'package:danb_rhs_prep/bootstrap/app_bootstrap_service.dart';
 import 'package:danb_rhs_prep/domain/models/entitlement.dart';
+import 'package:danb_rhs_prep/domain/models/mock_attempt.dart';
+import 'package:danb_rhs_prep/domain/models/practice_session.dart';
 import 'package:danb_rhs_prep/domain/repositories/subscription_repository.dart';
 import 'package:danb_rhs_prep/domain/repositories/fakes/in_memory_bootstrap_local_store.dart';
 import 'package:danb_rhs_prep/domain/repositories/fakes/in_memory_content_repository.dart';
