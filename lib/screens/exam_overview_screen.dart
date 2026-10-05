@@ -156,6 +156,7 @@ class _ExamOverviewScreenState extends State<ExamOverviewScreen> {
     }
     return 20;
   }
+
   PracticeFocus _focus = PracticeFocus.any;
   String? _domainId;
   String? _topicId;
