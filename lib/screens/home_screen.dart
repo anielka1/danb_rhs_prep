@@ -204,8 +204,12 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     final access = PremiumAccessScope.maybeOf(context);
     final accessReady = access == null || access.ready;
     final locked = accessReady && access?.active == false;
-    final available =
-        accessReady && !_loading && !_failed && !_opening && eligible > 0;
+    final contentAvailable = accessReady && !_opening && eligible > 0;
+    final available = contentAvailable && !_loading && !_failed;
+    final mixedAvailable = contentAvailable &&
+        (access?.active == true ||
+            access?.canStartFreePractice == true ||
+            !_loading && !_failed);
     final colors = context.colors;
     final dateLabel = days == null
         ? 'Set exam date'
@@ -294,12 +298,12 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                 padding: const EdgeInsets.only(top: 12),
                 child: Text(
                     '${progress!.total.gradeUnavailable} questions have older mock answers without saved grades. See Progress for details.')),
-          if (access?.loading == true)
+          if (access?.loading == true && !accessReady)
             const Padding(
               padding: EdgeInsets.only(top: 12),
               child: Text('Checking access...'),
             ),
-          if (access?.failed == true) ...[
+          if (access?.failed == true && !accessReady) ...[
             const SizedBox(height: 12),
             const Text('Could not check your access. Please retry.'),
             TextButton(
@@ -354,7 +358,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               locked: locked &&
                   PremiumAccessScope.maybeOf(context)?.canStartFreePractice !=
                       true,
-              onTap: locked || available
+              onTap: locked || mixedAvailable
                   ? () => _launch(PracticeLaunch.random)
                   : null),
           _ActivityTile(

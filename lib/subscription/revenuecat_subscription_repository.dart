@@ -32,11 +32,9 @@ class PurchasesClient implements RevenueCatClient {
   }
 
   @override
-  Future<rc.CustomerInfo> customerInfo() async {
-    // Explicit refresh on launch/resume; SDK remains responsible for its cache.
-    await rc.Purchases.invalidateCustomerInfoCache();
-    return rc.Purchases.getCustomerInfo();
-  }
+  // The SDK owns its verified cache and background refresh. Invalidating it
+  // on every launch/resume removes offline access and forces a network wait.
+  Future<rc.CustomerInfo> customerInfo() => rc.Purchases.getCustomerInfo();
 
   @override
   Future<rc.Offerings> offerings() => rc.Purchases.getOfferings();

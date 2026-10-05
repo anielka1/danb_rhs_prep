@@ -23,7 +23,8 @@ class CachedSubscriptionRepository implements SubscriptionRepository {
 }
 
 /// One app-owned subscription state, above both the root and tab navigators.
-/// Refresh and failures fail closed; expiry is enforced even without an event.
+/// Unexpired verified access survives refresh failures; expiry and explicit
+/// revocation are enforced even without a successful refresh.
 class PremiumAccessController extends ChangeNotifier
     with WidgetsBindingObserver {
   PremiumAccessController(this.repository,
@@ -42,7 +43,7 @@ class PremiumAccessController extends ChangeNotifier
   final FreePracticeStore? trialStore;
   FreePracticeState? trial;
   bool _trialReady = false;
-  bool get ready => !loading && !failed;
+  bool get ready => active || !loading && !failed;
   int get freeQuestionsRemaining =>
       ready && _trialReady ? trial?.remaining ?? 0 : 0;
   bool get canStartFreePractice =>
@@ -132,8 +133,7 @@ class PremiumAccessController extends ChangeNotifier
   int _revision = 0;
   Timer? _expiry;
   StreamSubscription<Entitlement>? _subscription;
-  bool get active =>
-      !loading && !failed && (entitlement?.isActiveAt(now()) ?? false);
+  bool get active => entitlement?.isActiveAt(now()) ?? false;
   Future<void> refresh() async {
     final revision = ++_revision;
     loading = true;
@@ -169,7 +169,7 @@ class PremiumAccessController extends ChangeNotifier
   void _fail() {
     loading = false;
     failed = true;
-    _expiry?.cancel();
+    // Keep the expiry timer for previously verified access while offline.
     notifyListeners();
   }
 
