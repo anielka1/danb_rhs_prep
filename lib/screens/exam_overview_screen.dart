@@ -102,10 +102,6 @@ class _ExamOverviewScreenState extends State<ExamOverviewScreen> {
   @override
   void initState() {
     super.initState();
-    _requestedCount = widget.launch == PracticeLaunch.random ||
-            widget.launch == PracticeLaunch.topic
-        ? 20
-        : 10;
     if (widget.launch == PracticeLaunch.topic) _loadTopicProgress();
     if (widget.launch == PracticeLaunch.mistakes) {
       _focus = PracticeFocus.incorrectQuestions;
@@ -153,7 +149,11 @@ class _ExamOverviewScreenState extends State<ExamOverviewScreen> {
 
   bool _starting = false;
   bool _choosingSession = false;
-  int _requestedCount = 10;
+  int get _requestedCount =>
+      widget.launch == PracticeLaunch.quick10 ||
+              widget.launch == PracticeLaunch.timed
+          ? 10
+          : 20;
   PracticeFocus _focus = PracticeFocus.any;
   String? _domainId;
   String? _topicId;
@@ -251,8 +251,7 @@ class _ExamOverviewScreenState extends State<ExamOverviewScreen> {
     if (existing != null &&
         (widget.launch != null ||
             _focus != PracticeFocus.any ||
-            _domainId != null ||
-            _requestedCount != 10)) {
+            _domainId != null)) {
       setState(() => _choosingSession = true);
       final startNew = await AppDialog.show<bool?>(
         context: context,
@@ -716,36 +715,9 @@ class _ExamOverviewScreenState extends State<ExamOverviewScreen> {
             const SizedBox(height: AppSpacing.md),
             const StudyPageHeading(
               title: 'Let’s practice.',
-              subtitle: 'Choose a short session that fits your day.',
+              subtitle: '20 questions per session.',
               icon: Icons.auto_stories_rounded,
             ),
-            const SizedBox(height: AppSpacing.xxl),
-            Text('Session length', style: textStyles.h3),
-            const SizedBox(height: AppSpacing.md),
-            Wrap(spacing: AppSpacing.sm, runSpacing: AppSpacing.sm, children: [
-              for (final count in [5, 10, 20])
-                ChoiceChip(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 12, vertical: 10),
-                    selectedColor: colors.primaryContainer,
-                    checkmarkColor: colors.onPrimaryContainer,
-                    labelStyle: textStyles.body.copyWith(
-                      color: _requestedCount == count
-                          ? colors.onPrimaryContainer
-                          : colors.onSurface,
-                      fontWeight: FontWeight.w700,
-                    ),
-                    backgroundColor: colors.surfaceContainer,
-                    side: BorderSide(color: colors.outlineVariant),
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(18)),
-                    label: Text('$count questions'),
-                    selected: _requestedCount == count,
-                    onSelected: _starting
-                        ? null
-                        : (_) =>
-                            _updateSelection(() => _requestedCount = count)),
-            ]),
             const SizedBox(height: AppSpacing.xxl),
             Text('Focus', style: textStyles.h3),
             const SizedBox(height: AppSpacing.md),
