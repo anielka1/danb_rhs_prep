@@ -111,8 +111,8 @@ abstract interface class ProgressRepository {
 
   Future<void> savePracticeSession(PracticeSession session);
 
-  /// The user's not-yet-finished session for this exam, if any, so it can
-  /// be resumed instead of starting a new one.
+  /// The most recently started unfinished session for this exam, if any.
+  /// Ties use descending session ID. Other saved sessions remain untouched.
   Future<PracticeSession?> inProgressPracticeSession(String examId);
 
   Future<void> saveMockAttempt(MockAttempt attempt);

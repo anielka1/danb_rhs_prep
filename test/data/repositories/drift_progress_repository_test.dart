@@ -355,6 +355,28 @@ void main() {
   });
 
   group('practice sessions', () {
+    test('multiple unfinished sessions select the latest without erasing rows',
+        () async {
+      PracticeSession session(String id, int day) => PracticeSession(
+            id: id,
+            examId: 'danb-rhs',
+            mode: PracticeMode.quickPractice,
+            questionIds: const ['q1'],
+            status: SessionStatus.inProgress,
+            startedAt: DateTime.utc(2026, 1, day),
+          );
+      final newer = session('session-b', 2);
+      final older = session('session-old', 1);
+      final tied = session('session-a', 2);
+      await repository.savePracticeSession(newer);
+      await repository.savePracticeSession(older);
+      await repository.savePracticeSession(tied);
+      expect(await repository.inProgressPracticeSession('danb-rhs'), newer);
+      expect(await repository.practiceSessionsForExam('danb-rhs'),
+          unorderedEquals([newer, older, tied]));
+      expect(await repository.inProgressPracticeSession('other-exam'), isNull);
+    });
+
     test('inProgressPracticeSession finds the only unfinished session',
         () async {
       final inProgress = PracticeSession(

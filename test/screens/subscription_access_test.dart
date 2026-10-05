@@ -53,6 +53,44 @@ Entitlement premium({DateTime? expires}) => Entitlement(
     expiresAt: expires);
 
 void main() {
+  testWidgets('Home waits for access without flashing a Premium lock',
+      (tester) async {
+    final package = fixture(count: 80);
+    final store = InMemoryBootstrapLocalStore();
+    await store.writeOnboardingComplete(true);
+    final repo = ControlledSubscriptions();
+    addTearDown(repo.events.close);
+    final settings = InMemoryUserSettingsRepository();
+    await tester.pumpWidget(DanbRhsPrepApp(
+      subscriptionRepository: repo,
+      localStore: store,
+      freePracticeStore: InMemoryFreePracticeStore(),
+      progressRepository: InMemoryProgressRepository(),
+      userSettingsRepository: settings,
+      bootstrapService: AppBootstrapService(
+        localStore: store,
+        userSettingsRepository: settings,
+        contentRepository:
+            InMemoryContentRepository({package.exam.id: package}),
+        defaultExamId: package.exam.id,
+      ),
+    ));
+    await tester.pumpAndSettle();
+    expect(find.text('Checking access...'), findsOneWidget);
+    expect(find.byIcon(Icons.lock_outline_rounded), findsNothing);
+    await tester.tap(find.text('Practise questions'));
+    await tester.pumpAndSettle();
+    expect(find.byType(SubscriptionScreen), findsNothing);
+    expect(find.byType(ExamOverviewScreen), findsNothing);
+    repo.read.complete(premium());
+    await tester.pumpAndSettle();
+    expect(find.text('Checking access...'), findsNothing);
+    expect(find.byIcon(Icons.lock_outline_rounded), findsNothing);
+    await tap(tester, 'Practice by topics');
+    expect(find.byType(ExamOverviewScreen), findsOneWidget);
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
+
   testWidgets('empty approved bank does not consume the free trial',
       (tester) async {
     final package = fixture(count: 0);

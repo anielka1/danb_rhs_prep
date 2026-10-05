@@ -285,7 +285,12 @@ class DriftProgressRepository
     final PracticeSessionRow? row = await (_db.select(_db.practiceSessions)
           ..where((t) =>
               t.examId.equals(examId) &
-              t.status.equals(SessionStatus.inProgress.name)))
+              t.status.equals(SessionStatus.inProgress.name))
+          ..orderBy([
+            (t) => OrderingTerm.desc(t.startedAt),
+            (t) => OrderingTerm.desc(t.id),
+          ])
+          ..limit(1))
         .getSingleOrNull();
     if (row == null) return null;
     return _sessionToDomain(row);

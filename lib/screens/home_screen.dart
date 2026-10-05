@@ -201,8 +201,11 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             .inDays;
     final styles = context.textStyles;
     final large = MediaQuery.textScalerOf(context).scale(1) >= 1.8;
-    final locked = PremiumAccessScope.maybeOf(context)?.active == false;
-    final available = !_loading && !_failed && !_opening && eligible > 0;
+    final access = PremiumAccessScope.maybeOf(context);
+    final accessReady = access == null || access.ready;
+    final locked = accessReady && access?.active == false;
+    final available =
+        accessReady && !_loading && !_failed && !_opening && eligible > 0;
     final colors = context.colors;
     final dateLabel = days == null
         ? 'Set exam date'
@@ -291,6 +294,19 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                 padding: const EdgeInsets.only(top: 12),
                 child: Text(
                     '${progress!.total.gradeUnavailable} questions have older mock answers without saved grades. See Progress for details.')),
+          if (access?.loading == true)
+            const Padding(
+              padding: EdgeInsets.only(top: 12),
+              child: Text('Checking access...'),
+            ),
+          if (access?.failed == true) ...[
+            const SizedBox(height: 12),
+            const Text('Could not check your access. Please retry.'),
+            TextButton(
+              onPressed: access!.refresh,
+              child: const Text('Retry access'),
+            ),
+          ],
           const _ContentDownloadStatus(),
           if (_loading)
             const Padding(
@@ -321,7 +337,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                                     true)
                         ? 'Continue session · Premium'
                         : 'Continue session',
-                    onPressed: _opening ? null : () => _practice(start: true))),
+                    onPressed: !accessReady || _opening
+                        ? null
+                        : () => _practice(start: true))),
           const SizedBox(height: 24),
           Text('Choose your practice', style: styles.h3),
           const SizedBox(height: 12),
@@ -354,7 +372,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               detail: _loading || _failed
                   ? 'Your answer library'
                   : '$_saved saved · answers and explanations',
-              onTap: _opening
+              onTap: !accessReady || _opening
                   ? null
                   : () => _open(SavedQuestionsScreen(
                       contentPackage: package,
@@ -376,7 +394,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               title: 'Mock exam',
               locked: locked,
               detail: 'A full practice exam, with saved progress.',
-              onTap: _opening
+              onTap: !accessReady || _opening
                   ? null
                   : () => _open(MockExamScreen(
                       contentPackage: package,
