@@ -21,6 +21,7 @@ import 'package:danb_rhs_prep/screens/exam_overview_screen.dart';
 import 'package:danb_rhs_prep/screens/practice_question_screen.dart';
 import 'package:danb_rhs_prep/theme/app_theme.dart';
 import 'package:danb_rhs_prep/widgets/error_state.dart';
+import '../study_plan/fixtures.dart' show fixture;
 
 /// A [ProgressRepository] whose [answerAttemptsForExam] throws exactly
 /// once (then behaves normally), for exercising a free-tier limit check
@@ -265,15 +266,35 @@ void main() {
       await tester
           .pumpWidget(wrap(ExamOverviewScreen(contentPackage: package)));
 
-      expect(find.text('5 questions'), findsOneWidget);
-      expect(find.text('10 questions'), findsOneWidget);
-      expect(find.text('20 questions'), findsOneWidget);
+      expect(find.text('5 questions'), findsNothing);
+      expect(find.text('10 questions'), findsNothing);
+      expect(find.byType(ChoiceChip), findsNothing);
+      expect(find.text('20 questions per session.'), findsOneWidget);
       expect(find.textContaining('100 Questions'), findsNothing);
       expect(find.textContaining('1.5 Hours'), findsNothing);
       expect(find.textContaining('Intermediate'), findsNothing,
           reason: 'no difficulty-label field exists anywhere in '
               'ExamConfig — this was always a fabricated value with no '
               'backing data, not merely a stale one');
+    });
+
+    testWidgets('standard practice starts twenty without a length selector',
+        (tester) async {
+      final package = fixture(count: 80);
+      await tester.pumpWidget(wrap(ExamOverviewScreen(
+        contentPackage: package,
+        progressRepository: InMemoryProgressRepository(),
+      )));
+      await tester.pumpAndSettle();
+      expect(find.byType(ChoiceChip), findsNothing);
+      await tester.ensureVisible(find.text('Start Practice Exam'));
+      await tester.tap(find.text('Start Practice Exam'));
+      await tester.pumpAndSettle();
+      final controller = PracticeSessionScope.of(
+        tester.element(find.byType(PracticeQuestionScreen)),
+      );
+      expect(controller.totalQuestions, 20);
+      await tester.pumpWidget(const SizedBox.shrink());
     });
 
     testWidgets(

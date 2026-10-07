@@ -4,8 +4,11 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:danb_rhs_prep/main.dart';
+import 'package:danb_rhs_prep/practice_session/practice_session_scope.dart';
 import 'package:danb_rhs_prep/bootstrap/app_bootstrap_service.dart';
 import 'package:danb_rhs_prep/domain/models/entitlement.dart';
+import 'package:danb_rhs_prep/domain/models/mock_attempt.dart';
+import 'package:danb_rhs_prep/domain/models/practice_session.dart';
 import 'package:danb_rhs_prep/domain/repositories/subscription_repository.dart';
 import 'package:danb_rhs_prep/domain/repositories/fakes/in_memory_bootstrap_local_store.dart';
 import 'package:danb_rhs_prep/domain/repositories/fakes/in_memory_content_repository.dart';
@@ -52,7 +55,120 @@ Entitlement premium({DateTime? expires}) => Entitlement(
     lastVerifiedAt: DateTime.utc(2026),
     expiresAt: expires);
 
+class _UnreadableSavedSession extends InMemoryProgressRepository {
+  @override
+  Future<PracticeSession?> inProgressPracticeSession(String examId) async {
+    throw const FormatException('old session record');
+  }
+
+  @override
+  Future<List<MockAttempt>> mockAttemptsForExam(String examId) async {
+    throw const FormatException('old mock history');
+  }
+}
+
 void main() {
+  for (final paid in [false, true]) {
+    testWidgets('bundled mixed practice survives history errors: paid=$paid',
+        (tester) async {
+      final package = fixture(count: 80);
+      final history = _UnreadableSavedSession();
+      final old = PracticeSession(
+        id: 'old-session',
+        examId: package.exam.id,
+        mode: PracticeMode.quickPractice,
+        questionIds: [package.questions.first.id],
+        status: SessionStatus.inProgress,
+        startedAt: DateTime.utc(2026),
+      );
+      await history.savePracticeSession(old);
+      final store = InMemoryBootstrapLocalStore();
+      await store.writeOnboardingComplete(true);
+      final subscriptions = ControlledSubscriptions();
+      subscriptions.read.complete(
+        paid ? premium() : Entitlement.free(lastVerifiedAt: DateTime.utc(2026)),
+      );
+      final trial = InMemoryFreePracticeStore();
+      if (!paid) {
+        await trial.registerSession('session-1');
+        for (var i = 0; i < 4; i++) {
+          final attempt = answer(
+            package.questions[i],
+            DateTime.utc(2026),
+            id: 'trial-$i',
+          );
+          await trial.record(attempt, () async {});
+        }
+      }
+      addTearDown(subscriptions.events.close);
+      final settings = InMemoryUserSettingsRepository();
+      await tester.pumpWidget(DanbRhsPrepApp(
+        subscriptionRepository: subscriptions,
+        localStore: store,
+        freePracticeStore: trial,
+        progressRepository: history,
+        userSettingsRepository: settings,
+        bootstrapService: AppBootstrapService(
+          localStore: store,
+          userSettingsRepository: settings,
+          contentRepository:
+              InMemoryContentRepository({package.exam.id: package}),
+          defaultExamId: package.exam.id,
+        ),
+      ));
+      await tester.pumpAndSettle();
+      expect(find.text('Retry'), findsOneWidget);
+      await tap(tester, 'Practise questions');
+      expect(find.byType(PracticeQuestionScreen), findsOneWidget);
+      final controller = PracticeSessionScope.of(
+        tester.element(find.byType(PracticeQuestionScreen)),
+      );
+      expect(controller.totalQuestions, paid ? 20 : 1);
+      expect((await trial.read()).remaining, paid ? 5 : 1);
+      expect(await history.practiceSessionsForExam(package.exam.id),
+          contains(old));
+      await tester.pumpWidget(const SizedBox.shrink());
+    });
+  }
+
+  testWidgets('Home waits for access without flashing a Premium lock',
+      (tester) async {
+    final package = fixture(count: 80);
+    final store = InMemoryBootstrapLocalStore();
+    await store.writeOnboardingComplete(true);
+    final repo = ControlledSubscriptions();
+    addTearDown(repo.events.close);
+    final settings = InMemoryUserSettingsRepository();
+    await tester.pumpWidget(DanbRhsPrepApp(
+      subscriptionRepository: repo,
+      localStore: store,
+      freePracticeStore: InMemoryFreePracticeStore(),
+      progressRepository: InMemoryProgressRepository(),
+      userSettingsRepository: settings,
+      bootstrapService: AppBootstrapService(
+        localStore: store,
+        userSettingsRepository: settings,
+        contentRepository:
+            InMemoryContentRepository({package.exam.id: package}),
+        defaultExamId: package.exam.id,
+      ),
+    ));
+    await tester.pumpAndSettle();
+    expect(find.text('Checking access...'), findsOneWidget);
+    expect(find.byIcon(Icons.lock_outline_rounded), findsNothing);
+    await tester.tap(find.text('Practise questions'));
+    await tester.pumpAndSettle();
+    expect(find.byType(SubscriptionScreen), findsNothing);
+    expect(find.byType(ExamOverviewScreen), findsNothing);
+    repo.read.complete(premium());
+    await tester.pumpAndSettle();
+    expect(find.text('Checking access...'), findsNothing);
+    expect(find.byIcon(Icons.lock_outline_rounded), findsNothing);
+    await tap(tester, 'Practice by topics');
+    expect(find.byType(ExamOverviewScreen), findsOneWidget);
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
+
   testWidgets('empty approved bank does not consume the free trial',
       (tester) async {
     final package = fixture(count: 0);

@@ -87,6 +87,25 @@ class Client implements RevenueCatClient {
 }
 
 void main() {
+  test('customer info keeps the SDK cache', () async {
+    const channel = MethodChannel('purchases_flutter');
+    final methods = <String>[];
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(channel, (call) async {
+      methods.add(call.method);
+      throw PlatformException(code: 'offline');
+    });
+    addTearDown(() {
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(channel, null);
+    });
+    await expectLater(
+      PurchasesClient().customerInfo(),
+      throwsA(isA<PlatformException>()),
+    );
+    expect(methods, ['getCustomerInfo']);
+  });
+
   test(
       'configuration rejects missing, secret, wrong platform and release Test Store keys',
       () {

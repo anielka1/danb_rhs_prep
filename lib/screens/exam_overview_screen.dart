@@ -102,10 +102,6 @@ class _ExamOverviewScreenState extends State<ExamOverviewScreen> {
   @override
   void initState() {
     super.initState();
-    _requestedCount = widget.launch == PracticeLaunch.random ||
-            widget.launch == PracticeLaunch.topic
-        ? 20
-        : 10;
     if (widget.launch == PracticeLaunch.topic) _loadTopicProgress();
     if (widget.launch == PracticeLaunch.mistakes) {
       _focus = PracticeFocus.incorrectQuestions;
@@ -153,7 +149,14 @@ class _ExamOverviewScreenState extends State<ExamOverviewScreen> {
 
   bool _starting = false;
   bool _choosingSession = false;
-  int _requestedCount = 10;
+  int get _requestedCount {
+    if (widget.launch == PracticeLaunch.quick10 ||
+        widget.launch == PracticeLaunch.timed) {
+      return 10;
+    }
+    return 20;
+  }
+
   PracticeFocus _focus = PracticeFocus.any;
   String? _domainId;
   String? _topicId;
@@ -169,20 +172,8 @@ class _ExamOverviewScreenState extends State<ExamOverviewScreen> {
   /// generated. Shown in the same caption slot as the "no content package
   /// at all" message below, cleared on every new attempt.
   ///
-  /// **Current, known production state:** the real bundled DANB RHS
-  /// content (`assets/content/danb_rhs/content.json`) has exactly 2
-  /// questions today, and *both are drafts* — zero approved questions
-  /// exist. [PracticeGenerator.select] deliberately excludes drafts
-  /// (matching [MockExamBlueprint]'s already-accepted behavior for Mock
-  /// Exam), so with today's content, tapping "Start Practice Exam" in a
-  /// real production build *always* lands here with a "no eligible
-  /// questions" reason — Quick Practice is unavailable end-to-end until
-  /// content is approved (tracked separately, see
-  /// `docs/PROTOTYPE_CONTENT_AUDIT.md`). This is not a generic/rare error
-  /// state to shrug off: it is the expected, reproducible behavior of
-  /// today's shipped content, verified by
-  /// `test/screens/exam_overview_screen_test.dart`'s
-  /// "no approved questions (PREP-667)" test against the real asset file.
+  /// Production loads the approved bank bundled in the app. Selection,
+  /// saved-history and session-write failures are separate from content loading.
   String? _unavailableReason;
 
   /// Set when a free user's daily practice limit could not be checked
@@ -227,36 +218,43 @@ class _ExamOverviewScreenState extends State<ExamOverviewScreen> {
     // silently falling back to the real device clock partway through.
     final DateTime Function() nowFn = widget.now ?? DateTime.now;
 
+    final access = PremiumAccessScope.maybeOf(context);
+    // A fresh mixed session needs the bundled bank, not an old saved session.
+    final freshMixed = widget.launch == PracticeLaunch.random &&
+        (PremiumAccessScope.maybeOf(context)?.active ??
+            entitlement?.isActiveAt(nowFn()) ??
+            true);
+    // Free-trial recovery is capped by the independently persisted allowance.
+    final mixedFromBank = freshMixed ||
+        widget.launch == PracticeLaunch.random &&
+            access?.canStartFreePractice == true;
     PracticeSession? existing;
-    if (repository != null) {
+    if (repository != null && !freshMixed) {
       try {
         existing = await resumablePracticeSession(repository, examId);
       } catch (_) {
-        if (mounted) {
-          setState(() {
-            _starting = false;
-            _unavailableReason =
-                'Could not read your saved session. Please try again.';
-          });
+        if (!mixedFromBank) {
+          if (mounted) {
+            setState(() {
+              _starting = false;
+              _unavailableReason =
+                  'Could not read your saved session. Please try again.';
+            });
+          }
+          return;
         }
-        return;
       }
     }
 
     if (!mounted) return;
-    final access = PremiumAccessScope.maybeOf(context);
     // The mixed-practice tile starts its advertised capped set. Only the
     // explicit Continue entry resumes arbitrary sessions (including full topics).
     // A free trial must keep its existing identity and lifetime allowance.
-    if (widget.launch == PracticeLaunch.random &&
-        (access == null || access.active)) {
-      existing = null;
-    }
+    if (freshMixed) existing = null;
     if (existing != null &&
         (widget.launch != null ||
             _focus != PracticeFocus.any ||
-            _domainId != null ||
-            _requestedCount != 10)) {
+            _domainId != null)) {
       setState(() => _choosingSession = true);
       final startNew = await AppDialog.show<bool?>(
         context: context,
@@ -342,6 +340,30 @@ class _ExamOverviewScreenState extends State<ExamOverviewScreen> {
           return;
         }
       }
+      // Reservation is optional history-based planning, not question content.
+      // Preserve it when readable; basic mixed practice still works if an old
+      // history/schedule record cannot be decoded. Writes remain mandatory.
+      var reservedQuestionIds = <String>{};
+      if (repository != null && entitlement != null) {
+        try {
+          reservedQuestionIds = await effectiveMockReserve(
+            repository: repository,
+            package: package,
+            entitlement: entitlement,
+            now: nowFn(),
+          );
+        } catch (_) {
+          if (!mixedFromBank) {
+            if (!mounted) return;
+            setState(() {
+              _starting = false;
+              _unavailableReason =
+                  'Could not load your practice history. Please try again.';
+            });
+            return;
+          }
+        }
+      }
       final PracticeGenerator generator;
       try {
         generator = PracticeGenerator.select(
@@ -351,13 +373,7 @@ class _ExamOverviewScreenState extends State<ExamOverviewScreen> {
               ...package.questions
                   .where((q) => _topicProgress!.isComplete(q.topicId))
                   .map((q) => q.id),
-            ...(repository != null && entitlement != null
-                ? await effectiveMockReserve(
-                    repository: repository,
-                    package: package,
-                    entitlement: entitlement,
-                    now: nowFn())
-                : <String>{}),
+            ...reservedQuestionIds,
           },
           questionStates: _focus == PracticeFocus.any || repository == null
               ? const []
@@ -702,36 +718,9 @@ class _ExamOverviewScreenState extends State<ExamOverviewScreen> {
             const SizedBox(height: AppSpacing.md),
             const StudyPageHeading(
               title: 'Let’s practice.',
-              subtitle: 'Choose a short session that fits your day.',
+              subtitle: '20 questions per session.',
               icon: Icons.auto_stories_rounded,
             ),
-            const SizedBox(height: AppSpacing.xxl),
-            Text('Session length', style: textStyles.h3),
-            const SizedBox(height: AppSpacing.md),
-            Wrap(spacing: AppSpacing.sm, runSpacing: AppSpacing.sm, children: [
-              for (final count in [5, 10, 20])
-                ChoiceChip(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 12, vertical: 10),
-                    selectedColor: colors.primaryContainer,
-                    checkmarkColor: colors.onPrimaryContainer,
-                    labelStyle: textStyles.body.copyWith(
-                      color: _requestedCount == count
-                          ? colors.onPrimaryContainer
-                          : colors.onSurface,
-                      fontWeight: FontWeight.w700,
-                    ),
-                    backgroundColor: colors.surfaceContainer,
-                    side: BorderSide(color: colors.outlineVariant),
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(18)),
-                    label: Text('$count questions'),
-                    selected: _requestedCount == count,
-                    onSelected: _starting
-                        ? null
-                        : (_) =>
-                            _updateSelection(() => _requestedCount = count)),
-            ]),
             const SizedBox(height: AppSpacing.xxl),
             Text('Focus', style: textStyles.h3),
             const SizedBox(height: AppSpacing.md),

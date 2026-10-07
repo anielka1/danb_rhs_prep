@@ -48,7 +48,7 @@ void main() {
     final old = DebugDemoEnvironment.demoInProgressPracticeSession;
     final repo = InMemoryProgressRepository(seedPracticeSessions: [old]);
     await open(tester, repo);
-    await tap(tester, '5 questions');
+    await tap(tester, 'My weak areas');
     await tap(tester, 'Start Practice Exam');
     expect(find.text('You have an unfinished session'), findsOneWidget);
     await tap(tester, 'Cancel');

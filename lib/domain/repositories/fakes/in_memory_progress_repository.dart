@@ -152,13 +152,16 @@ class InMemoryProgressRepository
 
   @override
   Future<PracticeSession?> inProgressPracticeSession(String examId) async {
-    for (final session in _practiceSessions.values) {
-      if (session.examId == examId &&
-          session.status == SessionStatus.inProgress) {
-        return session;
-      }
-    }
-    return null;
+    final sessions = _practiceSessions.values
+        .where((session) =>
+            session.examId == examId &&
+            session.status == SessionStatus.inProgress)
+        .toList()
+      ..sort((a, b) {
+        final started = b.startedAt.compareTo(a.startedAt);
+        return started == 0 ? b.id.compareTo(a.id) : started;
+      });
+    return sessions.isEmpty ? null : sessions.first;
   }
 
   @override
