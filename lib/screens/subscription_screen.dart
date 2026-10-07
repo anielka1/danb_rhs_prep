@@ -32,10 +32,24 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
   bool _loading = true;
   bool _busy = false;
   bool _initialized = false;
+  bool _closed = false;
+  bool _closeScheduled = false;
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    if (_initialized) return;
+    final access = PremiumAccessScope.maybeOf(context);
+    if (access?.active == true && !_closeScheduled && !_closed) {
+      _closeScheduled = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _closeScheduled = false;
+        if (mounted &&
+            access!.active &&
+            ModalRoute.of(context)?.isCurrent != false) {
+          _close();
+        }
+      });
+    }
+    if (access?.active == true || _initialized) return;
     _initialized = true;
     final repository =
         widget.repository ?? PremiumAccessScope.maybeOf(context)?.repository;
@@ -81,10 +95,22 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
   String _error(Object e) => e is SubscriptionException
       ? e.message
       : 'Could not complete the store request. Please try again.';
-  void _close() => widget.onClose != null
-      ? widget.onClose!()
-      : Navigator.of(context).maybePop();
+  void _close() {
+    if (_closed || ModalRoute.of(context)?.isCurrent == false) return;
+    _closed = true;
+    if (widget.onClose != null) {
+      widget.onClose!();
+    } else {
+      Navigator.of(context).maybePop();
+    }
+  }
+
   Future<void> _request({bool restore = false}) async {
+    if (_closed) return;
+    if (PremiumAccessScope.maybeOf(context)?.active == true) {
+      _close();
+      return;
+    }
     if (_busy || _repository == null || (!restore && _selected == null)) return;
     setState(() {
       _busy = true;
@@ -136,6 +162,17 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
   Widget build(BuildContext context) {
     final styles = context.textStyles;
     final colors = context.colors;
+    if (PremiumAccessScope.maybeOf(context)?.active == true) {
+      return AppScaffold(
+          body: SingleChildScrollView(
+              child: Column(children: [
+        Semantics(
+            liveRegion: true,
+            child: Text('Premium is active', style: styles.h2)),
+        const SizedBox(height: AppSpacing.lg),
+        PrimaryButton(label: 'Close', onPressed: _close),
+      ])));
+    }
     return AppScaffold(
         body: Column(children: [
       Row(children: [

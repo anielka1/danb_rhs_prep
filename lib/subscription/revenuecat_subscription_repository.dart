@@ -63,6 +63,7 @@ class RevenueCatSubscriptionRepository implements SubscriptionStoreRepository {
   Future<void>? _initialization;
   DateTime? _latestRequest;
   Entitlement? _latest;
+  int _publicationRevision = 0;
   String? _key;
 
   /// Validation prevents Test Store credentials from entering release/profile.
@@ -120,13 +121,19 @@ class RevenueCatSubscriptionRepository implements SubscriptionStoreRepository {
         productId: premium!.productIdentifier);
   }
 
-  Entitlement _publish(rc.CustomerInfo info, {bool restored = false}) {
+  Entitlement _publish(rc.CustomerInfo info,
+      {bool restored = false, int? readRevision}) {
     final value = mapCustomerInfo(info, now(), restored: restored);
-    // A slow foreground refresh must not overwrite a newer purchase/listener.
+    // A slow foreground read must not overwrite a newer publication, even
+    // when the backend timestamps tie. Unsolicited events still revoke access.
     if (_latestRequest != null &&
-        value.lastVerifiedAt.isBefore(_latestRequest!)) {
+        (value.lastVerifiedAt.isBefore(_latestRequest!) ||
+            (value.lastVerifiedAt == _latestRequest &&
+                readRevision != null &&
+                readRevision != _publicationRevision))) {
       return _latest!;
     }
+    _publicationRevision++;
     _latestRequest = value.lastVerifiedAt;
     _latest = value;
     if (!_changes.isClosed) _changes.add(value);
@@ -136,7 +143,8 @@ class RevenueCatSubscriptionRepository implements SubscriptionStoreRepository {
   @override
   Future<Entitlement> currentEntitlement() async {
     await _ready();
-    return _publish(await client.customerInfo());
+    final revision = _publicationRevision;
+    return _publish(await client.customerInfo(), readRevision: revision);
   }
 
   @override
