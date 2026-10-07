@@ -124,7 +124,9 @@ class _PracticeQuestionScreenState extends State<PracticeQuestionScreen>
         .dependOnInheritedWidgetOfExactType<PracticeSessionScope>()
         ?.returnToTopics;
     try {
-      if (returnToTopics != null) {
+      if (returnToTopics != null ||
+          controller.session.mode == PracticeMode.topicPractice ||
+          controller.session.mode == PracticeMode.browseDomain) {
         // End this run, not the unanswered questions or the whole topic.
         await controller.complete();
       }

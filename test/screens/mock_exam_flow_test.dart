@@ -150,6 +150,8 @@ void main() {
     await tapText(tester, 'Finish mock exam');
     await tapText(tester, 'Finish exam');
     expect(find.byType(MockExamResultsScreen), findsNothing);
+    expect(find.text('Back to exam'), findsNothing);
+    expect(await repo.answerAttemptsForExam('demo_exam'), isEmpty);
     repo.failSave = false;
     await tapText(tester, 'Try Again');
     expect(find.text('Below practice threshold'), findsOneWidget);

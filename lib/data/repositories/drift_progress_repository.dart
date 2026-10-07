@@ -1,3 +1,4 @@
+import '../../domain/repositories/mock_completion_repository.dart';
 import '../../domain/models/answer_order.dart';
 import '../../domain/models/study_schedule.dart';
 import '../../domain/repositories/study_schedule_repository.dart';
@@ -29,6 +30,7 @@ import '../local/app_database.dart';
 class DriftProgressRepository
     implements
         ProgressRepository,
+        MockCompletionRepository,
         ProgressResetRepository,
         StudyScheduleRepository {
   DriftProgressRepository(this._db);
@@ -362,6 +364,19 @@ class DriftProgressRepository
                   reservedQuestionIdsJson: jsonEncode(e.reservedQuestionIds)));
         }
       });
+
+  @override
+  Future<void> completeMockAttempt(
+      MockAttempt attempt, List<AnswerAttempt> answers) {
+    validateMockCompletion(attempt, answers);
+    return _db.transaction(() async {
+      // The existing idempotent inserts also protect the aggregate counters.
+      for (final answer in answers) {
+        await recordAnswerAttempt(answer);
+      }
+      await saveMockAttempt(attempt);
+    });
+  }
 
   // ---- Mock attempts ----
 

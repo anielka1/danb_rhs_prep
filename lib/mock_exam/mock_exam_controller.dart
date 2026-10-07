@@ -1,3 +1,6 @@
+import 'dart:convert';
+import '../domain/models/answer_attempt.dart';
+import '../domain/repositories/mock_completion_repository.dart';
 import 'dart:math';
 import '../domain/models/answer_order.dart';
 import '../domain/models/entitlement.dart';
@@ -27,6 +30,8 @@ class MockExamController {
   final Random _random;
   MockAttempt? _attempt;
   List<Question>? _restoredQuestions;
+  MockAttempt? _pendingCompletion;
+  List<AnswerAttempt>? _pendingGrades;
   bool _busy = false;
   bool _loaded = false;
   final Set<String> _usedIds = {};
@@ -36,6 +41,7 @@ class MockExamController {
   int get currentIndex => _attempt?.currentQuestionIndex ?? 0;
   Question get currentQuestion => questions[currentIndex];
   int get unansweredCount => questions.length - (_attempt?.answeredCount ?? 0);
+  bool get completionPending => _pendingCompletion != null;
   bool get inProgress => _attempt?.status == MockAttemptStatus.inProgress;
   bool get isExpired =>
       blueprint.config.timed && _attempt != null && remaining == Duration.zero;
@@ -178,22 +184,62 @@ class MockExamController {
       });
 
   Future<void> finish() => _exclusive(() async {
-        _requireActive();
-        final correct = questions
-            .where((q) => _attempt!.answers[q.id] == q.correctAnswerId)
-            .length;
-        final now = _now().toUtc();
-        final end =
-            now.isBefore(_attempt!.startedAt) ? _attempt!.startedAt : now;
-        await _save(_attempt!.copyWith(
-            status: MockAttemptStatus.completed,
-            completedAt: end,
-            correctCount: correct));
+        _requireActive(finishing: true);
+        final storage = repository;
+        if (storage is! MockCompletionRepository) {
+          throw UnsupportedError('Atomic mock completion unavailable');
+        }
+        if (_pendingCompletion == null) {
+          final now = _now();
+          final end = now.toUtc().isBefore(_attempt!.startedAt)
+              ? _attempt!.startedAt
+              : now.toUtc();
+          final local = end.toLocal();
+          final day = '${local.year.toString().padLeft(4, '0')}-'
+              '${local.month.toString().padLeft(2, '0')}-'
+              '${local.day.toString().padLeft(2, '0')}';
+          final grades = [
+            for (final q in questions)
+              if (_attempt!.answers.containsKey(q.id))
+                AnswerAttempt(
+                    id: 'mock-final:${jsonEncode([_attempt!.id, q.id])}',
+                    examId: _attempt!.examId,
+                    questionId: q.id,
+                    domainId: q.domainId,
+                    topicId: q.topicId,
+                    difficulty: q.difficulty,
+                    sessionId: _attempt!.id,
+                    sessionType: AttemptSessionType.mock,
+                    selectedAnswerId: _attempt!.answers[q.id]!,
+                    isCorrect: _attempt!.answers[q.id] == q.correctAnswerId,
+                    answeredAt: end,
+                    localAnsweredDate: day,
+                    contentVersion: _attempt!.contentVersion,
+                    questionVersion: q.version,
+                    correctAnswerId: q.correctAnswerId,
+                    explanation: q.explanation),
+          ];
+          _pendingCompletion = _attempt!.copyWith(
+              status: MockAttemptStatus.completed,
+              completedAt: end,
+              correctCount: grades.where((a) => a.isCorrect).length);
+          _pendingGrades = List.unmodifiable(grades);
+        }
+        // Keep this exact payload after an ambiguous write failure. Retry must
+        // not change the timestamp, final choices, or question-state counters.
+        await (storage as MockCompletionRepository)
+            .completeMockAttempt(_pendingCompletion!, _pendingGrades!);
+        _attempt = _pendingCompletion;
+        _pendingCompletion = null;
+        _pendingGrades = null;
       });
 
   MockExamResult get result => blueprint.resultFor(_attempt!);
 
-  void _requireActive() {
+  void _requireActive({bool finishing = false}) {
+    if (!finishing && _pendingCompletion != null) {
+      throw StateError('Retry saving the completed exam first.');
+    }
     if (!inProgress) throw StateError('No active mock exam.');
   }
 

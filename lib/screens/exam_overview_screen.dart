@@ -448,15 +448,18 @@ class _ExamOverviewScreenState extends State<ExamOverviewScreen> {
         examId: examId,
         mode: widget.launch == PracticeLaunch.timed
             ? PracticeMode.timedQuiz
-            : switch (_focus) {
-                PracticeFocus.any => _domainId == null
-                    ? PracticeMode.quickPractice
-                    : PracticeMode.browseDomain,
-                PracticeFocus.weakAreas => PracticeMode.weakAreas,
-                PracticeFocus.incorrectQuestions =>
-                  PracticeMode.incorrectQuestions,
-                PracticeFocus.bookmarkedQuestions => PracticeMode.bookmarked,
-              },
+            : widget.launch == PracticeLaunch.topic
+                ? PracticeMode.topicPractice
+                : switch (_focus) {
+                    PracticeFocus.any => _domainId == null
+                        ? PracticeMode.quickPractice
+                        : PracticeMode.browseDomain,
+                    PracticeFocus.weakAreas => PracticeMode.weakAreas,
+                    PracticeFocus.incorrectQuestions =>
+                      PracticeMode.incorrectQuestions,
+                    PracticeFocus.bookmarkedQuestions =>
+                      PracticeMode.bookmarked,
+                  },
         questionIds: generator.questions.map((q) => q.id).toList(),
         answerOrder: AnswerOrder.shuffled(
             generator.questions, widget.random ?? Random()),

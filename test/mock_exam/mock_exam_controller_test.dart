@@ -88,7 +88,6 @@ void main() {
       () => controller.answer('a'),
       controller.toggleFlag,
       () => controller.moveTo(2),
-      controller.finish,
     ]) {
       await expectLater(action(), throwsStateError);
       expect(controller.attempt, before);
@@ -97,6 +96,19 @@ void main() {
     repo.failSave = false;
     await controller.answer('a');
     expect(controller.attempt!.answeredCount, 1);
+    final answered = controller.attempt;
+    repo.failSave = true;
+    await expectLater(controller.finish(), throwsStateError);
+    expect(controller.attempt, answered);
+    expect(await repo.mockAttempt(before!.id), answered);
+    // A finalization retry must use the frozen choices, even if the original
+    // transaction succeeded but its acknowledgement was lost.
+    await expectLater(controller.answer('b'), throwsStateError);
+    repo.failSave = false;
+    await controller.finish();
+    expect(controller.attempt!.answeredCount, 1);
+    expect(controller.inProgress, isFalse);
+    expect(await repo.answerAttemptsForExam('demo_exam'), hasLength(1));
   });
 
   test('failed first save leaves no attempt and retry creates one', () async {

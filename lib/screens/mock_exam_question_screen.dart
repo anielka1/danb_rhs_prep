@@ -125,9 +125,10 @@ class _MockExamQuestionScreenState extends State<MockExamQuestionScreen> {
                 'Your previous answers and flags are unchanged. Try again.',
             onRetry: () => _perform(_retry!)),
         const SizedBox(height: AppSpacing.lg),
-        SecondaryButton(
-            label: 'Back to exam',
-            onPressed: () => setState(() => _retry = null)),
+        if (!controller.completionPending)
+          SecondaryButton(
+              label: 'Back to exam',
+              onPressed: () => setState(() => _retry = null)),
       ]));
     } else {
       final remainingSeconds =
