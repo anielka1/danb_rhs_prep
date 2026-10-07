@@ -1,3 +1,4 @@
+import '../mock_completion_repository.dart';
 import '../../models/study_schedule.dart';
 import '../study_schedule_repository.dart';
 import '../progress_reset_repository.dart';
@@ -18,6 +19,7 @@ import '../progress_repository.dart';
 class InMemoryProgressRepository
     implements
         ProgressRepository,
+        MockCompletionRepository,
         ProgressResetRepository,
         StudyScheduleRepository {
   InMemoryProgressRepository({
@@ -162,6 +164,25 @@ class InMemoryProgressRepository
         return started == 0 ? b.id.compareTo(a.id) : started;
       });
     return sessions.isEmpty ? null : sessions.first;
+  }
+
+  @override
+  Future<void> completeMockAttempt(
+      MockAttempt attempt, List<AnswerAttempt> answers) async {
+    validateMockCompletion(attempt, answers);
+    final staged = InMemoryProgressRepository(
+        seedAnswerAttempts: _attempts,
+        seedQuestionStates: _questionStates.values.toList());
+    for (final answer in answers) {
+      await staged.recordAnswerAttempt(answer);
+    }
+    await saveMockAttempt(attempt);
+    _attempts
+      ..clear()
+      ..addAll(staged._attempts);
+    _questionStates
+      ..clear()
+      ..addAll(staged._questionStates);
   }
 
   @override

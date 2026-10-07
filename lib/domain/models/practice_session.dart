@@ -12,6 +12,7 @@ enum PracticeMode {
   diagnostic,
   planned,
   timedQuiz,
+  topicPractice,
 }
 
 /// Lifecycle state of a [PracticeSession].

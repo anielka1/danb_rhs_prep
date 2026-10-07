@@ -20,6 +20,59 @@ class FailingCompletionRepository extends InMemoryProgressRepository {
 }
 
 void main() {
+  for (final mode in [
+    PracticeMode.topicPractice,
+    PracticeMode.browseDomain,
+    PracticeMode.quickPractice
+  ]) {
+    testWidgets(
+        'resumed $mode Close uses persisted mode without a topic callback',
+        (tester) async {
+      final package = fixture(count: 3);
+      final repo = FailingCompletionRepository();
+      final controller = PracticeSessionController(
+          session: PracticeSession(
+              id: 'resumed',
+              examId: package.exam.id,
+              mode: mode,
+              questionIds: package.questions.map((q) => q.id).toList(),
+              status: SessionStatus.inProgress,
+              startedAt: DateTime.utc(2026)),
+          questions: package.questions,
+          progressRepository: repo);
+      await controller.saveSession();
+      final nav = GlobalKey<NavigatorState>();
+      await tester.pumpWidget(MaterialApp(
+          navigatorKey: nav,
+          theme: AppTheme.lightTheme,
+          home: const Scaffold(body: Text('Home'))));
+      nav.currentState!.push(MaterialPageRoute<void>(
+          builder: (_) => PracticeSessionScope(
+              controller: controller, child: const PracticeQuestionScreen())));
+      await tester.pumpAndSettle();
+      if (mode != PracticeMode.quickPractice) {
+        repo.failCompletion = true;
+        await tester.tap(find.bySemanticsLabel('Close'));
+        await tester.pumpAndSettle();
+        expect(find.text('Leave without saving?'), findsOneWidget);
+        await tester.tap(find.text('Stay here'));
+        await tester.pumpAndSettle();
+        expect(
+            await repo.inProgressPracticeSession(package.exam.id), isNotNull);
+        repo.failCompletion = false;
+      }
+      await tester.tap(find.bySemanticsLabel('Close'));
+      await tester.pumpAndSettle();
+      expect(find.text('Home'), findsOneWidget);
+      expect(
+          controller.session.status,
+          mode == PracticeMode.quickPractice
+              ? SessionStatus.inProgress
+              : SessionStatus.completed);
+      expect(await repo.answerAttemptsForExam(package.exam.id), isEmpty);
+    });
+  }
+
   for (final fail in [false, true]) {
     testWidgets(
         'Close ends partial topic session, unwinds routes, save failure=$fail',

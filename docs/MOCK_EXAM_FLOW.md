@@ -116,3 +116,37 @@ consumes randomness), real SQLite close/reopen, and a frozen schema-4 SQL fixtur
 exported from main b705270. Existing UI tests locate answers by identity/text,
 not by assuming the first option is correct. Test sources do not affect production
 randomness. Hosted workflows remain disabled for these commits via `[skip ci]`.
+
+## Final grades and topic-session exit
+
+New mock completions atomically store the final `MockAttempt`, one frozen
+`AnswerAttempt` per answered question, and the corresponding `QuestionState`
+aggregates. Grades use stable answer IDs, not display positions. Changing a
+choice during an exam records only the final choice when the exam is finished.
+Until then, the persisted mock remains resumable without publishing interim
+correctness to Progress. Unanswered questions still reduce the mock score but
+are not marked attempted or completed in topic progress.
+
+Final answer records contain the content/question version, correct answer ID,
+and explanation used for grading. Their timestamp and local date represent
+exam finalization; no per-question answer time or confidence is invented.
+Progress and Review mistakes consume these records through their existing
+history logic. Legacy completed mocks are not backfilled or regraded; existing
+`Grade unavailable` behavior remains when their detailed grades are missing.
+
+`MockCompletionRepository` is the atomic completion capability implemented by
+Drift, the demo repository, and the reset-aware UI lease. A failed completion
+keeps the exact final payload for Retry. Editing choices is unavailable until
+that retry succeeds, since a failure may occur after the database committed.
+Deterministic record IDs make an identical retry idempotent. SQLite tests cover
+rollback of partial work, a lost acknowledgement, and a full database restart.
+No schema migration is required (schema 5 remains unchanged).
+
+New topic sessions persist `PracticeMode.topicPractice`, including the
+unfinished-topics action. X ends that run even when resumed from Home without
+a topic-selection callback. Legacy `browseDomain` sessions receive the same
+exit behavior; older `quickPractice` sessions are not guessed to be topic
+sessions, because that mode also represented ordinary mixed practice. Ordinary
+mixed sessions remain resumable. Ending a run never marks its unanswered
+questions or its whole topic completed. A failed save retains the existing
+Stay/Leave recovery flow. Existing question/answer order and history survive.

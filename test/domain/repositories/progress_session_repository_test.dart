@@ -48,6 +48,9 @@ void main() {
     await expectLater(old.saveMockAttempt(DebugDemoEnvironment.demoMockAttempt),
         throwsStateError);
     await expectLater(
+        old.completeMockAttempt(DebugDemoEnvironment.demoMockAttempt, const []),
+        throwsStateError);
+    await expectLater(
         old.saveReadinessSnapshot(DebugDemoEnvironment.demoReadinessSnapshot),
         throwsStateError);
     await fresh.savePracticeSession(session);

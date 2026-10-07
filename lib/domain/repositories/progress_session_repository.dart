@@ -1,3 +1,4 @@
+import 'mock_completion_repository.dart';
 import '../models/study_schedule.dart';
 import 'study_schedule_repository.dart';
 import '../models/answer_attempt.dart';
@@ -12,7 +13,10 @@ import 'progress_reset_repository.dart';
 /// blocks new ones, then permanently retires this lease after successful deletion.
 /// Old controllers therefore cannot recreate deleted progress, even after retry.
 class ProgressSessionRepository
-    implements ProgressRepository, StudyScheduleRepository {
+    implements
+        ProgressRepository,
+        StudyScheduleRepository,
+        MockCompletionRepository {
   ProgressSessionRepository(this._storage);
   final ProgressRepository _storage;
   Future<void> _writes = Future.value();
@@ -92,6 +96,18 @@ class ProgressSessionRepository
   @override
   Future<void> savePracticeSession(PracticeSession value) =>
       _write(() => _storage.savePracticeSession(value));
+  @override
+  Future<void> completeMockAttempt(
+          MockAttempt attempt, List<AnswerAttempt> answers) =>
+      _write(() async {
+        final storage = _storage;
+        if (storage is! MockCompletionRepository) {
+          throw UnsupportedError('Atomic mock completion unavailable');
+        }
+        await (storage as MockCompletionRepository)
+            .completeMockAttempt(attempt, answers);
+      });
+
   @override
   Future<void> saveMockAttempt(MockAttempt value) =>
       _write(() => _storage.saveMockAttempt(value));
