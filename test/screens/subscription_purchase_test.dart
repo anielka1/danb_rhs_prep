@@ -82,6 +82,14 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.bySemanticsLabel('Close subscription'));
     expect((await repo.currentEntitlement()).isPremium, false);
+    expect(closes, 1);
+    // Reopen after Close, as the actual navigator does. The closed instance
+    // must not accept another operation while its route is being removed.
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pumpWidget(MaterialApp(
+        theme: AppTheme.lightTheme,
+        home: SubscriptionScreen(repository: repo, onClose: () => closes++)));
+    await tester.pumpAndSettle();
     await tap(tester, 'Restore purchases');
     await tester.pumpAndSettle();
     expect(find.text('No active subscription was found.'), findsOneWidget);

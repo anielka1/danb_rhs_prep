@@ -28,7 +28,9 @@ class CachedSubscriptionRepository implements SubscriptionRepository {
 class PremiumAccessController extends ChangeNotifier
     with WidgetsBindingObserver {
   PremiumAccessController(this.repository,
-      {this.trialStore, this.now = DateTime.now}) {
+      {this.trialStore,
+      this.now = DateTime.now,
+      this.refreshTimeout = const Duration(seconds: 10)}) {
     WidgetsBinding.instance.addObserver(this);
     _subscription = repository.entitlementChanges().listen((value) {
       _revision++;
@@ -126,29 +128,44 @@ class PremiumAccessController extends ChangeNotifier
   }
 
   final DateTime Function() now;
+  final Duration refreshTimeout;
   Entitlement? entitlement;
   bool loading = true;
   bool failed = false;
   bool _disposed = false;
   int _revision = 0;
+  int _refreshGeneration = 0;
   Timer? _expiry;
   StreamSubscription<Entitlement>? _subscription;
   bool get active => entitlement?.isActiveAt(now()) ?? false;
   Future<void> refresh() async {
+    if (_disposed) return;
+    final generation = ++_refreshGeneration;
     final revision = ++_revision;
+    _trialReady = false;
     loading = true;
     failed = false;
     notifyListeners();
     try {
-      final value = await repository.currentEntitlement();
-      _trialReady = false;
-      if (trialStore != null) {
-        trial = await trialStore!.read();
-        _trialReady = true;
+      // Bound the whole read, including local trial storage. Late results have
+      // no side effects here and cannot mutate a newer refresh's trial state.
+      final result = await (() async {
+        final value = await repository.currentEntitlement();
+        final trialValue = await trialStore?.read();
+        return (value, trialValue);
+      })()
+          .timeout(refreshTimeout);
+      if (_disposed || generation != _refreshGeneration) return;
+      trial = result.$2;
+      _trialReady = trialStore != null;
+      if (revision == _revision) {
+        _accept(result.$1);
+      } else {
+        // RevenueCat may already have published a newer event while reading.
+        notifyListeners();
       }
-      if (!_disposed && revision == _revision) _accept(value);
     } catch (_) {
-      if (!_disposed && revision == _revision) _fail();
+      if (!_disposed && generation == _refreshGeneration) _fail();
     }
   }
 

@@ -109,3 +109,36 @@ Apple Sandbox / TestFlight, `appl_` build:
 Documentation accessed 2026-09-14. The installed SDK's PurchaseParams.package /
 Purchases.purchase API is used. Verification results are recorded in the PR;
 Test Store, Apple Sandbox and signed device behavior require the owner setup above.
+
+## Access refresh and late responses
+
+A foreground CustomerInfo read records the repository publication revision when
+it starts. A response older than the latest requestDate is ignored; when dates
+tie, a response from before an intervening publication is also ignored. This
+prevents a slow free read from overwriting a newer purchase/listener result.
+The rule is symmetric: a newer explicit revocation wins over an older Premium
+read, and a subsequent free read without an intervening event is still accepted.
+It does not extend access beyond the verified expiry or assume Premium offline.
+
+The application access check has a 10-second ceiling across CustomerInfo and
+local trial reads. This is a failure deadline, not an added startup delay. A
+hung read switches unknown access to the existing error/Retry state, not to
+free or a purchase screen. Previously verified, unexpired Premium stays usable
+while checking or after an error; its normal expiry remains enforced. Retry
+starts a new check. Late local snapshots from previous checks cannot overwrite
+the current check's trial state. The SDK continues to own the verified cache;
+no new persisted Premium flag or cache invalidation has been added.
+
+An open subscription screen observes the app-owned access controller. When
+Premium becomes active, purchase controls disappear immediately and the current
+paywall closes once after the frame. It never pops another route covering it.
+A late purchase/restore callback cannot cause a second pop. Already active users
+do not load a catalog when this screen is opened. Actual SDK/store requests
+are not cancelled by closing the screen; this change neither fabricates a
+transaction nor issues an extra purchase or restore.
+
+Regression tests use controlled futures, a fake SDK, and widget-test time for
+same-date response ordering, hanging reads/Retry, expiry, late trial results,
+disposal, existing Premium, and navigation during an in-flight purchase. They do
+not perform real transactions. TestFlight/Sandbox validation is still required
+for native store behavior; a network outage cannot be made impossible by UI code.
