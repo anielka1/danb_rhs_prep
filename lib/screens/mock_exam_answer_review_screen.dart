@@ -19,7 +19,9 @@ class MockExamAnswerReviewScreen extends StatefulWidget {
 class _MockExamAnswerReviewScreenState
     extends State<MockExamAnswerReviewScreen> {
   int _index = 0;
+  bool _mistakesOnly = false;
   final _scroll = ScrollController();
+  final _top = GlobalKey();
 
   @override
   void dispose() {
@@ -30,6 +32,11 @@ class _MockExamAnswerReviewScreenState
   void _move(int index) {
     setState(() => _index = index);
     if (_scroll.hasClients) _scroll.jumpTo(0);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted && _top.currentContext != null) {
+        Scrollable.ensureVisible(_top.currentContext!);
+      }
+    });
   }
 
   @override
@@ -37,7 +44,13 @@ class _MockExamAnswerReviewScreenState
     final blocked = premiumBlock(context);
     if (blocked != null) return blocked;
     final result = widget.result;
-    final question = result.questions[_index];
+    final mistakes = result.questions
+        .where((q) =>
+            result.attempt.answers.containsKey(q.id) &&
+            result.attempt.answers[q.id] != q.correctAnswerId)
+        .toList();
+    final questions = _mistakesOnly ? mistakes : result.questions;
+    final question = questions[_index];
     final selected = result.attempt.answers[question.id];
     final status = selected == null
         ? 'Unanswered'
@@ -55,29 +68,60 @@ class _MockExamAnswerReviewScreenState
       body: SingleChildScrollView(
         controller: _scroll,
         child: Column(
+          key: _top,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            SwitchListTile.adaptive(
+              contentPadding: EdgeInsets.zero,
+              title: Text('Mistakes only (${mistakes.length})'),
+              subtitle: mistakes.isEmpty
+                  ? const Text('No mistakes in this session')
+                  : null,
+              value: _mistakesOnly,
+              onChanged: mistakes.isEmpty
+                  ? null
+                  : (value) {
+                      setState(() {
+                        _mistakesOnly = value;
+                        _index = 0;
+                      });
+                      if (_scroll.hasClients) _scroll.jumpTo(0);
+                    },
+            ),
             if (result.isDemo)
               Text('Demo · synthetic questions', style: text.label),
             const SizedBox(height: AppSpacing.md),
             Semantics(
               liveRegion: true,
               header: true,
-              child: Text(
-                  'Question ${_index + 1} of ${result.questions.length}',
+              child: Text('Question ${_index + 1} of ${questions.length}',
                   style: text.h3),
             ),
-            Text(status, style: text.label),
-            if (result.attempt.flaggedQuestionIds.contains(question.id))
-              Text('Flagged for review', style: text.label),
+            Text(status,
+                style: text.label.copyWith(
+                    color: selected == null
+                        ? context.colors.onSurfaceVariant
+                        : selected == question.correctAnswerId
+                            ? context.semanticColors.success
+                            : context.colors.error)),
             const SizedBox(height: AppSpacing.lg),
             Text(question.questionText, style: text.h3),
             const SizedBox(height: AppSpacing.lg),
             for (final answer in question.answers) ...[
               AppCard(
+                backgroundColor: answer.id == question.correctAnswerId
+                    ? context.semanticColors.success.withValues(alpha: 0.12)
+                    : answer.id == selected
+                        ? context.colors.errorContainer
+                        : null,
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    if (answer.id == question.correctAnswerId)
+                      Icon(Icons.check_circle_rounded,
+                          color: context.semanticColors.success)
+                    else if (answer.id == selected)
+                      Icon(Icons.cancel_rounded, color: context.colors.error),
                     Text(answer.text, style: text.body),
                     if (answer.id == selected)
                       Text('Your answer', style: text.label),
@@ -102,22 +146,40 @@ class _MockExamAnswerReviewScreenState
               ),
             ),
             const SizedBox(height: AppSpacing.lg),
-            if (_index > 0) ...[
-              SecondaryButton(
-                  label: 'Previous answer', onPressed: () => _move(_index - 1)),
-              const SizedBox(height: AppSpacing.sm),
-            ],
-            if (_index < result.questions.length - 1)
-              PrimaryButton(
-                  label: 'Next answer', onPressed: () => _move(_index + 1))
-            else
-              PrimaryButton(
-                  label: 'Back to results',
-                  onPressed: () => Navigator.of(context).pop()),
-            const SizedBox(height: AppSpacing.lg),
           ],
         ),
       ),
+      bottomNavigationBar: SafeArea(
+          child: Padding(
+        padding:
+            const EdgeInsets.symmetric(horizontal: AppSpacing.screenPadding),
+        child: ConstrainedBox(
+          constraints: BoxConstraints(
+              maxHeight: MediaQuery.sizeOf(context).height * 0.32),
+          child: SingleChildScrollView(
+              child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
+            child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  if (_index < questions.length - 1)
+                    PrimaryButton(
+                        label: 'Next answer',
+                        onPressed: () => _move(_index + 1))
+                  else
+                    PrimaryButton(
+                        label: 'Back to results',
+                        onPressed: () => Navigator.of(context).pop()),
+                  if (_index > 0) ...[
+                    const SizedBox(height: AppSpacing.sm),
+                    SecondaryButton(
+                        label: 'Previous answer',
+                        onPressed: () => _move(_index - 1)),
+                  ],
+                ]),
+          )),
+        ),
+      )),
     );
   }
 }

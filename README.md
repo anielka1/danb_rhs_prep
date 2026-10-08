@@ -202,7 +202,7 @@ only for the process lifetime; restarting restores the deterministic fixtures.
 
 `DebugDemoEnvironment.buildProgressRepository()` also provides independent
 seeded practice/mock history for repository consumers and tests. After accountless
-onboarding, the Home **Mock exam** tile opens instructions, saved answers and flags,
+onboarding, the Home **Mock exam** tile opens instructions, saved answers,
 question navigation, confirmation, and a result calculated from the attempt.
 It uses only `Above practice threshold` / `Below practice threshold`, always
 with the practice-estimate disclaimer. See [PREP-650](docs/MOCK_EXAM_FLOW.md)

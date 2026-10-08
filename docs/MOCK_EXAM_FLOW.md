@@ -7,10 +7,10 @@ fabricated an 82% score and PASSED badge without any attempt. The regression
 `mock_exam_results_screen_test.dart` failed before the fix (one PASSED widget)
 and now requires an honest no-result state.
 
-The accountless debug demo now runs start → instructions → answering → flags →
+The accountless debug demo now runs start → instructions → answering →
 question navigation → finish confirmation → calculated demo result → new exam.
 Cancelling confirmation preserves the attempt. Exiting resumes the same saved
-answers, flags and cursor. No correctness is revealed during the attempt.
+answers and cursor. No correctness is revealed during the attempt.
 
 Results use only `Above practice threshold` / `Below practice threshold`.
 The configured threshold is inclusive and evaluated without rounding; unanswered
@@ -37,7 +37,7 @@ questions count as incorrect. Every result includes:
 
 ## State and persistence policy
 
-Every answer, flag, cursor and completion is saved before publishing new state.
+Every answer, cursor and completion is saved before publishing new state.
 Pending writes block duplicate operations and exiting. Failed writes retain the
 previous state and allow retry; errors do not display storage diagnostics.
 Restoration validates content version, question/answer identities and domain
@@ -53,7 +53,7 @@ is still required to produce a result. The demo configuration is untimed.
 
 ## Accessibility and privacy
 
-Selected answers, flags and question navigation expose textual/semantic state;
+Selected answers and question navigation expose textual/semantic state;
 status never relies only on color. Controls use existing tokens and minimum
 44-point targets. Screens scroll at large text sizes. Material confirmation is
 scrollable to prevent the overflow reproduced at 4× text. Existing adaptive iOS
@@ -116,3 +116,30 @@ consumes randomness), real SQLite close/reopen, and a frozen schema-4 SQL fixtur
 exported from main b705270. Existing UI tests locate answers by identity/text,
 not by assuming the first option is correct. Test sources do not affect production
 randomness. Hosted workflows remain disabled for these commits via `[skip ci]`.
+
+## Review and progress refresh (October 2026)
+
+Flag controls and flag instructions have been removed. The legacy stored flag
+field remains readable without being shown or deleting history. The navigator
+keeps exam order and mixes answered (grey/check) and unanswered tiles in one grid.
+
+Completed review marks the correct answer green, the selected wrong answer red,
+and labels both. The Mistakes only filter includes actually answered incorrect
+questions; unanswered questions remain available in All answers. Navigation is
+separate from the scrolling question/explanation, with a scrollable footer for
+large text. Review never writes or changes the original score.
+
+New mock completion stores final per-question grades, question states and the
+completed mock atomically. Retry uses a frozen payload and stable answer IDs,
+so a failed acknowledgement cannot double-count progress. No unanswered question
+is recorded as answered. Existing Grade unavailable is retained only for legacy
+mock records without per-question grades: an aggregate score cannot safely
+reconstruct those historical grades from a potentially changed answer key.
+No schema migration or retroactive grading is performed.
+
+Practice summaries retain the total score and mistakes review, without topic
+percentages or highest/lowest comparisons. Mistakes practice removes the
+redundant Next control on the question (the explanation advances the session).
+Topic rings display unique answered / eligible questions, including wrong
+answers; completion is coverage, not mastery. Home omits Set exam date when
+there is no date; date settings remain accessible in Settings.

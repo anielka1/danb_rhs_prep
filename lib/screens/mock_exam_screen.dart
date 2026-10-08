@@ -147,7 +147,7 @@ class _MockExamScreenState extends State<MockExamScreen> {
           icon: Icons.assignment_rounded,
           title: 'Mock Exam',
           message: controller.inProgress
-              ? 'Your answers and flags are saved. Resume your exam where you left off.'
+              ? 'Your answers are saved. Resume your exam where you left off.'
               : '${controller.questions.length} questions. Read the instructions before you begin.',
           primaryActionLabel:
               controller.inProgress ? 'Resume Mock Exam' : 'Start Mock Exam',
@@ -247,7 +247,7 @@ class _MockExamInstructionsScreenState
                             style: text.body),
                         const SizedBox(height: AppSpacing.md),
                         Text(
-                            'Select an answer to save it. Flag questions to find them later. '
+                            'Select an answer to save it. '
                             'Correct answers are not revealed during the exam. '
                             'Unanswered questions count as incorrect when you finish.',
                             style: text.body),
@@ -261,7 +261,7 @@ class _MockExamInstructionsScreenState
                             blueprint.isDemo
                                 ? 'Works offline. Answers are kept during this demo run. '
                                     'Closing the exam lets you resume; restarting the demo app resets its data.'
-                                : 'Answers and flags are saved locally after every change.',
+                                : 'Answers are saved locally after every change.',
                             style: text.body),
                         const SizedBox(height: AppSpacing.lg),
                         Text(MockExamResult.disclaimer, style: text.body),

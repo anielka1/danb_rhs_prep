@@ -402,33 +402,35 @@ class _PracticeQuestionScreenState extends State<PracticeQuestionScreen>
                       ),
                     ),
                     const Spacer(),
-                    Flexible(
-                      child: TextButton(
-                        onPressed: controller.canGoToNext
-                            ? () => _goToNext(controller)
-                            : null,
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Flexible(
-                              child: Text('Next',
-                                  style: TextStyle(
-                                      color: controller.canGoToNext
-                                          ? colors.onSurface
-                                          : context
-                                              .semanticColors.mutedForeground,
-                                      fontWeight: FontWeight.w600)),
-                            ),
-                            const SizedBox(width: AppSpacing.xs),
-                            Icon(Icons.arrow_forward_rounded,
-                                size: AppIconSize.small,
-                                color: controller.canGoToNext
-                                    ? colors.onSurface
-                                    : context.semanticColors.mutedForeground),
-                          ],
+                    if (controller.session.mode !=
+                        PracticeMode.incorrectQuestions)
+                      Flexible(
+                        child: TextButton(
+                          onPressed: controller.canGoToNext
+                              ? () => _goToNext(controller)
+                              : null,
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Flexible(
+                                child: Text('Next',
+                                    style: TextStyle(
+                                        color: controller.canGoToNext
+                                            ? colors.onSurface
+                                            : context
+                                                .semanticColors.mutedForeground,
+                                        fontWeight: FontWeight.w600)),
+                              ),
+                              const SizedBox(width: AppSpacing.xs),
+                              Icon(Icons.arrow_forward_rounded,
+                                  size: AppIconSize.small,
+                                  color: controller.canGoToNext
+                                      ? colors.onSurface
+                                      : context.semanticColors.mutedForeground),
+                            ],
+                          ),
                         ),
                       ),
-                    ),
                   ],
                 ),
                 const SizedBox(height: 10),

@@ -1,6 +1,7 @@
 import 'package:danb_rhs_prep/domain/models/entitlement.dart';
 import '../study_plan/onboarding_helper.dart';
 import 'dart:async';
+import 'dart:ui' show SemanticsAction;
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:danb_rhs_prep/main_demo.dart' as demo;
@@ -50,7 +51,7 @@ Future<void> begin(WidgetTester tester, ControlledMockRepository repo) async {
 
 void main() {
   testWidgets(
-      'E2E: instructions, answers, flags, navigator, cancel/confirm finish, result, retake',
+      'E2E: instructions, answers, navigator, cancel/confirm finish, result, retake',
       (tester) async {
     final semantics = tester.ensureSemantics();
 
@@ -65,13 +66,24 @@ void main() {
         controller.currentQuestion.answers.indexWhere(
             (a) => a.id == controller.currentQuestion.correctAnswerId)));
     await tester.pumpAndSettle();
-    await tapText(tester, 'Flag question');
-    expect(controller.attempt!.flaggedQuestionIds,
-        {controller.questions.first.id});
+    expect(find.text('Flag question'), findsNothing);
+    expect(controller.attempt!.flaggedQuestionIds, isEmpty);
     expect(find.bySemanticsLabel('Question 3, unanswered'), findsNothing);
     await tapText(tester, 'Show question navigator');
+    final first = find.widgetWithText(TextButton, '1 ✓');
+    final second = find.widgetWithText(TextButton, '2');
+    expect(tester.getTopLeft(first).dy, tester.getTopLeft(second).dy);
+    expect(tester.getTopLeft(first).dx, lessThan(tester.getTopLeft(second).dx));
+    expect(tester.widget<TextButton>(first).style!.backgroundColor!.resolve({}),
+        tester.element(first).colors.surfaceContainerHighest);
     final jump = find.bySemanticsLabel('Question 3, unanswered');
     await tester.ensureVisible(jump);
+    expect(
+        tester
+            .getSemantics(jump)
+            .getSemanticsData()
+            .hasAction(SemanticsAction.tap),
+        isTrue);
     await tester.tap(jump);
     await tester.pumpAndSettle();
     expect(find.text('Question 3 of 5'), findsOneWidget);
@@ -106,7 +118,7 @@ void main() {
     expect(find.text('Start Mock Exam'), findsOneWidget);
     await tapText(tester, 'Start Mock Exam');
     await tapText(tester, 'Begin exam');
-    expect(find.text('0 answered · 0 flagged'), findsOneWidget);
+    expect(find.text('0 answered'), findsOneWidget);
     expect(await repo.mockAttemptsForExam('demo_exam'), hasLength(2));
     semantics.dispose();
   });
@@ -150,6 +162,8 @@ void main() {
     await tapText(tester, 'Finish mock exam');
     await tapText(tester, 'Finish exam');
     expect(find.byType(MockExamResultsScreen), findsNothing);
+    expect(find.text('Back to exam'), findsNothing);
+    expect(await repo.answerAttemptsForExam('demo_exam'), isEmpty);
     repo.failSave = false;
     await tapText(tester, 'Try Again');
     expect(find.text('Below practice threshold'), findsOneWidget);
@@ -188,17 +202,18 @@ void main() {
     expect(find.byType(MockExamQuestionScreen), findsOneWidget);
     repo.saveGate!.complete();
     await tester.pumpAndSettle();
-    expect(find.text('1 answered · 0 flagged'), findsOneWidget);
+    expect(find.text('1 answered'), findsOneWidget);
   });
 
   testWidgets(
-      'exit and recreated UI resume saved position and flags with no network',
+      'exit and recreated UI resume saved position and answers with no network',
       (tester) async {
     final semantics = tester.ensureSemantics();
 
     final repo = ControlledMockRepository();
     await begin(tester, repo);
-    await tapText(tester, 'Flag question');
+    await tester.tap(find.byType(AnswerOptionTile).first);
+    await tester.pumpAndSettle();
     await tapText(tester, 'Next question');
     await tester.tap(find.bySemanticsLabel('Exit exam'));
     await tester.pumpAndSettle();
@@ -209,7 +224,7 @@ void main() {
     await tapText(tester, 'Resume Mock Exam');
     await tapText(tester, 'Resume exam');
     expect(find.text('Question 2 of 5'), findsOneWidget);
-    expect(find.text('0 answered · 1 flagged'), findsOneWidget);
+    expect(find.text('1 answered'), findsOneWidget);
     semantics.dispose();
   });
 
@@ -277,8 +292,8 @@ void main() {
         final text = tester.widget<AnswerOptionTile>(answer).text;
         expect(
             find.bySemanticsLabel('Option A: $text, selected'), findsOneWidget);
-        await tapText(tester, 'Flag question');
-        expect(find.text('Remove flag'), findsOneWidget);
+        expect(find.text('Flag question'), findsNothing);
+        expect(find.text('Remove flag'), findsNothing);
         await tapText(tester, 'Finish mock exam');
         await tapText(tester, 'Finish exam');
         await tester.ensureVisible(find.text(MockExamResult.disclaimer));

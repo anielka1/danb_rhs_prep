@@ -643,17 +643,28 @@ class _ExamOverviewScreenState extends State<ExamOverviewScreen> {
                 final status = _topicProgress?.status(topic.id);
                 return ListTile(
                     selected: _topicId == topic.id,
-                    leading: Icon(
-                        total == 0 || status == 'Not started'
-                            ? Icons.radio_button_unchecked
-                            : status == 'Completed'
-                                ? Icons.check_circle_rounded
-                                : status == 'In progress'
-                                    ? Icons.timelapse_rounded
-                                    : Icons.help_outline,
-                        color: status == 'Completed'
-                            ? context.semanticColors.success
-                            : null),
+                    leading: SizedBox(
+                      width: 32,
+                      height: 32,
+                      child: status == 'Completed'
+                          ? Icon(Icons.check_circle_rounded,
+                              color: context.semanticColors.success)
+                          : total == 0 || status == null || _progressLoading
+                              ? Icon(total == 0
+                                  ? Icons.radio_button_unchecked
+                                  : Icons.help_outline)
+                              : CircularProgressIndicator(
+                                  key: ValueKey('topic-progress-${topic.id}'),
+                                  value: (completed / total).clamp(0.0, 1.0),
+                                  backgroundColor:
+                                      context.colors.outlineVariant,
+                                  color: context.colors.primary,
+                                  semanticsLabel:
+                                      '${topic.name}: $completed of $total completed',
+                                  semanticsValue:
+                                      '${(completed / total * 100).round()}',
+                                ),
+                    ),
                     title: Text(topic.name),
                     subtitle: Text(total == 0
                         ? 'No approved questions'

@@ -108,6 +108,13 @@ void main() {
     return s;
   }
 
+  testWidgets('Home omits Set exam date but retains Settings', (tester) async {
+    await tester.pumpWidget(app());
+    await tester.pumpAndSettle();
+    expect(find.text('Set exam date'), findsNothing);
+    expect(find.byIcon(Icons.settings_rounded), findsOneWidget);
+  });
+
   testWidgets('a later correction removes the current review mistake',
       (tester) async {
     final q = package.questions.first;

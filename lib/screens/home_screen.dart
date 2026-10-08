@@ -282,8 +282,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                         style: styles.h3.copyWith(
                             color: context.colors.onPrimaryContainer)),
                     const SizedBox(height: 16),
-                    calendar,
-                    const SizedBox(height: 12),
+                    if (days != null) ...[
+                      calendar,
+                      const SizedBox(height: 12),
+                    ],
                     metrics,
                     const SizedBox(height: 10),
                     Text(
