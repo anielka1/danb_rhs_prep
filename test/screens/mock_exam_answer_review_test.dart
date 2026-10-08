@@ -16,6 +16,24 @@ Future<void> tapText(WidgetTester tester, String label) async {
 }
 
 void main() {
+  testWidgets('100 percent review has no enabled mistakes filter',
+      (tester) async {
+    final controller = await startedMock();
+    for (var i = 0; i < controller.questions.length; i++) {
+      if (i > 0) await controller.moveTo(i);
+      await controller.answer(controller.currentQuestion.correctAnswerId);
+    }
+    await controller.finish();
+    await tester.pumpWidget(MaterialApp(
+        theme: AppTheme.lightTheme,
+        home: MockExamAnswerReviewScreen(result: controller.result)));
+    await tester.pumpAndSettle();
+    expect(find.text('No mistakes in this session'), findsOneWidget);
+    expect(tester.widget<SwitchListTile>(find.byType(SwitchListTile)).onChanged,
+        isNull);
+    expect(find.text('Correct'), findsOneWidget);
+  });
+
   for (final dark in [false, true]) {
     testWidgets(
         'completed review preserves score and covers every answer, dark=$dark',
@@ -68,11 +86,16 @@ void main() {
       await tapText(tester, 'Review answers');
       expect(find.byType(MockExamAnswerReviewScreen), findsOneWidget);
       expect(find.text('Correct'), findsOneWidget);
+      expect(tester.widget<Text>(find.text('Correct')).style!.color,
+          tester.element(find.text('Correct')).semanticColors.success);
+      expect(find.text('Next answer').hitTestable(), findsOneWidget);
       expect(find.text('Your answer'), findsOneWidget);
       expect(find.text('Correct answer'), findsOneWidget);
       await tapText(tester, 'Next answer');
       expect(find.text('Incorrect'), findsOneWidget);
-      expect(find.text('Flagged for review'), findsOneWidget);
+      expect(find.text('Flagged for review'), findsNothing);
+      expect(find.byIcon(Icons.cancel_rounded), findsOneWidget);
+      expect(find.byIcon(Icons.check_circle_rounded), findsOneWidget);
       await tapText(tester, 'Next answer');
       expect(find.text('Unanswered'), findsOneWidget);
       expect(find.text('Your answer'), findsNothing);
@@ -90,6 +113,18 @@ void main() {
       await tapText(tester, 'Back to results');
       expect(find.byType(MockExamAnswerReviewScreen), findsNothing);
       expect(find.text('Correct answers: 1 / 5'), findsOneWidget);
+      await tapText(tester, 'Review answers');
+      await tapText(tester, 'Mistakes only (1)');
+      expect(find.text('Question 1 of 1'), findsOneWidget);
+      expect(find.text('Incorrect'), findsOneWidget);
+      expect(find.text(questions[1].questionText), findsOneWidget);
+      expect(find.text('Next answer'), findsNothing);
+      await tapText(tester, 'Mistakes only (1)');
+      expect(find.text('Question 1 of 5'), findsOneWidget);
+      await tester.ensureVisible(find.byIcon(Icons.arrow_back_rounded));
+      await tester.tap(find.byIcon(Icons.arrow_back_rounded));
+      await tester.pumpAndSettle();
+
       expect(attempt.answers, {
         questions[0].id: questions[0].correctAnswerId,
         questions[1].id: wrong

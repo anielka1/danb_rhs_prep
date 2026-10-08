@@ -211,8 +211,8 @@ void main() {
 
   group('strongest and weakest area (PREP-463)', () {
     testWidgets(
-        'identifies the real best- and worst-scoring topics from the '
-        'actual session, across 2+ distinct topics', (tester) async {
+        'omits topic comparisons while retaining the actual total score',
+        (tester) async {
       // Two real, distinct topics — the demo fixtures used elsewhere in
       // this file all share one topicId, so they can never exercise this
       // comparison; DebugDemoEnvironment's own "no DateTime.now()"
@@ -255,9 +255,11 @@ void main() {
 
       expect(
           find.textContaining('Highest session accuracy: topic_strong (100%)'),
-          findsOneWidget);
+          findsNothing);
       expect(find.textContaining('Lowest session accuracy: topic_weak (50%)'),
-          findsOneWidget);
+          findsNothing);
+      expect(find.text('TOPIC BREAKDOWN'), findsNothing);
+      expect(find.text('3/4 Correct'), findsOneWidget);
     });
 
     testWidgets(

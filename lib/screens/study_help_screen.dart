@@ -13,7 +13,7 @@ class StudyHelpScreen extends StatelessWidget {
     'Where should I start?':
         'Open Practice and start a short session. Read the explanation after each answer, then review your mistakes.',
     'Practice or Mock Exam?':
-        'Practice gives feedback after each answer. Mock Exam lets you answer and flag questions before seeing explanations at the end. Neither is an official DANB exam.',
+        'Practice gives feedback after each answer. Mock Exam lets you answer questions before seeing explanations at the end. Neither is an official DANB exam.',
     'What does my progress mean?':
         'Accuracy describes your recorded answers. It is not your chance of passing. A personalized exam-readiness calculation is not available yet. Any readiness history included in the demo is sample data, not an assessment of you.',
     'How do I continue a session?':

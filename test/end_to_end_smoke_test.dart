@@ -45,14 +45,20 @@ Future<void> _completeOnboarding(WidgetTester tester) async {
 }
 
 void main() {
-  testWidgets('Home Set exam date opens editable date without weekday setup',
+  testWidgets('Exam date remains editable in Settings without weekday setup',
       (tester) async {
     await _completeOnboarding(tester);
-    await _tapText(tester, 'Set exam date');
+    expect(find.text('Set exam date'), findsNothing);
+    await tester.tap(find.byTooltip('Settings'));
+    await tester.pumpAndSettle();
+    await _tapText(tester, 'Exam timeframe');
     await _tapText(tester, 'I know the exact date');
     await _tapText(tester, 'Choose a date');
     await _tapText(tester, 'OK');
     await _tapText(tester, 'Save changes');
+    expect(find.byType(ProfileSettingsScreen), findsOneWidget);
+    await tester.tap(find.bySemanticsLabel('Back').last);
+    await tester.pumpAndSettle();
     expect(find.text('Let’s study'), findsOneWidget);
     expect(find.text('Set exam date'), findsNothing);
     expect(find.text('Monday'), findsNothing);

@@ -17,6 +17,34 @@ void main() {
   Widget wrap(Widget child) =>
       MaterialApp(theme: AppTheme.lightTheme, home: child);
 
+  testWidgets('review mistakes omits redundant Next but can submit and advance',
+      (tester) async {
+    final questions = DebugDemoEnvironment.demoQuestions.take(2).toList();
+    final controller = PracticeSessionController(
+        session: PracticeSession(
+            id: 'mistakes',
+            examId: DebugDemoEnvironment.demoExamId,
+            mode: PracticeMode.incorrectQuestions,
+            questionIds: questions.map((q) => q.id).toList(),
+            status: SessionStatus.inProgress,
+            startedAt: DateTime.utc(2026)),
+        questions: questions);
+    await tester.pumpWidget(wrap(PracticeSessionScope(
+        controller: controller, child: const PracticeQuestionScreen())));
+    await tester.pumpAndSettle();
+    expect(find.text('Next'), findsNothing);
+    await tester.ensureVisible(find.text(questions.first.answers.first.text));
+    await tester.tap(find.text(questions.first.answers.first.text));
+    await tester.pump();
+    await tester.ensureVisible(find.text('Submit Answer'));
+    await tester.tap(find.text('Submit Answer'));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('Next Question'));
+    await tester.tap(find.text('Next Question'));
+    await tester.pumpAndSettle();
+    expect(controller.currentIndex, 1);
+    expect(find.text('Next'), findsNothing);
+  });
   testWidgets(
       'controlled clock excludes background and explanation reading from saved answer seconds',
       (tester) async {

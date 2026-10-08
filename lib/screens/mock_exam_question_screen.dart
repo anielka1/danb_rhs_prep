@@ -111,7 +111,6 @@ class _MockExamQuestionScreenState extends State<MockExamQuestionScreen> {
     final controller = widget.controller;
     final question = controller.currentQuestion;
     final attempt = controller.attempt!;
-    final flagged = attempt.flaggedQuestionIds.contains(question.id);
     final text = context.textStyles;
     Widget body;
     if (_busy) {
@@ -121,13 +120,13 @@ class _MockExamQuestionScreenState extends State<MockExamQuestionScreen> {
           child: Column(children: [
         ErrorState(
             title: 'Could not save this change',
-            message:
-                'Your previous answers and flags are unchanged. Try again.',
+            message: 'Your previous answers are unchanged. Try again.',
             onRetry: () => _perform(_retry!)),
         const SizedBox(height: AppSpacing.lg),
-        SecondaryButton(
-            label: 'Back to exam',
-            onPressed: () => setState(() => _retry = null)),
+        if (!controller.completionPending)
+          SecondaryButton(
+              label: 'Back to exam',
+              onPressed: () => setState(() => _retry = null)),
       ]));
     } else {
       final remainingSeconds =
@@ -144,9 +143,7 @@ class _MockExamQuestionScreenState extends State<MockExamQuestionScreen> {
               child: Text(
                   'Question ${controller.currentIndex + 1} of ${controller.questions.length}',
                   style: text.h3)),
-          Text(
-              '${attempt.answeredCount} answered · ${attempt.flaggedQuestionIds.length} flagged',
-              style: text.body),
+          Text('${attempt.answeredCount} answered', style: text.body),
           if (controller.blueprint.config.timed)
             Text(
                 'Time remaining: ${remainingSeconds ~/ 60}:${(remainingSeconds % 60).toString().padLeft(2, '0')}',
@@ -172,11 +169,6 @@ class _MockExamQuestionScreenState extends State<MockExamQuestionScreen> {
                         () => controller.answer(question.answers[i].id))),
             const SizedBox(height: AppSpacing.sm),
           ],
-          Semantics(
-              toggled: flagged,
-              child: SecondaryButton(
-                  label: flagged ? 'Remove flag' : 'Flag question',
-                  onPressed: () => _perform(controller.toggleFlag))),
           const SizedBox(height: AppSpacing.lg),
           if (controller.canMoveTo(controller.currentIndex - 1)) ...[
             SecondaryButton(
@@ -203,8 +195,7 @@ class _MockExamQuestionScreenState extends State<MockExamQuestionScreen> {
           if (_showNavigator) ...[
             const SizedBox(height: AppSpacing.md),
             Text(
-                'Choose a question to jump to. Check marks mean answered; '
-                'flags mark questions to revisit.',
+                'Questions stay in exam order. Grey tiles with a check mark are answered.',
                 style: text.body),
             const SizedBox(height: AppSpacing.sm),
             Wrap(spacing: AppSpacing.sm, runSpacing: AppSpacing.sm, children: [
@@ -235,34 +226,37 @@ class _MockExamQuestionScreenState extends State<MockExamQuestionScreen> {
     final id = controller.questions[index].id;
     final current = index == controller.currentIndex;
     final answered = attempt.answers.containsKey(id);
-    final flagged = attempt.flaggedQuestionIds.contains(id);
-    final label = 'Question ${index + 1}, ${current ? 'current, ' : ''}'
-        '${answered ? 'answered' : 'unanswered'}${flagged ? ', flagged' : ''}';
-    final visible = '${index + 1}${answered ? ' ✓' : ''}${flagged ? ' ⚑' : ''}';
     final canMove = controller.canMoveTo(index);
     return Semantics(
-      label: label,
+      label:
+          'Question ${index + 1}, ${current ? 'current, ' : ''}${answered ? 'answered' : 'unanswered'}',
       selected: current,
+      button: true,
+      enabled: canMove,
       onTap: canMove ? () => _move(index) : null,
-      button: canMove,
       child: ExcludeSemantics(
-          child: canMove
-              ? TextButton(
-                  style: TextButton.styleFrom(
-                      minimumSize: const Size(AppTapTarget.minInteractive,
-                          AppTapTarget.minInteractive)),
-                  onPressed: () => _move(index),
-                  child: Text(visible))
-              : Container(
-                  alignment: Alignment.center,
-                  constraints: const BoxConstraints(
-                      minWidth: AppTapTarget.minInteractive,
-                      minHeight: AppTapTarget.minInteractive),
-                  padding: const EdgeInsets.all(AppSpacing.sm),
-                  child: Text(visible,
-                      style: current
-                          ? context.textStyles.label
-                          : context.textStyles.body))),
+        child: SizedBox(
+          width: 64,
+          child: TextButton(
+            onPressed: canMove ? () => _move(index) : null,
+            style: TextButton.styleFrom(
+              minimumSize: const Size(64, 48),
+              padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 4),
+              backgroundColor: answered
+                  ? context.colors.surfaceContainerHighest
+                  : context.colors.surfaceContainer,
+              foregroundColor: context.colors.onSurface,
+              disabledForegroundColor: context.colors.onSurfaceVariant,
+              side: BorderSide(
+                  color: current
+                      ? context.colors.primary
+                      : context.colors.outlineVariant,
+                  width: current ? 2 : 1),
+            ),
+            child: Text('${index + 1}${answered ? ' ✓' : ''}'),
+          ),
+        ),
+      ),
     );
   }
 }

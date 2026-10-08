@@ -93,6 +93,13 @@ void main() {
         find.textContaining('1 of 2 completed · In progress'), findsOneWidget);
     expect(find.textContaining('Not started'), findsWidgets);
     expect(find.byIcon(Icons.check_circle_rounded), findsOneWidget);
+    expect(
+        tester
+            .widget<CircularProgressIndicator>(
+                find.byKey(ValueKey('topic-progress-$partialTopic')))
+            .value,
+        0.5);
+
     expect(find.text('No approved questions'), findsWidgets);
     final empty = tester.widgetList<ListTile>(find.byType(ListTile)).where(
         (tile) => (tile.subtitle as Text).data == 'No approved questions');
